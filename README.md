@@ -49,20 +49,12 @@ The solution is located in the ScimReferenceApi folder and can be built and run 
 
 #### Steps to run the solution locally
 1. Click **"Clone or download"** and click **"Open in Desktop"** OR copy the link.
-
-    ![Clone Link VSO](Screenshots/CloneLinkVSO.png)
-    
+ 
 2. If you chose to copy the link, open Visual Studio and choose **"Clone or check out code**. 
-
-    ![Clone Link VS](Screenshots/CloneLinkVS.png)
 
 3. Use the copied link from Github to make a local copy of all files.
 
-    ![Clone Link VS](Screenshots/CloneLinkVS-2.png)
-
-4. The Solution Explorer should open. Navigate to **SCIMReference.sln** view by double-clicking on it.
-
-    ![Solution Explorer](Screenshots/SolutionExplorer.png)
+4. The Solution Explorer should open. Navigate to **Microsoft.SCIM.sln** view by double-clicking on it.
 
 5. Click **IIS Express** to execute. The project will launch as a web page with the local host URL.
 
