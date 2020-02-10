@@ -1,4 +1,4 @@
-
+# Getting started with the solution
 ## Prerequisites
 
 1. [Visual Studio 2019](https://visualstudio.microsoft.com/downloads/) (required)
