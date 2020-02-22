@@ -20,7 +20,7 @@ namespace Microsoft.SCIM
 
         public const string SeparatorSegments = "/";
 
-        internal const string TokenAudience = "Microsoft.Security.Bearer";
-        internal const string TokenIssuer = "Microsoft.Security.Bearer";
+        public const string TokenAudience = "Microsoft.Security.Bearer";
+        public const string TokenIssuer = "Microsoft.Security.Bearer";
     }
 }
