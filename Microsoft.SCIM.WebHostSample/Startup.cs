@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
@@ -17,11 +18,15 @@ namespace Microsoft.SCIM.WebHostSample
 {
     public class Startup
     {
+        private readonly IConfiguration _configuration;
+
         public IMonitor MonitoringBehavior { get; set; }
         public IProvider ProviderBehavior { get; set; }
 
-        public Startup()
+        public Startup(IConfiguration configuration)
         {
+            this._configuration = configuration;
+
             this.MonitoringBehavior = new ConsoleMonitor();
             this.ProviderBehavior = new InMemoryProvider();
         }
@@ -45,9 +50,9 @@ namespace Microsoft.SCIM.WebHostSample
                             ValidateAudience = false,
                             ValidateLifetime = false,
                             ValidateIssuerSigningKey = false,
-                            ValidIssuer = ServiceConstants.TokenIssuer,
-                            ValidAudience = ServiceConstants.TokenAudience,
-                            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(ServiceConstants.TokenIssuer))
+                            ValidIssuer = this._configuration["Token:TokenIssuer"],
+                            ValidAudience = this._configuration["Token:TokenAudience"],
+                            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(this._configuration["Token:IssuerSigningKey"]))
                         };
                 });
 

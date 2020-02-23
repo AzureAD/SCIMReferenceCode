@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
@@ -11,26 +12,32 @@ namespace Microsoft.SCIM.WebHostSample.Controllers
 {
     // Controller for generating a bearer token for authorization during testing.
     // This is not meant to replace proper Oauth for authentication purposes.
-    [Route(ServiceConstants.RouteToken)]
+    [Route("scim/token")]
     [ApiController]
-    public class KeyController : ControllerBase
+    public class TokenController : ControllerBase
     {
-        private const int TokenLifetimeInMins = 120;
+        private readonly IConfiguration _configuration;
+        //private const int TokenLifetimeInMins = 120;
 
-        private static string GenerateJSONWebToken()
+        public TokenController(IConfiguration Configuration)
+        {
+            _configuration = Configuration;
+        }
+
+        private string GenerateJSONWebToken()
         {
             SymmetricSecurityKey securityKey =
-                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(ServiceConstants.TokenIssuer));
+                new SymmetricSecurityKey(Encoding.UTF8.GetBytes(this._configuration["Token:IssuerSigningKey"]));
             SigningCredentials credentials =
                 new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
             DateTime startTime = DateTime.UtcNow;
-            DateTime expiryTime = startTime.AddMinutes(KeyController.TokenLifetimeInMins);
+            DateTime expiryTime = startTime.AddMinutes(double.Parse(this._configuration["Token:TokenLifetimeInMins"]));
 
             JwtSecurityToken token =
                 new JwtSecurityToken(
-                    ServiceConstants.TokenIssuer,
-                    ServiceConstants.TokenAudience,
+                    this._configuration["Token:TokenIssuer"],
+                    this._configuration["Token:TokenAudience"],
                     null,
                     notBefore: startTime,
                     expires: expiryTime,
@@ -43,7 +50,7 @@ namespace Microsoft.SCIM.WebHostSample.Controllers
         [HttpGet]
         public ActionResult Get()
         {
-            string tokenString = KeyController.GenerateJSONWebToken();
+            string tokenString = this.GenerateJSONWebToken();
             return this.Ok(new { token = tokenString });
         }
 
