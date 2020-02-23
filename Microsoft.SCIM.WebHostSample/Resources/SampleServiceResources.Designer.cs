@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Microsoft.SCIM.Sample.Properties {
+namespace Microsoft.SCIM.WebHostSample.Resources {
     using System;
     
     

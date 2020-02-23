@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //------------------------------------------------------------
 
-namespace Microsoft.SCIM.Sample
+namespace Microsoft.SCIM.WebHostSample.Provider
 {
     using System;
     using System.Collections.Generic;
@@ -11,13 +11,13 @@ namespace Microsoft.SCIM.Sample
     using System.Threading.Tasks;
     using System.Web.Http;
     using Microsoft.SCIM;
-    using Microsoft.SCIM.Sample.Properties;
+    using Microsoft.SCIM.WebHostSample.Resources;
 
-    public class InMemoryGroupProvider : ProviderBase
+    public class InMemoryUserProvider : ProviderBase
     {
         private readonly InMemoryStorage storage;
 
-        public InMemoryGroupProvider()
+        public InMemoryUserProvider()
         {
             this.storage = InMemoryStorage.Instance;
         }
@@ -29,19 +29,18 @@ namespace Microsoft.SCIM.Sample
                 throw new HttpResponseException(HttpStatusCode.BadRequest);
             }
 
-            Core2Group group = resource as Core2Group;
-
-            if (string.IsNullOrWhiteSpace(group.DisplayName))
+            Core2EnterpriseUser user = resource as Core2EnterpriseUser;
+            if (string.IsNullOrWhiteSpace(user.UserName))
             {
                 throw new HttpResponseException(HttpStatusCode.BadRequest);
             }
 
-            IEnumerable<Core2Group> exisitingGroups = this.storage.Groups.Values;
+            IEnumerable<Core2EnterpriseUser> exisitingUsers = this.storage.Users.Values;
             if
             (
-                exisitingGroups.Any(
-                    (Core2Group exisitingGroup) =>
-                        string.Equals(exisitingGroup.DisplayName, group.DisplayName, StringComparison.Ordinal))
+                exisitingUsers.Any(
+                    (Core2EnterpriseUser exisitingUser) =>
+                        string.Equals(exisitingUser.UserName, user.UserName, StringComparison.Ordinal))
             )
             {
                 throw new HttpResponseException(HttpStatusCode.Conflict);
@@ -49,7 +48,7 @@ namespace Microsoft.SCIM.Sample
 
             string resourceIdentifier = Guid.NewGuid().ToString();
             resource.Identifier = resourceIdentifier;
-            this.storage.Groups.Add(resourceIdentifier, group);
+            this.storage.Users.Add(resourceIdentifier, user);
 
             return Task.FromResult(resource);
         }
@@ -63,9 +62,9 @@ namespace Microsoft.SCIM.Sample
 
             string identifier = resourceIdentifier.Identifier;
 
-            if (this.storage.Groups.ContainsKey(identifier))
+            if (this.storage.Users.ContainsKey(identifier))
             {
-                this.storage.Groups.Remove(identifier);
+                this.storage.Users.Remove(identifier);
             }
 
             return Task.CompletedTask;
@@ -95,73 +94,61 @@ namespace Microsoft.SCIM.Sample
 
             Resource[] results;
             IFilter queryFilter = parameters.AlternateFilters.SingleOrDefault();
-            IEnumerable<Core2Group> buffer = Enumerable.Empty<Core2Group>();
             if (queryFilter == null)
             {
-                buffer = this.storage.Groups.Values;
+                IEnumerable<Core2EnterpriseUser> allUsers = this.storage.Users.Values;
+                results =
+                    allUsers.Select((Core2EnterpriseUser user) => user as Resource).ToArray();
+
+                return Task.FromResult(results);
             }
-            else
+
+            if (string.IsNullOrWhiteSpace(queryFilter.AttributePath))
             {
-                if (string.IsNullOrWhiteSpace(queryFilter.AttributePath))
-                {
-                    throw new ArgumentException(SampleServiceResources.ExceptionInvalidParameters);
-                }
-
-                if (string.IsNullOrWhiteSpace(queryFilter.ComparisonValue))
-                {
-                    throw new ArgumentException(SampleServiceResources.ExceptionInvalidParameters);
-                }
-
-                if (queryFilter.FilterOperator != ComparisonOperator.Equals)
-                {
-                    throw new NotSupportedException(SampleServiceResources.UnsupportedComparisonOperator);
-                }
-
-                if (queryFilter.AttributePath.Equals(AttributeNames.DisplayName))
-                {
-                    buffer =
-                        this.storage.Groups.Values
-                        .Where(
-                            (Core2Group item) =>
-                               string.Equals(
-                                   item.DisplayName,
-                                   parameters.AlternateFilters.Single().ComparisonValue,
-                                   StringComparison.OrdinalIgnoreCase));
-                }
-                else
-                {
-                    throw new NotSupportedException(SampleServiceResources.UnsupportedFilterAttributeGroup);
-                }
+                throw new ArgumentException(SampleServiceResources.ExceptionInvalidParameters);
             }
 
-            results =
-                buffer
-                .Select((Core2Group item) =>
-                 {
-                     Core2Group bufferItem =
-                     new Core2Group
-                     {
-                         DisplayName = item.DisplayName,
-                         ExternalIdentifier = item.ExternalIdentifier,
-                         Identifier = item.Identifier,
-                         Members = item.Members,
-                         Metadata = item.Metadata
-                     };
+            if (string.IsNullOrWhiteSpace(queryFilter.ComparisonValue))
+            {
+                throw new ArgumentException(SampleServiceResources.ExceptionInvalidParameters);
+            }
 
-                     if (parameters?.ExcludedAttributePaths?.Any(
-                             (string excludedAttributes) =>
-                                 excludedAttributes.Equals(AttributeNames.Members, StringComparison.OrdinalIgnoreCase))
-                         == true)
-                     {
-                         bufferItem.Members = null;
-                     }
+            if (queryFilter.FilterOperator != ComparisonOperator.Equals)
+            {
+                throw new NotSupportedException(SampleServiceResources.UnsupportedComparisonOperator);
+            }
 
-                     return bufferItem;
-                 })
-                .Select((Core2Group item) => item as Resource)
-                .ToArray();
+            if (queryFilter.AttributePath.Equals(AttributeNames.UserName))
+            {
+                IEnumerable<Core2EnterpriseUser> allUsers = this.storage.Users.Values;
+                results =
+                    allUsers.Where(
+                        (Core2EnterpriseUser item) =>
+                           string.Equals(
+                                item.UserName,
+                               parameters.AlternateFilters.Single().ComparisonValue,
+                               StringComparison.OrdinalIgnoreCase))
+                               .Select((Core2EnterpriseUser user) => user as Resource).ToArray();
 
-            return Task.FromResult(results);
+                return Task.FromResult(results);
+            }
+
+            if (queryFilter.AttributePath.Equals(AttributeNames.ExternalIdentifier))
+            {
+                IEnumerable<Core2EnterpriseUser> allUsers = this.storage.Users.Values;
+                results =
+                    allUsers.Where(
+                        (Core2EnterpriseUser item) =>
+                           string.Equals(
+                                item.ExternalIdentifier,
+                               parameters.AlternateFilters.Single().ComparisonValue,
+                               StringComparison.OrdinalIgnoreCase))
+                               .Select((Core2EnterpriseUser user) => user as Resource).ToArray();
+
+                return Task.FromResult(results);
+            }
+
+            throw new NotSupportedException(SampleServiceResources.UnsupportedFilterAttributeUser);
         }
 
         public override Task<Resource> ReplaceAsync(Resource resource, string correlationIdentifier)
@@ -171,32 +158,32 @@ namespace Microsoft.SCIM.Sample
                 throw new HttpResponseException(HttpStatusCode.BadRequest);
             }
 
-            Core2Group group = resource as Core2Group;
+            Core2EnterpriseUser user = resource as Core2EnterpriseUser;
 
-            if (string.IsNullOrWhiteSpace(group.DisplayName))
+            if (string.IsNullOrWhiteSpace(user.UserName))
             {
                 throw new HttpResponseException(HttpStatusCode.BadRequest);
             }
 
-            IEnumerable<Core2Group> exisitingGroups = this.storage.Groups.Values;
+            IEnumerable<Core2EnterpriseUser> exisitingUsers = this.storage.Users.Values;
             if
             (
-                exisitingGroups.Any(
-                    (Core2Group exisitingUser) =>
-                        string.Equals(exisitingUser.DisplayName, group.DisplayName, StringComparison.Ordinal) &&
-                        !string.Equals(exisitingUser.Identifier, group.Identifier, StringComparison.OrdinalIgnoreCase))
+                exisitingUsers.Any(
+                    (Core2EnterpriseUser exisitingUser) =>
+                        string.Equals(exisitingUser.UserName, user.UserName, StringComparison.Ordinal) &&
+                        !string.Equals(exisitingUser.Identifier, user.Identifier, StringComparison.OrdinalIgnoreCase))
             )
             {
                 throw new HttpResponseException(HttpStatusCode.Conflict);
             }
 
-            if (!this.storage.Groups.TryGetValue(group.Identifier, out Core2Group _))
+            if (!this.storage.Users.TryGetValue(user.Identifier, out Core2EnterpriseUser _))
             {
                 throw new HttpResponseException(HttpStatusCode.NotFound);
             }
 
-            this.storage.Groups[group.Identifier] = group;
-            Resource result = group as Resource;
+            this.storage.Users[user.Identifier] = user;
+            Resource result = user as Resource;
             return Task.FromResult(result);
         }
 
@@ -217,13 +204,14 @@ namespace Microsoft.SCIM.Sample
                 throw new ArgumentNullException(nameof(parameters));
             }
 
+            Resource result = null;
             string identifier = parameters.ResourceIdentifier.Identifier;
 
-            if (this.storage.Groups.ContainsKey(identifier))
+            if (this.storage.Users.ContainsKey(identifier))
             {
-                if (this.storage.Groups.TryGetValue(identifier, out Core2Group group))
+                if (this.storage.Users.TryGetValue(identifier, out Core2EnterpriseUser user))
                 {
-                    Resource result = group as Resource;
+                    result = user as Resource;
                     return Task.FromResult(result);
                 }
             }
@@ -262,9 +250,9 @@ namespace Microsoft.SCIM.Sample
                 throw new NotSupportedException(unsupportedPatchTypeName);
             }
 
-            if (this.storage.Groups.TryGetValue(patch.ResourceIdentifier.Identifier, out Core2Group group))
+            if (this.storage.Users.TryGetValue(patch.ResourceIdentifier.Identifier, out Core2EnterpriseUser user))
             {
-                group.Apply(patchRequest);
+                user.Apply(patchRequest);
             }
             else
             {

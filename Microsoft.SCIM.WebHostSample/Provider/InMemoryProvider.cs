@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //------------------------------------------------------------
 
-namespace Microsoft.SCIM.Sample
+namespace Microsoft.SCIM.WebHostSample.Provider
 {
     using System;
     using System.Threading.Tasks;
