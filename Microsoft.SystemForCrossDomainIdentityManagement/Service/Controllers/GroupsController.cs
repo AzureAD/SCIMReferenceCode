@@ -5,9 +5,11 @@
 namespace Microsoft.SCIM
 {
     using System;
+    using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
 
     [Route(ServiceConstants.RouteGroups)]
+    [Authorize]
     [ApiController]
     public sealed class GroupsController : ControllerTemplate<Core2Group>
     {
