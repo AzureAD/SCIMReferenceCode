@@ -5,9 +5,11 @@
 namespace Microsoft.SCIM
 {
     using System;
+    using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
 
     [Route(ServiceConstants.RouteUsers)]
+    [Authorize]
     [ApiController]
     public sealed class UsersController : ControllerTemplate<Core2EnterpriseUser>
     {
