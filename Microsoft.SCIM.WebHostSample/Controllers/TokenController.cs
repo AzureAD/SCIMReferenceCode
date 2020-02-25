@@ -17,7 +17,8 @@ namespace Microsoft.SCIM.WebHostSample.Controllers
     public class TokenController : ControllerBase
     {
         private readonly IConfiguration _configuration;
-        //private const int TokenLifetimeInMins = 120;
+        
+        private const int defaultTokenExpiration = 120;
 
         public TokenController(IConfiguration Configuration)
         {
@@ -26,14 +27,22 @@ namespace Microsoft.SCIM.WebHostSample.Controllers
 
         private string GenerateJSONWebToken()
         {
+            // Create token key
             SymmetricSecurityKey securityKey =
                 new SymmetricSecurityKey(Encoding.UTF8.GetBytes(this._configuration["Token:IssuerSigningKey"]));
             SigningCredentials credentials =
                 new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
+            // Set token expiration
             DateTime startTime = DateTime.UtcNow;
-            DateTime expiryTime = startTime.AddMinutes(double.Parse(this._configuration["Token:TokenLifetimeInMins"]));
+            DateTime expiryTime;
+            double tokenExpiration;
+            if (double.TryParse(this._configuration["Token:TokenLifetimeInMins"], out tokenExpiration))
+                expiryTime = startTime.AddMinutes(tokenExpiration);
+            else
+                expiryTime = startTime.AddMinutes(defaultTokenExpiration);
 
+            // Generate the token
             JwtSecurityToken token =
                 new JwtSecurityToken(
                     this._configuration["Token:TokenIssuer"],
