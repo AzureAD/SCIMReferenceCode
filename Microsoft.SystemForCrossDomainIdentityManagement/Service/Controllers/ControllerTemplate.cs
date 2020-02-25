@@ -609,6 +609,23 @@ namespace Microsoft.SCIM
 
                 throw new HttpResponseException(HttpStatusCode.NotImplemented);
             }
+            catch (HttpResponseException httpResponseException)
+            {
+                if (this.TryGetMonitor(out IMonitor monitor))
+                {
+                    IExceptionNotification notification =
+                        ExceptionNotificationFactory.Instance.CreateNotification(
+                            httpResponseException,
+                            correlationIdentifier,
+                            ServiceNotificationIdentifiers.ControllerTemplatePostNotSupportedException);
+                    monitor.Report(notification);
+                }
+
+                if (httpResponseException.Response.StatusCode == HttpStatusCode.Conflict)
+                    return this.Conflict();
+                else
+                    return this.BadRequest();
+            }
             catch (Exception exception)
             {
                 if (this.TryGetMonitor(out IMonitor monitor))
