@@ -460,7 +460,14 @@ namespace Microsoft.SCIM
 
                 IProviderAdapter<T> provider = this.AdaptProvider();
                 await provider.Update(request, identifier, patchRequest, correlationIdentifier).ConfigureAwait(false);
-                return this.Ok();
+
+                // If EnterpriseUser, return HTTP code 200 and user object, otherwise HTTP code 204
+                if (provider.SchemaIdentifier == SchemaIdentifiers.Core2EnterpriseUser)
+                {
+                    return await Get(identifier).ConfigureAwait(false);
+                }
+                else
+                    return this.NoContent();
             }
             catch (ArgumentException argumentException)
             {
