@@ -25,8 +25,8 @@ Use this reference code to get started on building a [SCIM](https://docs.microso
 
 Use the repository **[Wiki](https://github.com/AzureAD/SCIMReferenceCode/wiki)** for guidance on how to use this reference.
 
-> [!NOTE]
-> This code is intended to help you get started building your SCIM endpoint and is provided "AS IS." It is intended as a reference and there is no guarantee of it being actively maintained or supported. 
+> **[NOTE]**
+> This code is intended to help you get started building your SCIM endpoint and is provided "AS IS." It is intended as a reference and there is no guarantee of it being actively maintained or supported.
 
 ## Capabilities 
 
@@ -40,7 +40,7 @@ Use the repository **[Wiki](https://github.com/AzureAD/SCIMReferenceCode/wiki)**
 
 ## Getting Started
 
-The `Microsoft.SystemForCrossDomainIdentityManagement` project contains the code base for building a SCIM API. The `Microsoft.SCIM.Sample` project is there as a sample for using the project. A step by step guide for starting up with the project can be found [here](docs/get-started.md)
+The `Microsoft.SystemForCrossDomainIdentityManagement` project contains the code base for building a SCIM API. The `Microsoft.SCIM.WebHostSample` project is there as a sample for using the project. A step by step guide for starting up with the project can be found [here](docs/get-started.md)
 
 ## Navigating the reference code
 
@@ -49,14 +49,10 @@ This reference code was developed as a .Net core MVC web API for SCIM provisioni
 1. The **Schemas** folder includes:
     * The models for the User and Group resources along with some abstract classes like Schematized for shared functionality.
     * An Attributes folder which contains the class definitions for complex attributes of Users and Groups such as addresses.
-2. The **Controllers** folder contains:
-    * The controllers for the various SCIM endpoints. Resource controllers include HTTP verbs to perform CRUD operations on the resource (GET, POST, PUT, PATCH, DELETE). 
-    * Controllers rely on services to perform the actions.
-3. The **Services** folder contains logic for actions relating to the way resources are queried and updated.
-    * The service methods are exposed via the IProviderService interface.
+2. The **Service** folder contains logic for actions relating to the way resources are queried and updated.
     * The reference code has services to return users and groups.
-    * The services are based on Entity Framework and DbContext is defined by the class ScimContext.
-4. The **Protocol** folder contains logic for actions relating to the way resources are returned according to the SCIM RFC such as:
+    * The **controllers** folder contains the various SCIM endpoints. Resource controllers include HTTP verbs to perform CRUD operations on the resource (GET, POST, PUT, PATCH, DELETE). Controllers rely on services to perform the actions.
+3. The **Protocol** folder contains logic for actions relating to the way resources are returned according to the SCIM RFC such as:
     * Returning multiple resources as a list.
     * Returning only specific resources based on a filter.
     * Turning a query into a list of linked lists of single filters.
@@ -67,42 +63,21 @@ This reference code was developed as a .Net core MVC web API for SCIM provisioni
 
 | File/folder       | Description                                |
 |-------------------|--------------------------------------------|
-| `ScimRefrenceAPI` | Sample source code.                        |
-| `Screenshots`     | Screenshots for README.      |
+| `Microsoft.SystemForCrossDomainIdentityManagement`| Sample source code.|
+| `Microsoft.SCIM.WebHostSample`| Sample implementation of the SCIM library.|
 | `.gitignore`      | Define what to ignore at commit time.      |
 | `CHANGELOG.md`    | List of changes to the sample.             |
 | `CONTRIBUTING.md` | Guidelines for contributing to the sample. |
 | `README.md`       | This README file.                          |
 | `LICENSE`         | The license for the sample.                |
 
-## Common scenarios
-
-|Scenario|How-to|
-|---|---|
-|Enable or disable authorization|**Steps**<br/>1. Navigate to the **UsersController.cs** or **GroupController.cs** files located in **ScimReferenceApi > Controllers**.<br/>2. Comment or uncomment out the authorize command.|
-|Add additional filterable attributes|**Steps**<br/>1. Navigate to the **FilterUsers.cs** or **FilterGroups.cs** files located in **ScimReferenceApi > Protocol**.<br/>2. Update the method to include the attributes that you would like to support filtering for. |
-|Support additional user resource extensions|**Steps**<br/>1. Copy the **EnterpriseUser.cs** file located in **ScimReferenceApi > Schemas**.<br/>2. Rename the class to your custom extension name (e.g. customExtensionName.cs)<br/>3. Update the schema to match the desired naming convention.<br/>4. Repeat steps 1 - 3 with the **EnterpriseAttributes.cs** file (located in ScimReferenceApi > Schemas > Attributes) and update it with the attributes that you need.|
-
 ## Authorization
 
-The SCIM standard leaves authentication and authorization relatively open. You could use cookies, basic authentication, TLS client authentication, or any of the other methods listed [here](https://tools.ietf.org/html/rfc7644#section-2). You should take into consideration security and industry best practices when choosing an authentication/authorization method. Avoid insecure methods such as username and password in favor of more secure methods such as OAuth. Azure AD supports long-lived bearer tokens (for gallery and non-gallery applications) as well as the OAuth authorization grant (for applications published in the app gallery). This reference code allows you to either turn authorization off to simplify testing, generate a bearer token, or bring your own bearer token. 
+The SCIM standard leaves authentication and authorization relatively open. You could use cookies, basic authentication, TLS client authentication, or any of the other methods listed [here](https://tools.ietf.org/html/rfc7644#section-2). You should take into consideration security and industry best practices when choosing an authentication/authorization method. Avoid insecure methods such as username and password in favor of more secure methods such as OAuth. Azure AD supports long-lived bearer tokens (for gallery and non-gallery applications) as well as the OAuth authorization grant (for applications published in the app gallery). This reference code allows you to either leverage the token that Azure AD provides or generate a token when testing locally. Review the [wiki](https://github.com/AzureAD/SCIMReferenceCode/wiki/Authorization) for more details.  
 
-**Option 1**: Turn off authorization (this should only be used for testing) 
-* Navigate to the **UsersController.cs** or **GroupController.cs** files located in **ScimReferenceApi > Controllers**.<br/>2. Comment out the authorize command.
+> **[NOTE]**
+> These options are solely for testing. You will want to generate your own token when integrating with Azure AD. 
 
-**Option 2**: Get a bearer token signed by Microsoft security bearer (should only be used for testing, not in production) 
-* Post to to the key endpoint with the string "SecureLogin" to retrieve a token. The token is valid for 120 minutes (the validity can be changed in the key controller). 
-
-**Option 3**: Bring your own token
-* **Option 3a**: Generate your own token that matches the specifications of the reference code. 
-  * By default the issuer, audience, and signer must be "Microsoft.Security.Bearer"
-  * These are defaults to get started testing quickly. They should not be relied on in production. 
-* **Option 3b**: Generate your own token and update the specifications of the reference code to match your token. 
-  * Change the specifications in the configure service section of the startup.cs class.
-  * Specify the authorization settings you would like to validate. 
-  * Generate a token on your own that matches those specifications. 
-
-Provided below are test cases that you can use to ensure that your SCIM endpoint is compliant with the SCIM RFC. 
 
 ## Contributing to the reference code
 
