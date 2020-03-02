@@ -18,15 +18,10 @@ Guidance on onboarding samples to docs.microsoft.com/samples: https://review.doc
 Taxonomies for products and languages: https://review.docs.microsoft.com/new-hope/information-architecture/metadata/taxonomies?branch=master
 -->
 
-Use this reference code to get started on building a [SCIM](https://docs.microsoft.com/azure/active-directory/manage-apps/use-scim-to-provision-users-and-groups) endpoint. It contains guidance on how to implement:
-
-1. Basic requirements for CRUD operations on a user and group object (also known as resources in SCIM). 
-2. Optional features such as filtering and pagination. 
-
-Use the repository **[Wiki](https://github.com/AzureAD/SCIMReferenceCode/wiki)** for guidance on how to use this reference.
+The reference code provided in this repository will help you get started building a [SCIM](https://docs.microsoft.com/azure/active-directory/manage-apps/use-scim-to-provision-users-and-groups) endpoint. It contains guidance on how to implement basic requirements for CRUD operations on a user and group object (also known as resources in SCIM) and optional features of the standard such as filtering and pagination. Use the repository **[Wiki](https://github.com/AzureAD/SCIMReferenceCode/wiki)** for guidance on how to use this reference.
 
 > **[NOTE]**
-> This code is intended to help you get started building your SCIM endpoint and is provided "AS IS." It is intended as a reference and there is no guarantee of it being actively maintained or supported.
+> This code is intended to help you get started building your SCIM endpoint and is provided "AS IS." It is intended as a reference and there is no guarantee of it being actively maintained or supported. [Contributions](https://github.com/AzureAD/SCIMReferenceCode/wiki/Contributing-Overview) from the community are welcome to help build and maintain the repo.
 
 ## Capabilities 
 
@@ -73,10 +68,10 @@ This reference code was developed as a .Net core MVC web API for SCIM provisioni
 
 ## Authorization
 
-The SCIM standard leaves authentication and authorization relatively open. You could use cookies, basic authentication, TLS client authentication, or any of the other methods listed [here](https://tools.ietf.org/html/rfc7644#section-2). You should take into consideration security and industry best practices when choosing an authentication/authorization method. Avoid insecure methods such as username and password in favor of more secure methods such as OAuth. Azure AD supports long-lived bearer tokens (for gallery and non-gallery applications) as well as the OAuth authorization grant (for applications published in the app gallery). This reference code allows you to either leverage the token that Azure AD provides or generate a token when testing locally. Review the [wiki](https://github.com/AzureAD/SCIMReferenceCode/wiki/Authorization) for more details.  
+The SCIM standard leaves authentication and authorization relatively open. You could use cookies, basic authentication, TLS client authentication, or any of the other methods listed [here](https://tools.ietf.org/html/rfc7644#section-2). You should take into consideration security and industry best practices when choosing an authentication/authorization method. Avoid insecure methods such as username and password in favor of more secure methods such as OAuth. Azure AD supports long-lived bearer tokens (for gallery and non-gallery applications) as well as the OAuth authorization grant (for applications published in the app gallery). Review the [wiki](https://github.com/AzureAD/SCIMReferenceCode/wiki/Authorization) for more details about the current authorization support that this reference code provides.   
 
 > **[NOTE]**
-> These options are solely for testing. You will want to generate your own token when integrating with Azure AD. 
+> These authorization methods provided by this repo are solely for testing. When integrating with Azure AD, review the authorization guidance provided [here](https://docs.microsoft.com/azure/active-directory/app-provisioning/use-scim-to-provision-users-and-groups#authorization-for-provisioning-connectors-in-the-application-gallery). 
 
 
 ## Contributing to the reference code
