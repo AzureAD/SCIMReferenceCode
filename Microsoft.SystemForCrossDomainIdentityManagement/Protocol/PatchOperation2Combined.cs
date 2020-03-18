@@ -7,6 +7,7 @@ namespace Microsoft.SCIM
     using System;
     using System.Collections.Generic;
     using System.Globalization;
+    using System.Linq;
     using System.Runtime.Serialization;
     using Newtonsoft.Json;
 
@@ -38,6 +39,37 @@ namespace Microsoft.SCIM
             set
             {
                 this.values = value;
+            }
+        }
+
+        [OnDeserialized]
+        private void OnDeserialized(StreamingContext context)
+        {
+            this.OnInitialized();
+        }
+
+        [OnDeserializing]
+        private void OnDeserializing(StreamingContext context)
+        {
+            this.OnInitialization();
+        }
+
+        private void OnInitialization()
+        {
+        }
+
+        private void OnInitialized()
+        {
+            if (this.values == null && this.Path == null)
+            {
+                throw new NotSupportedException(SystemForCrossDomainIdentityManagementProtocolResources.ExceptionInvalidValue);
+            }
+            else if(this.values == null)
+            { 
+                if (this.Path.SubAttributes.Any())
+                {
+                    this.values = this.Path.SubAttributes.First().ComparisonValue;
+                }
             }
         }
 
