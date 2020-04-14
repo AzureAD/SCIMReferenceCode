@@ -7,6 +7,7 @@ namespace Microsoft.SCIM
     using System;
     using System.Collections;
     using System.Collections.Generic;
+    using System.Diagnostics.CodeAnalysis;
     using System.Globalization;
     using System.IO;
     using System.Linq;
@@ -102,90 +103,192 @@ namespace Microsoft.SCIM
                 return;
             }
 
-            OperationValue value;
             switch (operation.Path.AttributePath)
             {
                 case AttributeNames.DisplayName:
-                    value = operation.Value.SingleOrDefault();
-
-                    if (OperationName.Remove == operation.Name)
-                    {
-                        if (
-                            null == value
-                            || string.Equals(group.DisplayName, value.Value, StringComparison.OrdinalIgnoreCase))
-                        {
-                            value = null;
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-
-                    if (null == value)
-                    {
-                        group.DisplayName = null;
-                    }
-                    else
-                    {
-                        group.DisplayName = value.Value;
-                    }
+                    group.DisplayNamePatchOperation(operation);
                     break;
 
                 case AttributeNames.Members:
-                    if (operation.Value != null)
-                    {
-                        switch (operation.Name)
-                        {
-                            case OperationName.Add:
-                                IEnumerable<Member> newMembers =
-                                     operation
-                                     .Value
-                                     .Select(
-                                         (OperationValue item) =>
-                                             new Member()
-                                             {
-                                                 Value = item.Value
-                                             })
-                                     .ToArray();
-                                group.Members =
-                                    group.Members != null ?
-                                        group.Members.Concat(newMembers).ToArray() : newMembers;
-
-                                break;
-
-                            case OperationName.Remove:
-                                if (null == group.Members)
-                                {
-                                    break;
-                                }
-
-                                if (operation?.Value?.FirstOrDefault()?.Value == null)
-                                {
-                                    group.Members = Enumerable.Empty<Member>();
-                                    break;
-                                }
-
-                                IDictionary<string, Member> members =
-                                    new Dictionary<string, Member>(group.Members.Count());
-                                foreach (Member item in group.Members)
-                                {
-                                    members.Add(item.Value, item);
-                                }
-
-                                foreach (OperationValue operationValue in operation.Value)
-                                {
-                                    if (members.TryGetValue(operationValue.Value, out Member removedMember))
-                                    {
-                                        members.Remove(operationValue.Value);
-                                    }
-                                }
-
-                                group.Members = members.Values;
-                                break;
-                        }
-                    }
+                    group.MemberPatchOperation(operation);
                     break;
+            }
+        }
+
+        private static void DisplayNamePatchOperation(this Core2Group group, PatchOperation2 operation)
+        {
+            var value = operation.Value.SingleOrDefault();
+
+            if (operation.Name == OperationName.Remove)
+            {
+                if (
+                    null == value
+                    || string.Equals(group.DisplayName, value.Value, StringComparison.OrdinalIgnoreCase))
+                {
+                    value = null;
+                }
+                else
+                {
+                    return;
+                }
+            }
+
+            if (value == null)
+            {
+                group.DisplayName = null;
+            }
+            else
+            {
+                group.DisplayName = value.Value;
+            }
+        }
+
+        private static void MemberPatchOperation(this Core2Group group, PatchOperation2 operation)
+        {
+            if (operation.Value != null)
+            {
+                switch (operation.Name)
+                {
+                    case OperationName.Replace:
+                        group.ReplaceMembersOperation(operation);
+                        break;
+
+                    case OperationName.Add:
+                        group.AddMembersOperation(operation);
+                        break;
+
+                    case OperationName.Remove:
+                        group.RemoveMembersOperation(operation);
+                        break;
+                }
+            }
+        }
+
+        private static void AddMembersOperation(this Core2Group group, PatchOperation2 operation)
+        {
+            IEnumerable<Member> newMembers = operation.Value
+                 .Select(
+                     (OperationValue item) =>
+                         new Member()
+                         {
+                             Value = item.Value
+                         })
+                 .ToArray();
+
+            if (group.Members != null)
+            {
+                //merge existing with new members
+                var existingMembers = group.Members.Distinct(new MemberComparer()).ToDictionary(k => k.Value, v => v);
+                foreach (var newMember in newMembers)
+                {
+                    existingMembers[newMember.Value] = newMember;
+                }
+                group.Members = existingMembers.Values;
+            }
+            else
+            {
+                //no existing members, so just use new members.
+                group.Members = newMembers;
+            }
+        }
+        private static void ReplaceMembersOperation(this Core2Group group, PatchOperation2 operation)
+        {
+            IEnumerable<Member> replacementMembers =
+                 operation
+                 .Value
+                 .Select(
+                     (OperationValue item) =>
+                         new Member()
+                         {
+                             Value = item.Value
+                         })
+                 .ToArray();
+
+            //replace - so just use new members.
+            group.Members = replacementMembers;
+        }
+
+        private static void RemoveMembersOperation(this Core2Group group, PatchOperation2 operation)
+        {
+            if (group.Members == null)
+            {
+                return;
+            }
+
+            //patch is asking to remove members completely.
+            if (operation.Value?.FirstOrDefault()?.Value == null &&
+                (operation.Path?.SubAttributes == null || operation.Path?.SubAttributes.Count == 0))
+            {
+                group.Members = Enumerable.Empty<Member>();
+                return;
+            }
+
+            var members = group.Members.Distinct(new MemberComparer()).ToDictionary(k => k.Value, v => v);
+
+            //we have values we need to remove
+            if (operation.Value?.FirstOrDefault()?.Value != null)
+            {
+                foreach (OperationValue operationValue in operation.Value)
+                {
+                    if (members.ContainsKey(operationValue.Value))
+                    {
+                        members.Remove(operationValue.Value);
+                    }
+                }
+            }
+
+            //we have paths we need to evaluate and remove
+            if (operation.Path?.SubAttributes?.Count == 1)
+            {
+                members.RemoveMembersOperationByPath(operation);
+            }
+
+            group.Members = members.Values;
+        }
+
+        private static void RemoveMembersOperationByPath(this Dictionary<string, Member> memberDictionary, PatchOperation2 operation)
+        {
+            var subAttr = operation.Path.SubAttributes.Single();
+
+            if (!subAttr.AttributePath.Equals("value", StringComparison.Ordinal))
+            {
+                throw new NotImplementedException(
+                    string.Format(
+                        CultureInfo.InvariantCulture,
+                        SystemForCrossDomainIdentityManagementProtocolResources.ExceptionInvalidFilterTemplate,
+                        subAttr.AttributePath));
+            }
+            if (subAttr.FilterOperator != ComparisonOperator.Equals)
+            {
+                throw new NotImplementedException(
+                    string.Format(
+                        CultureInfo.InvariantCulture,
+                        SystemForCrossDomainIdentityManagementProtocolResources.ExceptionInvalidOperatorTemplate,
+                        subAttr.FilterOperator));
+            }
+            if (string.IsNullOrWhiteSpace(subAttr.ComparisonValue))
+            {
+                throw new InvalidOperationException(SystemForCrossDomainIdentityManagementProtocolResources.ExceptionInvalidValue);
+            }
+
+            if (memberDictionary.ContainsKey(subAttr.ComparisonValue))
+            {
+                memberDictionary.Remove(subAttr.ComparisonValue);
+            }
+        }
+
+        private class MemberComparer : IEqualityComparer<Member>
+        {
+            public bool Equals([AllowNull] Member x, [AllowNull] Member y)
+            {
+                var xVal = x.Value ?? "";
+                var yVal = y.Value ?? "";
+                return (xVal.Equals(yVal, StringComparison.InvariantCultureIgnoreCase));
+            }
+
+            public int GetHashCode([DisallowNull] Member obj)
+            {
+                return obj.Value.GetHashCode(StringComparison.InvariantCultureIgnoreCase);
             }
         }
 
