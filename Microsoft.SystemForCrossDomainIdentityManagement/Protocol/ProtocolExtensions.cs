@@ -1235,9 +1235,11 @@ namespace Microsoft.SCIM
             TextWriter textWriter = null;
             try
             {
-#pragma warning disable IDE0068 // Use recommended dispose pattern
+
+#pragma warning disable CA2000 // Dispose objects before losing scope
                 textWriter = new StringWriter(buffer);
-#pragma warning restore IDE0068 // Use recommended dispose pattern
+#pragma warning restore CA2000 // Dispose objects before losing scope
+
                 IHttpRequestMessageWriter requestWriter = null;
                 try
                 {
@@ -1277,7 +1279,7 @@ namespace Microsoft.SCIM
                 throw new ArgumentNullException(nameof(request));
             }
 
-            string result = await request.SerializeAsync(false);
+            string result = await request.SerializeAsync(false).ConfigureAwait(false);
             return result;
         }
 

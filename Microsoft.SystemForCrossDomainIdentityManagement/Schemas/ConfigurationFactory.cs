@@ -11,6 +11,6 @@ namespace Microsoft.SCIM
     {
         public abstract TConfiguration Create(
             Lazy<TConfiguration> defaultConfiguration,
-            out TException error);
+            out TException configurationError);
     }
 }
