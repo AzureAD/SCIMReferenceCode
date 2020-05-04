@@ -464,7 +464,7 @@ namespace Microsoft.SCIM
                 // If EnterpriseUser, return HTTP code 200 and user object, otherwise HTTP code 204
                 if (provider.SchemaIdentifier == SchemaIdentifiers.Core2EnterpriseUser)
                 {
-                    return await Get(identifier).ConfigureAwait(false);
+                    return await this.Get(identifier).ConfigureAwait(false);
                 }
                 else
                     return this.NoContent();

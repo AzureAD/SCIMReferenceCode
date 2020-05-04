@@ -134,7 +134,7 @@ namespace Microsoft.SCIM
                 string encodedValue = this.comparisonValue;
                 foreach (KeyValuePair<string, string> encoding in Filter.ReservedCharacterEncodingsPerRfc2396.Value)
                 {
-                    encodedValue = encodedValue.Replace(encoding.Key, encoding.Value);
+                    encodedValue = encodedValue.Replace(encoding.Key, encoding.Value, StringComparison.OrdinalIgnoreCase);
                 }
                 this.comparisonValueEncoded = encodedValue;
             }
@@ -185,7 +185,7 @@ namespace Microsoft.SCIM
                 new Dictionary<string, string>(Filter.ReservedCharactersPerRfc3986.Value.Length);
             foreach (char character in Filter.ReservedCharactersPerRfc3986.Value)
             {
-                string from = character.ToString();
+                string from = character.ToString(CultureInfo.InvariantCulture);
                 string to = HttpUtility.UrlEncode(from);
                 result.Add(from, to);
             }
@@ -299,7 +299,11 @@ namespace Microsoft.SCIM
                 Filter clone = new Filter(filter);
                 clone.ComparisonValue = placeholder;
                 string currentFilter = clone.Serialize();
-                string encodedFilter = HttpUtility.UrlEncode(currentFilter).Replace(placeholder, filter.ComparisonValueEncoded);
+                string encodedFilter = 
+                    HttpUtility
+                    .UrlEncode(currentFilter)
+                    .Replace(placeholder, filter.ComparisonValueEncoded, StringComparison.OrdinalIgnoreCase);
+                
                 if (string.IsNullOrWhiteSpace(allFilters))
                 {
                     allFilters =
@@ -333,7 +337,13 @@ namespace Microsoft.SCIM
 
         public static bool TryParse(string filterExpression, out IReadOnlyCollection<IFilter> filters)
         {
-            string expression = filterExpression.Trim().Unquote();
+            string expression = filterExpression?.Trim()?.Unquote();
+
+            if (string.IsNullOrWhiteSpace(expression))
+            {
+                throw new ArgumentNullException(nameof(filterExpression));
+            }
+
             try
             {
                 IReadOnlyCollection<IFilter> buffer = new FilterExpression(expression).ToFilters();

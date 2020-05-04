@@ -104,8 +104,7 @@ namespace Microsoft.SCIM
                 try
                 {
                     Dictionary<string, object> result =
-                        (Dictionary<string, object>)JsonConvert.DeserializeObject(
-                            json);
+                        JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
                     return result;
                 }
                 finally

@@ -1,35 +1,33 @@
-// Copyright (c) Microsoft Corporation.// Licensed under the MIT license.
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.SCIM.WebHostSample.Provider;
+//------------------------------------------------------------
+// Copyright (c) Microsoft Corporation.  All rights reserved.
+//------------------------------------------------------------
 
 namespace Microsoft.SCIM.WebHostSample
 {
+    using System.Text;
+    using System.Threading.Tasks;
+    using Microsoft.AspNetCore.Authentication.JwtBearer;
+    using Microsoft.AspNetCore.Builder;
+    using Microsoft.AspNetCore.Hosting;
+    using Microsoft.AspNetCore.Routing;
+    using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Hosting;
+    using Microsoft.IdentityModel.Tokens;
+    using Microsoft.SCIM.WebHostSample.Provider;
+
     public class Startup
     {
-        private readonly IWebHostEnvironment _env;
-        private readonly IConfiguration _configuration;
+        private readonly IWebHostEnvironment environment;
+        private readonly IConfiguration configuration;
 
         public IMonitor MonitoringBehavior { get; set; }
         public IProvider ProviderBehavior { get; set; }
 
         public Startup(IWebHostEnvironment env, IConfiguration configuration)
         {
-            this._env = env;
-            this._configuration = configuration;
+            this.environment = env;
+            this.configuration = configuration;
 
             this.MonitoringBehavior = new ConsoleMonitor();
             this.ProviderBehavior = new InMemoryProvider();
@@ -39,7 +37,7 @@ namespace Microsoft.SCIM.WebHostSample
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
-            if (_env.IsDevelopment())
+            if (this.environment.IsDevelopment())
             {
                 // Development environment code
                 // Validation for bearer token for authorization used during testing.
@@ -51,20 +49,20 @@ namespace Microsoft.SCIM.WebHostSample
                     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
                 })
-                    .AddJwtBearer(options =>
-                    {
-                        options.TokenValidationParameters =
-                            new TokenValidationParameters
-                            {
-                                ValidateIssuer = false,
-                                ValidateAudience = false,
-                                ValidateLifetime = false,
-                                ValidateIssuerSigningKey = false,
-                                ValidIssuer = this._configuration["Token:TokenIssuer"],
-                                ValidAudience = this._configuration["Token:TokenAudience"],
-                                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(this._configuration["Token:IssuerSigningKey"]))
-                            };
-                    });
+                .AddJwtBearer(options =>
+                {
+                    options.TokenValidationParameters =
+                        new TokenValidationParameters
+                        {
+                            ValidateIssuer = false,
+                            ValidateAudience = false,
+                            ValidateLifetime = false,
+                            ValidateIssuerSigningKey = false,
+                            ValidIssuer = this.configuration["Token:TokenIssuer"],
+                            ValidAudience = this.configuration["Token:TokenAudience"],
+                            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(this.configuration["Token:IssuerSigningKey"]))
+                        };
+                });
             }
             else
             {
@@ -79,25 +77,24 @@ namespace Microsoft.SCIM.WebHostSample
                     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
                 })
-                    .AddJwtBearer(options =>
+                .AddJwtBearer(options =>
+                {
+                    options.Authority = this.configuration["Token:TokenIssuer"];
+                    options.Audience = this.configuration["Token:TokenAudience"];
+                    options.Events = new JwtBearerEvents
                     {
-                        options.Authority = this._configuration["Token:TokenIssuer"];
-                        options.Audience = this._configuration["Token:TokenAudience"];
-                        options.Events = new JwtBearerEvents
+                        OnTokenValidated = context =>
                         {
-                            OnTokenValidated = context =>
-                            {
-                                // NOTE: You can optionally take action when the OAuth 2.0 bearer token was validated.
+                            // NOTE: You can optionally take action when the OAuth 2.0 bearer token was validated.
 
-                                return Task.CompletedTask;
-                            },
-                            OnAuthenticationFailed = AuthenticationFailed
-                        };
-                    });
+                            return Task.CompletedTask;
+                        },
+                        OnAuthenticationFailed = AuthenticationFailed
+                    };
+                });
             }
 
             services.AddControllers().AddNewtonsoftJson();
-
             services.AddSingleton(typeof(IProvider), this.ProviderBehavior);
             services.AddSingleton(typeof(IMonitor), this.MonitoringBehavior);
         }
@@ -105,7 +102,7 @@ namespace Microsoft.SCIM.WebHostSample
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app)
         {
-            if (_env.IsDevelopment())
+            if (this.environment.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
@@ -127,10 +124,13 @@ namespace Microsoft.SCIM.WebHostSample
         private Task AuthenticationFailed(AuthenticationFailedContext arg)
         {
             // For debugging purposes only!
-            var s = $"{{AuthenticationFailed: '{arg.Exception.Message}'}}";
+            string authenticationExceptionMessage = $"{{AuthenticationFailed: '{arg.Exception.Message}'}}";
 
-            arg.Response.ContentLength = s.Length;
-            arg.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(s), 0, s.Length);
+            arg.Response.ContentLength = authenticationExceptionMessage.Length;
+            arg.Response.Body.WriteAsync(
+                Encoding.UTF8.GetBytes(authenticationExceptionMessage), 
+                0,
+                authenticationExceptionMessage.Length);
 
             return Task.FromException(arg.Exception);
         }

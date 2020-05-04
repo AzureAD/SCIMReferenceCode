@@ -67,15 +67,22 @@ namespace Microsoft.SCIM
                     Path = operation.Path
                 };
 
-                OperationValue[] values =
+                OperationValue[] values = null;
+                if (operation?.Value != null)
+                {
+                    values =
                     JsonConvert.DeserializeObject<OperationValue[]>(
                         operation.Value,
                         ProtocolConstants.JsonSettings.Value);
+                }
 
                 if (values == null)
                 {
-                    string value =
-                        JsonConvert.DeserializeObject<string>(operation.Value, ProtocolConstants.JsonSettings.Value);
+                    string value = null;
+                    if (operation?.Value != null)
+                    {
+                        value = JsonConvert.DeserializeObject<string>(operation.Value, ProtocolConstants.JsonSettings.Value);
+                    }
 
                     OperationValue valueSingle = new OperationValue()
                     {
@@ -138,7 +145,7 @@ namespace Microsoft.SCIM
                         switch (operation.Name)
                         {
                             case OperationName.Add:
-                                IEnumerable<Member> newMembers =
+                                IEnumerable<Member> membersToAdd =
                                      operation
                                      .Value
                                      .Select(
@@ -148,10 +155,19 @@ namespace Microsoft.SCIM
                                                  Value = item.Value
                                              })
                                      .ToArray();
-                                group.Members =
-                                    group.Members != null ?
-                                        group.Members.Concat(newMembers).ToArray() : newMembers;
 
+                                IList<Member> buffer = new List<Member>();
+                                foreach (Member member in membersToAdd)
+                                {
+                                    //O(n) with the number of group members, so for large groups this is not optimal
+                                    if (!group.Members.Any((Member item) =>
+                                            string.Equals(item.Value, member.Value, StringComparison.OrdinalIgnoreCase)))
+                                    {
+                                        buffer.Add(member);
+                                    }
+                                }
+
+                                group.Members = group.Members.Concat(buffer.ToArray());
                                 break;
 
                             case OperationName.Remove:
