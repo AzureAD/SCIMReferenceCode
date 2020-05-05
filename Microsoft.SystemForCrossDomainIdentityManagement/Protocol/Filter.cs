@@ -134,7 +134,7 @@ namespace Microsoft.SCIM
                 string encodedValue = this.comparisonValue;
                 foreach (KeyValuePair<string, string> encoding in Filter.ReservedCharacterEncodingsPerRfc2396.Value)
                 {
-                    encodedValue = encodedValue.Replace(encoding.Key, encoding.Value, StringComparison.OrdinalIgnoreCase);
+                    encodedValue = encodedValue.Replace(encoding.Key, encoding.Value, StringComparison.InvariantCulture);
                 }
                 this.comparisonValueEncoded = encodedValue;
             }
@@ -302,8 +302,7 @@ namespace Microsoft.SCIM
                 string encodedFilter = 
                     HttpUtility
                     .UrlEncode(currentFilter)
-                    .Replace(placeholder, filter.ComparisonValueEncoded, StringComparison.OrdinalIgnoreCase);
-                
+                    .Replace(placeholder, filter.ComparisonValueEncoded, StringComparison.InvariantCulture);
                 if (string.IsNullOrWhiteSpace(allFilters))
                 {
                     allFilters =

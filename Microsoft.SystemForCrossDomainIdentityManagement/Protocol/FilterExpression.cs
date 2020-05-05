@@ -225,7 +225,9 @@ namespace Microsoft.SCIM
                            CultureInfo.InvariantCulture,
                            SystemForCrossDomainIdentityManagementProtocolResources.ExceptionInvalidFilterTemplate,
                            this.Text);
+#pragma warning disable CA1303 // Do not pass literals as localized parameters
                     throw new ArgumentOutOfRangeException(message, nameof(this.Group));
+#pragma warning restore CA1303 // Do not pass literals as localized parameters
                 }
                 this.groupValue = value;
             }
@@ -247,7 +249,9 @@ namespace Microsoft.SCIM
                            CultureInfo.InvariantCulture,
                            SystemForCrossDomainIdentityManagementProtocolResources.ExceptionInvalidFilterTemplate,
                            this.Text);
+#pragma warning disable CA1303 // Do not pass literals as localized parameters
                     throw new ArgumentOutOfRangeException(message, nameof(this.Level));
+#pragma warning restore CA1303 // Do not pass literals as localized parameters
                 }
                 this.levelValue = value;
             }
@@ -604,7 +608,7 @@ namespace Microsoft.SCIM
             }
 
             string nextExpression = remainder.Substring(indexNextFilter);
-            int indexClosingBracket = remainder.IndexOf(FilterExpression.BracketClose, StringComparison.OrdinalIgnoreCase);
+            int indexClosingBracket = remainder.IndexOf(FilterExpression.BracketClose, StringComparison.InvariantCulture);
             int nextExpressionLevel;
             int nextExpressionGroup;
             if (indexClosingBracket >= 0 && indexClosingBracket < indexLogicalOperator)
@@ -738,7 +742,7 @@ namespace Microsoft.SCIM
             }
             else
             {
-                int index = input.IndexOf(FilterExpression.Space, StringComparison.OrdinalIgnoreCase);
+                int index = input.IndexOf(FilterExpression.Space, StringComparison.InvariantCulture);
                 if (index >= 0)
                 {
                     // If unquoted string comparison values were to be rejected,
