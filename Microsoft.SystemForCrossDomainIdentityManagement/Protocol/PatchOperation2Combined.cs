@@ -7,6 +7,7 @@ namespace Microsoft.SCIM
     using System;
     using System.Collections.Generic;
     using System.Globalization;
+    using System.Linq;
     using System.Runtime.Serialization;
     using Newtonsoft.Json;
 
@@ -32,12 +33,38 @@ namespace Microsoft.SCIM
         {
             get
             {
-                return JsonConvert.SerializeObject(this.values);
+                if (this.values == null)
+                {
+                    return null;
+                }
+
+                string result = JsonConvert.SerializeObject(this.values);
+                return result;
             }
 
             set
             {
                 this.values = value;
+            }
+        }
+
+        [OnDeserialized]
+        private void OnDeserialized(StreamingContext context)
+        {
+            if (this.Value == null)
+            {
+                if 
+                (
+                    this?.Path?.AttributePath != null &&
+                    this.Path.AttributePath.Contains(AttributeNames.Members, StringComparison.OrdinalIgnoreCase) &&
+                    this.Name == SCIM.OperationName.Remove &&
+                    this.Path?.SubAttributes?.Count == 1
+                )
+                {
+                    this.Value = this.Path.SubAttributes.First().ComparisonValue;
+                    IPath path = SCIM.Path.Create(AttributeNames.Members);
+                    this.Path = path;
+                }
             }
         }
 

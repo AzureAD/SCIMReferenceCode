@@ -299,7 +299,10 @@ namespace Microsoft.SCIM
                 Filter clone = new Filter(filter);
                 clone.ComparisonValue = placeholder;
                 string currentFilter = clone.Serialize();
-                string encodedFilter = HttpUtility.UrlEncode(currentFilter).Replace(placeholder, filter.ComparisonValueEncoded, StringComparison.InvariantCulture);
+                string encodedFilter = 
+                    HttpUtility
+                    .UrlEncode(currentFilter)
+                    .Replace(placeholder, filter.ComparisonValueEncoded, StringComparison.InvariantCulture);
                 if (string.IsNullOrWhiteSpace(allFilters))
                 {
                     allFilters =
@@ -333,11 +336,13 @@ namespace Microsoft.SCIM
 
         public static bool TryParse(string filterExpression, out IReadOnlyCollection<IFilter> filters)
         {
-            if(filterExpression == null)
+            string expression = filterExpression?.Trim()?.Unquote();
+
+            if (string.IsNullOrWhiteSpace(expression))
             {
                 throw new ArgumentNullException(nameof(filterExpression));
             }
-            string expression = filterExpression.Trim().Unquote();
+
             try
             {
                 IReadOnlyCollection<IFilter> buffer = new FilterExpression(expression).ToFilters();

@@ -51,14 +51,17 @@
     <EmbeddedResource Update="SystemForCrossDomainIdentityManagementServiceResources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>SystemForCrossDomainIdentityManagementServiceResources.Designer.cs</LastGenOutput>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
     <EmbeddedResource Update="SystemForCrossDomainIdentityManagementProtocolResources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>SystemForCrossDomainIdentityManagementProtocolResources.Designer.cs</LastGenOutput>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
     <EmbeddedResource Update="SystemForCrossDomainIdentityManagementSchemasResources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>SystemForCrossDomainIdentityManagementSchemasResources.Designer.cs</LastGenOutput>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
   </ItemGroup>
 

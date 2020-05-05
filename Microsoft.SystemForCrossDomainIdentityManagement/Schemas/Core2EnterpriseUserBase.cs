@@ -13,6 +13,7 @@ namespace Microsoft.SCIM
             : base()
         {
             this.AddSchema(SchemaIdentifiers.Core2EnterpriseUser);
+            this.EnterpriseExtension = new ExtensionAttributeEnterpriseUser2();
         }
 
         [DataMember(Name = AttributeNames.ExtensionEnterpriseUser2)]
