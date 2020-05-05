@@ -201,7 +201,7 @@
 									"\r",
 									"pm.test(\"User endpoint exists\", function () {\r",
 									"    var jsonData = pm.response.json();\r",
-									"    pm.expect(jsonData[0].endpoint).to.eql(\"/Users\");\r",
+									"    pm.expect(jsonData.Resources[0].endpoint).to.eql(\"/Users\");\r",
 									"});"
 								],
 								"type": "text/javascript"
