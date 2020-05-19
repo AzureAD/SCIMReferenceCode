@@ -17,6 +17,7 @@ namespace Microsoft.SCIM
         {
         }
 
+        [HttpGet]
         public ServiceConfigurationBase Get()
         {
             string correlationIdentifier = null;

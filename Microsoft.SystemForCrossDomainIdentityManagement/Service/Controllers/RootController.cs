@@ -4,7 +4,7 @@ namespace Microsoft.SCIM
 {
     using System;
 
-    public sealed class RootController : ControllerTemplate<Resource>
+    internal sealed class RootController : ControllerTemplate<Resource>
     {
         public RootController(IProvider provider, IMonitor monitor)
             : base(provider, monitor)

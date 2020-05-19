@@ -4,6 +4,7 @@
 
 namespace Microsoft.SCIM.WebHostSample
 {
+    using System;
     using System.Text;
     using System.Threading.Tasks;
     using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -14,6 +15,7 @@ namespace Microsoft.SCIM.WebHostSample
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
     using Microsoft.IdentityModel.Tokens;
+    using Microsoft.OpenApi.Models;
     using Microsoft.SCIM.WebHostSample.Provider;
 
     public class Startup
@@ -95,6 +97,29 @@ namespace Microsoft.SCIM.WebHostSample
             }
 
             services.AddControllers().AddNewtonsoftJson();
+
+            // Register the Swagger generator, defining 1 or more Swagger documents
+            services.AddSwaggerGen(c =>
+            {
+                c.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Version = "v1",
+                    Title = "SCIM Reference Code",
+                    Description = "The reference code provided in this repository will help you get started building a SCIM endpoint. It contains guidance on how to implement basic requirements for CRUD operations on a user and group object (also known as resources in SCIM) and optional features of the standard such as filtering and pagination.",
+                    Contact = new OpenApiContact
+                    {
+                        Name = "SCIM Reference Code on GitHub",
+                        Email = string.Empty,
+                        Url = new Uri("https://github.com/AzureAD/SCIMReferenceCode/wiki"),
+                    },
+                    License = new OpenApiLicense
+                    {
+                        Name = "AzureAD/SCIMReferenceCode is licensed under the MIT License",
+                        Url = new Uri("https://github.com/AzureAD/SCIMReferenceCode/blob/master/LICENSE"),
+                    }
+                });
+            });
+
             services.AddSingleton(typeof(IProvider), this.ProviderBehavior);
             services.AddSingleton(typeof(IMonitor), this.MonitoringBehavior);
         }
@@ -108,6 +133,17 @@ namespace Microsoft.SCIM.WebHostSample
             }
 
             app.UseHsts();
+
+            // Enable middleware to serve generated Swagger as a JSON endpoint.
+            app.UseSwagger();
+
+            // Enable middleware to serve swagger-ui (HTML, JS, CSS, etc.),
+            // specifying the Swagger JSON endpoint.
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "SCIM Reference Code V1");
+                c.RoutePrefix = string.Empty;
+            });
 
             app.UseRouting();
             app.UseHttpsRedirection();

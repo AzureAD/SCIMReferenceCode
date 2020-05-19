@@ -18,6 +18,7 @@ namespace Microsoft.SCIM
         {
         }
 
+        [HttpGet]
         public IEnumerable<TypeScheme> Get()
         {
             string correlationIdentifier = null;
