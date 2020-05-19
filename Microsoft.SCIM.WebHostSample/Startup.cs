@@ -5,6 +5,7 @@
 namespace Microsoft.SCIM.WebHostSample
 {
     using System;
+    using System.Reflection;
     using System.Text;
     using System.Threading.Tasks;
     using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -118,6 +119,11 @@ namespace Microsoft.SCIM.WebHostSample
                         Url = new Uri("https://github.com/AzureAD/SCIMReferenceCode/blob/master/LICENSE"),
                     }
                 });
+
+                // Set the comments path for the Swagger JSON and UI.
+                var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                var xmlPath = System.IO.Path.Combine(AppContext.BaseDirectory, xmlFile);
+                c.IncludeXmlComments(xmlPath);
             });
 
             services.AddSingleton(typeof(IProvider), this.ProviderBehavior);
@@ -143,6 +149,9 @@ namespace Microsoft.SCIM.WebHostSample
             {
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "SCIM Reference Code V1");
                 c.RoutePrefix = string.Empty;
+
+                // Remove "Try it out" button
+                c.SupportedSubmitMethods();
             });
 
             app.UseRouting();
