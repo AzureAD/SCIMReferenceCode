@@ -6,42 +6,23 @@ namespace Microsoft.SCIM.WebHostSample.Provider
     using System.Collections.Generic;
     using System.Threading.Tasks;
     using Microsoft.SCIM;
+    using Microsoft.SCIM.WebHostSample.Resources;
 
     public class InMemoryProvider : ProviderBase
     {
         private readonly ProviderBase groupProvider;
         private readonly ProviderBase userProvider;
 
+        private static readonly Lazy<IReadOnlyCollection<TypeScheme>> TypeSchema =
+            new Lazy<IReadOnlyCollection<TypeScheme>>(
+                () =>
+                    new TypeScheme[] { SampleTypeScheme.UserTypeSceme, SampleTypeScheme.GroupTypeSceme, SampleTypeScheme.EnterpriseUserTypeScheme });
+
         private static readonly Lazy<IReadOnlyCollection<Core2ResourceType>> Types =
             new Lazy<IReadOnlyCollection<Core2ResourceType>>(
                 () =>
-                    new Core2ResourceType[] { userResourceType, groupResourceType } );
+                    new Core2ResourceType[] { SampleResourceTypes.userResourceType, SampleResourceTypes.groupResourceType } );
 
-        private static Core2ResourceType userResourceType
-        {
-            get
-            {
-                Core2ResourceType userResource = new Core2ResourceType();
-                userResource.Identifier = "User";
-                userResource.Endpoint = new Uri("http://localhost:58464/Scim/Users");
-                userResource.Schema = "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User";
-
-                return userResource;
-            }
-        }
-
-        private static Core2ResourceType groupResourceType
-        {
-            get
-            {
-                Core2ResourceType groupResource = new Core2ResourceType();
-                groupResource.Identifier = "Group";
-                groupResource.Endpoint = new Uri("http://localhost:58464/Scim/Groups");
-                groupResource.Schema = "urn:ietf:params:scim:schemas:core:2.0:Group";
-
-                return groupResource;
-            }
-        }
 
         public InMemoryProvider()
         {
@@ -54,6 +35,14 @@ namespace Microsoft.SCIM.WebHostSample.Provider
             get
             {
                 return InMemoryProvider.Types.Value;
+            }
+        }
+
+        public override IReadOnlyCollection<TypeScheme> Schema
+        {
+            get
+            {
+                return InMemoryProvider.TypeSchema.Value;
             }
         }
 
