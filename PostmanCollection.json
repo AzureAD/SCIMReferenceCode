@@ -51,8 +51,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Token",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Token",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -110,8 +110,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/users",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/users",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -164,8 +164,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -222,8 +222,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/ResourceTypes",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/ResourceTypes",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -280,8 +280,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/serviceConfiguration",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/serviceConfiguration",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -337,8 +337,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Schemas",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Schemas",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -407,8 +407,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -472,8 +472,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -522,8 +522,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{id1}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/{{id1}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -572,8 +572,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{id2}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/{{id2}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -621,8 +621,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users?attributes=userName,emails",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users?attributes=userName,emails",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -671,8 +671,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/?filter=DisplayName+eq+%22BobIsAmazing%22",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/?filter=DisplayName+eq+%22BobIsAmazing%22",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -723,8 +723,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{id1}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/{{id1}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -778,8 +778,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{id1}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/{{id1}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -838,8 +838,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{id2}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/{{id2}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -887,8 +887,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{id2}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/{{id2}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -931,8 +931,8 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{id1}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/{{id1}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -975,8 +975,8 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{id2}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/{{id2}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -1055,8 +1055,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -1118,8 +1118,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -1181,8 +1181,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -1254,8 +1254,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -1297,8 +1297,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -1360,8 +1360,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -1419,8 +1419,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups/{{groupid3}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups/{{groupid3}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -1481,8 +1481,8 @@
 							}
 						],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups/{{groupid3}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups/{{groupid3}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -1527,8 +1527,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups/{{groupid}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups/{{groupid}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -1573,8 +1573,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups/{{groupid}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups/{{groupid}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -1619,8 +1619,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups/{{groupid}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups/{{groupid}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -1673,8 +1673,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups/{{groupid}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups/{{groupid}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -1719,8 +1719,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups/{{groupid}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups/{{groupid}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -1773,8 +1773,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups/{{groupid}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups/{{groupid}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -1817,8 +1817,8 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{id3}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/{{id3}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -1861,8 +1861,8 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{id4}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/{{id4}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -1905,8 +1905,8 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups/{{groupid}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups/{{groupid}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -1949,8 +1949,8 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups/{{groupid2}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups/{{groupid2}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -1993,8 +1993,8 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups/{{groupid3}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups/{{groupid3}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -2063,8 +2063,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -2126,8 +2126,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -2173,8 +2173,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users?attributes=emails%5Btype+eq+%22work%22%5D",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users?attributes=emails%5Btype+eq+%22work%22%5D",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -2227,8 +2227,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users?attributes=emails%5Bvalue+eq+%22emailName357%22%5D",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users?attributes=emails%5Bvalue+eq+%22emailName357%22%5D",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -2276,8 +2276,8 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{id1}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/{{id1}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -2320,8 +2320,8 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{id2}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/{{id2}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -2400,8 +2400,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -2468,8 +2468,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -2520,8 +2520,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -2583,8 +2583,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -2646,8 +2646,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -2705,8 +2705,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -2764,8 +2764,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -2827,8 +2827,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -2890,8 +2890,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -2950,8 +2950,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{1stuserid}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/{{1stuserid}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -3014,8 +3014,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{1stuserid}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/{{1stuserid}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -3078,8 +3078,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -3137,8 +3137,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{1stuserid}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/{{1stuserid}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -3197,8 +3197,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{1stuserid}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/{{1stuserid}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -3247,8 +3247,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{1stuserid}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/{{1stuserid}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -3321,8 +3321,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{1stuserid}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/{{1stuserid}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -3371,8 +3371,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users?startIndex=1&count=2",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users?startIndex=1&count=2",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -3425,8 +3425,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users?attributes=userName,emails",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users?attributes=userName,emails",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -3494,8 +3494,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -3538,8 +3538,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users?filter=name.FamilyName eq Employee and (emails.Value co example.com or emails.Value co example.org)",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users?filter=name.FamilyName eq Employee and (emails.Value co example.com or emails.Value co example.org)",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -3588,8 +3588,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users?filter=userName sw O",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users?filter=userName sw O",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -3638,8 +3638,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users?filter=meta.Created gt 2015-10-10T14:38:21.8617979-07:00",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users?filter=meta.Created gt 2015-10-10T14:38:21.8617979-07:00",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -3713,8 +3713,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -3774,8 +3774,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups/{{1stgroupid}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups/{{1stgroupid}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -3836,8 +3836,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups/{{1stgroupid}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups/{{1stgroupid}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -3882,8 +3882,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups/{{1stgroupid}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups/{{1stgroupid}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -3928,8 +3928,8 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups/{{1stgroupid}}?excludedAttributes=members",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups/{{1stgroupid}}?excludedAttributes=members",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -3999,8 +3999,8 @@
 							}
 						},
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups/{{1stgroupid}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups/{{1stgroupid}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -4049,8 +4049,8 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{1stuserid}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/{{1stuserid}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -4093,8 +4093,8 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{2nduserid}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/{{2nduserid}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -4137,8 +4137,8 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{3rduserid}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/{{3rduserid}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -4181,8 +4181,8 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{4thuserid}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/{{4thuserid}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -4225,8 +4225,8 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{enteruserid}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users/{{enteruserid}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -4269,8 +4269,8 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups/{{1stgroupid}}",
-							"protocol": "https",
+							"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups/{{1stgroupid}}",
+							"protocol": "{{Protocol}}",
 							"host": [
 								"{{Server}}{{Port}}"
 							],
@@ -4321,8 +4321,8 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "https://{{Server}}{{Port}}/{{Api}}/Users?attributes=userName",
-					"protocol": "https",
+					"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Users?attributes=userName",
+					"protocol": "{{Protocol}}",
 					"host": [
 						"{{Server}}{{Port}}"
 					],
@@ -4375,8 +4375,8 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "https://{{Server}}{{Port}}/{{Api}}/Groups",
-					"protocol": "https",
+					"raw": "{{Protocol}}://{{Server}}{{Port}}/{{Api}}/Groups",
+					"protocol": "{{Protocol}}",
 					"host": [
 						"{{Server}}{{Port}}"
 					],
