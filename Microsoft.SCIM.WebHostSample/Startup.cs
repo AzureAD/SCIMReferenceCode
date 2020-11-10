@@ -40,29 +40,57 @@ namespace Microsoft.SCIM.WebHostSample
             if (this.environment.IsDevelopment())
             {
                 // Development environment code
-                // Validation for bearer token for authorization used during testing.
-                // NOTE: It's not recommended to use this code in production, it is not meant to replace proper OAuth authentication.
-                //       This option is primarily available for testing purposes.
-                services.AddAuthentication(options =>
+
+                if (bool.Parse(this.configuration["Token:UseAzureADToken"]))
                 {
-                    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-                })
-                .AddJwtBearer(options =>
-                {
-                    options.TokenValidationParameters =
-                        new TokenValidationParameters
+                    services.AddAuthentication(options =>
+                    {
+                        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                    })
+                    .AddJwtBearer(options =>
+                    {
+                        options.Authority = this.configuration["Token:TokenIssuer"];
+                        options.Audience = this.configuration["Token:TokenAudience"];
+                        options.Events = new JwtBearerEvents
                         {
-                            ValidateIssuer = false,
-                            ValidateAudience = false,
-                            ValidateLifetime = false,
-                            ValidateIssuerSigningKey = false,
-                            ValidIssuer = this.configuration["Token:TokenIssuer"],
-                            ValidAudience = this.configuration["Token:TokenAudience"],
-                            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(this.configuration["Token:IssuerSigningKey"]))
+                            OnTokenValidated = context =>
+                            {
+                                // NOTE: You can optionally take action when the OAuth 2.0 bearer token was validated.
+
+                                return Task.CompletedTask;
+                            },
+                            OnAuthenticationFailed = AuthenticationFailed
                         };
-                });
+                    });
+                }
+                else
+                {
+                    // Validation for bearer token for authorization used during testing.
+                    // NOTE: It's not recommended to use this code in production, it is not meant to replace proper OAuth authentication.
+                    //       This option is primarily available for testing purposes.
+                    services.AddAuthentication(options =>
+                    {
+                        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                    })
+                    .AddJwtBearer(options =>
+                    {
+                        options.TokenValidationParameters =
+                            new TokenValidationParameters
+                            {
+                                ValidateIssuer = false,
+                                ValidateAudience = false,
+                                ValidateLifetime = false,
+                                ValidateIssuerSigningKey = false,
+                                ValidIssuer = this.configuration["Token:TokenIssuer"],
+                                ValidAudience = this.configuration["Token:TokenAudience"],
+                                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(this.configuration["Token:IssuerSigningKey"]))
+                            };
+                    });
+                }
             }
             else
             {
