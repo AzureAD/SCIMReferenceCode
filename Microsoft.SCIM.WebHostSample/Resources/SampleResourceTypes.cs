@@ -1,33 +1,36 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿// Copyright (c) Microsoft Corporation.// Licensed under the MIT license.
 
 namespace Microsoft.SCIM.WebHostSample.Resources
 {
+    using System;
+
     public class SampleResourceTypes
     {
-        public static Core2ResourceType userResourceType
+        public static Core2ResourceType UserResourceType
         {
             get
             {
-                Core2ResourceType userResource = new Core2ResourceType();
-                userResource.Identifier = SampleConstants.User;
-                userResource.Endpoint = new Uri("http://localhost:58464/Scim/Users");
-                userResource.Schema = SampleConstants.UserEnterpriseSchema;
+                Core2ResourceType userResource = new Core2ResourceType
+                {
+                    Identifier = Types.User,
+                    Endpoint = new Uri($"{SampleConstants.SampleScimEndpoint}/Users"),
+                    Schema = SampleConstants.UserEnterpriseSchema
+                };
 
                 return userResource;
             }
         }
 
-        public static Core2ResourceType groupResourceType
+        public static Core2ResourceType GroupResourceType
         {
             get
             {
-                Core2ResourceType groupResource = new Core2ResourceType();
-                groupResource.Identifier = SampleConstants.Group;
-                groupResource.Endpoint = new Uri("http://localhost:58464/Scim/Groups");
-                groupResource.Schema = SampleConstants.GroupSchema;
+                Core2ResourceType groupResource = new Core2ResourceType
+                {
+                    Identifier = Types.Group,
+                    Endpoint = new Uri($"{SampleConstants.SampleScimEndpoint}/Groups"),
+                    Schema = $"{SampleConstants.Core2SchemaPrefix}{Types.Group}"
+                };
 
                 return groupResource;
             }

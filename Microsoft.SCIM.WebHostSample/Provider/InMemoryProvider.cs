@@ -16,12 +16,20 @@ namespace Microsoft.SCIM.WebHostSample.Provider
         private static readonly Lazy<IReadOnlyCollection<TypeScheme>> TypeSchema =
             new Lazy<IReadOnlyCollection<TypeScheme>>(
                 () =>
-                    new TypeScheme[] { SampleTypeScheme.UserTypeSceme, SampleTypeScheme.GroupTypeSceme, SampleTypeScheme.EnterpriseUserTypeScheme });
+                    new TypeScheme[]
+                    { 
+                        SampleTypeScheme.UserTypeScheme,
+                        SampleTypeScheme.GroupTypeScheme, 
+                        SampleTypeScheme.EnterpriseUserTypeScheme,
+                        SampleTypeScheme.ResourceTypesTypeScheme,
+                        SampleTypeScheme.SchemaTypeScheme,
+                        SampleTypeScheme.ServiceProviderConfigTypeScheme
+                    });
 
         private static readonly Lazy<IReadOnlyCollection<Core2ResourceType>> Types =
             new Lazy<IReadOnlyCollection<Core2ResourceType>>(
                 () =>
-                    new Core2ResourceType[] { SampleResourceTypes.userResourceType, SampleResourceTypes.groupResourceType } );
+                    new Core2ResourceType[] { SampleResourceTypes.UserResourceType, SampleResourceTypes.GroupResourceType } );
 
 
         public InMemoryProvider()
@@ -30,22 +38,10 @@ namespace Microsoft.SCIM.WebHostSample.Provider
             this.userProvider = new InMemoryUserProvider();
         }
 
-        public override IReadOnlyCollection<Core2ResourceType> ResourceTypes
-        {
-            get
-            {
-                return InMemoryProvider.Types.Value;
-            }
-        }
-
-        public override IReadOnlyCollection<TypeScheme> Schema
-        {
-            get
-            {
-                return InMemoryProvider.TypeSchema.Value;
-            }
-        }
-
+        public override IReadOnlyCollection<Core2ResourceType> ResourceTypes => InMemoryProvider.Types.Value;
+       
+        public override IReadOnlyCollection<TypeScheme> Schema => InMemoryProvider.TypeSchema.Value;
+        
         public override Task<Resource> CreateAsync(Resource resource, string correlationIdentifier)
         {
             if (resource is Core2EnterpriseUser)

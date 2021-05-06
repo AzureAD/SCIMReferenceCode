@@ -791,23 +791,23 @@ namespace Microsoft.SCIM
 
                 if (this.Quoted)
                 {
-                    this.DataType = AttributeDataType.String;
+                    this.DataType = AttributeDataType.@string;
                 }
                 else if (bool.TryParse(this.Value, out bool _))
                 {
-                    this.DataType = AttributeDataType.Boolean;
+                    this.DataType = AttributeDataType.boolean;
                 }
                 else if (long.TryParse(this.Value, out long _))
                 {
-                    this.DataType = AttributeDataType.Integer;
+                    this.DataType = AttributeDataType.integer;
                 }
                 else if (double.TryParse(this.Value, out double _))
                 {
-                    this.DataType = AttributeDataType.Decimal;
+                    this.DataType = AttributeDataType.@decimal;
                 }
                 else
                 {
-                    this.DataType = AttributeDataType.String;
+                    this.DataType = AttributeDataType.@string;
                 }
             }
 

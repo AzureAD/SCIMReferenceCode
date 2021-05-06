@@ -7,9 +7,11 @@ namespace Microsoft.SCIM
     using System.Net;
     using System.Net.Http;
     using System.Web.Http;
+    using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
 
     [Route(ServiceConstants.RouteResourceTypes)]
+    [Authorize]
     [ApiController]
     public sealed class ResourceTypesController : ControllerTemplate
     {
@@ -18,7 +20,7 @@ namespace Microsoft.SCIM
         {
         }
 
-        public IEnumerable<Core2ResourceType> Get()
+        public QueryResponseBase Get()
         {
             string correlationIdentifier = null;
 
@@ -36,8 +38,15 @@ namespace Microsoft.SCIM
                     throw new HttpResponseException(HttpStatusCode.InternalServerError);
                 }
 
-                IEnumerable<Core2ResourceType> result = provider.ResourceTypes;
+                IReadOnlyCollection<Resource> resources = provider.ResourceTypes;
+                QueryResponseBase result = new QueryResponse(resources);
+
+                result.TotalResults =
+                    result.ItemsPerPage =
+                        resources.Count;
+                result.StartIndex = 1;
                 return result;
+
             }
             catch (ArgumentException argumentException)
             {

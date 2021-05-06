@@ -1,32 +1,36 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿// Copyright (c) Microsoft Corporation.// Licensed under the MIT license.
 
 namespace Microsoft.SCIM.WebHostSample.Resources
 {
     public static class SampleTypeScheme
     {
 
-        public static TypeScheme UserTypeSceme
+        public static TypeScheme UserTypeScheme
         {
             get
             {
-                TypeScheme userType = new TypeScheme();
-                userType.Description = SampleConstants.UserAccount;
-                userType.Identifier = SampleConstants.UserCore2Schema;
-                userType.Name = SampleConstants.User;
-                userType.AddAttribute(UserNameAttributeScheme);
-                userType.AddAttribute(NameAttributeScheme);
-                userType.AddAttribute(DisplayNameAttributeScheme);
-                userType.AddAttribute(TittleAttributeScheme);
-                userType.AddAttribute(UserTypeAttributeScheme);
-                userType.AddAttribute(PreferredLanguageAttrbiuteScheme);
-                userType.AddAttribute(LocaleAttributeScheme);
-                userType.AddAttribute(ActiveAttributeScheme);
-                userType.AddAttribute(EmailsAttributeScheme);
-                userType.AddAttribute(PhoneNumbersAttributeScheme);
-                userType.AddAttribute(AddressesAttributeScheme);
+                TypeScheme userType = new TypeScheme
+                {
+                    Description = SampleConstants.UserAccount,
+                    Identifier = $"{SampleConstants.Core2SchemaPrefix}{Types.User}",
+                    Name = Types.User
+                };
+                userType.AddAttribute(SampleUserAttributes.UserNameAttributeScheme);
+                userType.AddAttribute(SampleUserAttributes.NameAttributeScheme);
+                userType.AddAttribute(SampleUserAttributes.DisplayNameAttributeScheme);
+                userType.AddAttribute(SampleUserAttributes.TitleAttributeScheme);
+                userType.AddAttribute(SampleUserAttributes.UserTypeAttributeScheme);
+                userType.AddAttribute(SampleUserAttributes.PreferredLanguageAttrbiuteScheme);
+                userType.AddAttribute(SampleUserAttributes.LocaleAttributeScheme);
+                userType.AddAttribute(SampleUserAttributes.ActiveAttributeScheme);
+                userType.AddAttribute(SampleUserAttributes.EmailsAttributeScheme);
+                userType.AddAttribute(SampleUserAttributes.PhoneNumbersAttributeScheme);
+                userType.AddAttribute(SampleUserAttributes.AddressesAttributeScheme);
+                userType.AddAttribute(SampleUserAttributes.NickNameAttributeScheme);
+                userType.AddAttribute(SampleUserAttributes.TimezoneAttributeScheme);
+                userType.AddAttribute(SampleUserAttributes.ImsAttributeScheme);
+                userType.AddAttribute(SampleUserAttributes.RolessAttributeScheme);
+
 
                 return userType;
             }
@@ -36,229 +40,97 @@ namespace Microsoft.SCIM.WebHostSample.Resources
         {
             get
             {
-                TypeScheme enterpriseType = new TypeScheme();
-                enterpriseType.Description = SampleConstants.UserEnterprise;
-                enterpriseType.Identifier = SampleConstants.UserEnterpriseSchema;
-                enterpriseType.Name = SampleConstants.UserEnterpriseName;
-                enterpriseType.AddAttribute(ManagerAttributeScheme);
-                enterpriseType.AddAttribute(EmployeeNumberAttributeScheme);
-                enterpriseType.AddAttribute(CostcenterAttributeScheme);
-                enterpriseType.AddAttribute(OrganizationAttributeScheme);
-                enterpriseType.AddAttribute(DivisionAttributeScheme);
-                enterpriseType.AddAttribute(DepartmentAttributeScheme);
+                TypeScheme enterpriseType = new TypeScheme
+                {
+                    Description = SampleConstants.UserEnterprise,
+                    Identifier = SampleConstants.UserEnterpriseSchema,
+                    Name = SampleConstants.UserEnterpriseName
+                };
+                enterpriseType.AddAttribute(SampleEnterpriseUserAttributes.ManagerAttributeScheme);
+                enterpriseType.AddAttribute(SampleEnterpriseUserAttributes.EmployeeNumberAttributeScheme);
+                enterpriseType.AddAttribute(SampleEnterpriseUserAttributes.CostcenterAttributeScheme);
+                enterpriseType.AddAttribute(SampleEnterpriseUserAttributes.OrganizationAttributeScheme);
+                enterpriseType.AddAttribute(SampleEnterpriseUserAttributes.DivisionAttributeScheme);
+                enterpriseType.AddAttribute(SampleEnterpriseUserAttributes.DepartmentAttributeScheme);
 
                 return enterpriseType;
             }
         }
 
-        public static TypeScheme GroupTypeSceme
+        public static TypeScheme GroupTypeScheme
         {
             get
             {
-                TypeScheme groupType = new TypeScheme();
-                groupType.Description = SampleConstants.Group;
-                groupType.Identifier = SampleConstants.GroupSchema;
-                groupType.Name = SampleConstants.Group;
-                groupType.AddAttribute(GroupDisplayNameAttributeScheme);
-                groupType.AddAttribute(MembersAttributeScheme);
-
+                TypeScheme groupType = new TypeScheme
+                {
+                    Description = Types.Group,
+                    Identifier = $"{SampleConstants.Core2SchemaPrefix}{Types.Group}",
+                    Name = Types.Group
+                };
+                groupType.AddAttribute(SampleGroupAttributes.GroupDisplayNameAttributeScheme);
+                groupType.AddAttribute(SampleGroupAttributes.MembersAttributeScheme);
                 return groupType;
             }
         }
 
-        public static AttributeScheme GroupDisplayNameAttributeScheme
+        public static TypeScheme ResourceTypesTypeScheme
         {
             get
             {
-                AttributeScheme groupDisplayScheme = new AttributeScheme("displayName", AttributeDataType.String, false);
-                groupDisplayScheme.Description = SampleConstants.DescriptionGroupDisplayName;
-                groupDisplayScheme.Required = true;
-                groupDisplayScheme.Uniqueness = Uniqueness.server;
+                TypeScheme resourceTypesType = new TypeScheme
+                {
+                    Description = SampleConstants.DescriptionResourceTypeSchema,
+                    Identifier = $"{SampleConstants.Core2SchemaPrefix}{Types.ResourceType}",
+                    Name = Types.ResourceType
+                };
+                resourceTypesType.AddAttribute(SampleCommonAttributes.IdentiFierAttributeScheme);
+                resourceTypesType.AddAttribute(SampleResourceTypeAttributes.NameAttributeScheme);
+                resourceTypesType.AddAttribute(SampleResourceTypeAttributes.EndpointAttributeScheme);
+                resourceTypesType.AddAttribute(SampleResourceTypeAttributes.SchemaAttributeScheme);
 
-                return groupDisplayScheme;
+                return resourceTypesType;
             }
         }
 
-        public static AttributeScheme MembersAttributeScheme
+        public static TypeScheme SchemaTypeScheme
         {
             get
             {
-                AttributeScheme membersScheme = new AttributeScheme("members", AttributeDataType.Complex, true);
-                membersScheme.Description = SampleConstants.DescriptionMemebers;
+                TypeScheme schemaType = new TypeScheme
+                {
+                    Description = SampleConstants.DescriptionScimSchema,
+                    Identifier = $"{SampleConstants.Core2SchemaPrefix}{Types.Schema}",
+                    Name = Types.Schema
+                };
+                schemaType.AddAttribute(SampleCommonAttributes.IdentiFierAttributeScheme);
+                schemaType.AddAttribute(SampleSchemaAttributes.NameAttributeScheme);
+                schemaType.AddAttribute(SampleSchemaAttributes.DescriptionAttributeScheme);
+                schemaType.AddAttribute(SampleSchemaAttributes.AttributesAttributeScheme);
 
-                return membersScheme;
+                return schemaType;
             }
         }
 
-        public static AttributeScheme UserNameAttributeScheme
+        public static TypeScheme ServiceProviderConfigTypeScheme
         {
             get
             {
-                AttributeScheme userNameScheme = new AttributeScheme("userName", AttributeDataType.String, false);
-                userNameScheme.Description = SampleConstants.DescriptionUserName;
-                userNameScheme.Required = true;
-                userNameScheme.Uniqueness = Uniqueness.server;
-                return userNameScheme;
-            }
-        }
+                TypeScheme serviceProviderConfigType = new TypeScheme
+                {
+                    Description = SampleConstants.DescriptionServiceProviderConfigSchema,
+                    Identifier = $"{SampleConstants.Core2SchemaPrefix}{Types.ServiceProviderConfiguration}",
+                    Name = SampleConstants.ServiceProviderConfig
+                };
+                serviceProviderConfigType.AddAttribute(SampleServiceProviderConfigAttributes.DocumentationUriAttributeScheme);
+                serviceProviderConfigType.AddAttribute(SampleServiceProviderConfigAttributes.PatchAttributeScheme);
+                serviceProviderConfigType.AddAttribute(SampleServiceProviderConfigAttributes.BulkAttributeScheme);
+                serviceProviderConfigType.AddAttribute(SampleServiceProviderConfigAttributes.FilterAttributeScheme);
+                serviceProviderConfigType.AddAttribute(SampleServiceProviderConfigAttributes.ChangePasswordAttributeScheme);
+                serviceProviderConfigType.AddAttribute(SampleServiceProviderConfigAttributes.SortAttributeScheme);
+                serviceProviderConfigType.AddAttribute(SampleServiceProviderConfigAttributes.EtagAttributeScheme);
+                serviceProviderConfigType.AddAttribute(SampleServiceProviderConfigAttributes.AuthenticationSchemesAttributeScheme);
 
-        public static AttributeScheme NameAttributeScheme
-        {
-            get
-            {
-                AttributeScheme nameScheme = new AttributeScheme("name", AttributeDataType.Complex, false);
-                nameScheme.Description = SampleConstants.DescriptionName;
-                return nameScheme;
-            }
-        }
-
-        public static AttributeScheme DisplayNameAttributeScheme
-        {
-            get
-            {
-                AttributeScheme displayNameScheme = new AttributeScheme("displayName", AttributeDataType.String, false);
-                displayNameScheme.Description = SampleConstants.DescriptionDisplayName;
-                return displayNameScheme;
-            }
-        }
-
-        public static AttributeScheme TittleAttributeScheme
-        {
-            get
-            {
-                AttributeScheme titleScheme = new AttributeScheme("title", AttributeDataType.String, false);
-                titleScheme.Description = SampleConstants.DescriptionTitle;
-                return titleScheme;
-            }
-        }
-
-        public static AttributeScheme UserTypeAttributeScheme
-        {
-            get
-            {
-                AttributeScheme userTypeScheme = new AttributeScheme("userType", AttributeDataType.String, false);
-                userTypeScheme.Description = SampleConstants.DescriptionUserType;
-                return userTypeScheme;
-            }
-        }
-
-        public static AttributeScheme PreferredLanguageAttrbiuteScheme
-        {
-            get
-            {
-                AttributeScheme preferredLanguageScheme = new AttributeScheme("preferredLanguage", AttributeDataType.String, false);
-                preferredLanguageScheme.Description = SampleConstants.DescriptionPreferredLanguage;
-                return preferredLanguageScheme;
-            }
-        }
-
-        public static AttributeScheme LocaleAttributeScheme
-        {
-            get
-            {
-                AttributeScheme preferredLanguageScheme = new AttributeScheme("locale", AttributeDataType.String, false);
-                preferredLanguageScheme.Description = SampleConstants.DescriptionLocale;
-                return preferredLanguageScheme;
-            }
-        }
-
-        public static AttributeScheme ActiveAttributeScheme
-        {
-            get
-            {
-                AttributeScheme activeScheme = new AttributeScheme("active", AttributeDataType.Boolean, false);
-                activeScheme.Description = SampleConstants.DescriptionActive;
-                return activeScheme;
-            }
-        }
-
-        public static AttributeScheme EmailsAttributeScheme
-        {
-            get
-            {
-                AttributeScheme emailsScheme = new AttributeScheme("emails", AttributeDataType.Complex, true);
-                emailsScheme.Description = SampleConstants.DescriptionEmails;
-                return emailsScheme;
-            }
-        }
-
-        public static AttributeScheme PhoneNumbersAttributeScheme
-        {
-            get
-            {
-                AttributeScheme phoneNumbersScheme = new AttributeScheme("phoneNumbers", AttributeDataType.Complex, true);
-                phoneNumbersScheme.Description = SampleConstants.DescriptionPhoneNumbers;
-                return phoneNumbersScheme;
-            }
-        }
-
-        public static AttributeScheme AddressesAttributeScheme
-        {
-            get
-            {
-                AttributeScheme addressesScheme = new AttributeScheme("addresses", AttributeDataType.Complex, true);
-                addressesScheme.Description = SampleConstants.DescriptionAddresses;
-                return addressesScheme;
-            }
-        }
-
-        public static AttributeScheme ManagerAttributeScheme
-        {
-            get
-            {
-                AttributeScheme managerScheme = new AttributeScheme("manager", AttributeDataType.Complex, false);
-                managerScheme.Description = SampleConstants.DescriptionManager;
-                return managerScheme;
-            }
-        }
-
-        public static AttributeScheme EmployeeNumberAttributeScheme
-        {
-            get
-            {
-                AttributeScheme employeeNumberScheme = new AttributeScheme("employeeNumber", AttributeDataType.String, false);
-                employeeNumberScheme.Description = SampleConstants.DescriptionEmployeeNumber;
-                return employeeNumberScheme;
-            }
-        }
-
-        public static AttributeScheme CostcenterAttributeScheme
-        {
-            get
-            {
-                AttributeScheme costCenterScheme = new AttributeScheme("costCenter", AttributeDataType.String, false);
-                costCenterScheme.Description = SampleConstants.DescriptionCostCenter;
-                return costCenterScheme;
-            }
-        }
-
-        public static AttributeScheme OrganizationAttributeScheme
-        {
-            get
-            {
-                AttributeScheme organizationScheme = new AttributeScheme("organization", AttributeDataType.String, false);
-                organizationScheme.Description = SampleConstants.DescriptionOrganization;
-                return organizationScheme;
-            }
-        }
-
-        public static AttributeScheme DivisionAttributeScheme
-        {
-            get
-            {
-                AttributeScheme divisionScheme = new AttributeScheme("division", AttributeDataType.String, false);
-                divisionScheme.Description = SampleConstants.DescriptionDivision;
-                return divisionScheme;
-            }
-        }
-
-        public static AttributeScheme DepartmentAttributeScheme
-        {
-            get
-            {
-                AttributeScheme departmentScheme = new AttributeScheme("department", AttributeDataType.String, false);
-                departmentScheme.Description = SampleConstants.Descriptiondepartment;
-                return departmentScheme;
+                return serviceProviderConfigType;
             }
         }
     }
