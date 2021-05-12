@@ -10,5 +10,6 @@ namespace Microsoft.SCIM
         public const string ResourceType = "ResourceType";
         public const string ServiceProviderConfiguration = "ServiceProviderConfig";
         public const string User = "User";
+        public const string Schema = "Schema";
     }
 }

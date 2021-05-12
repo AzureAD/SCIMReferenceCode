@@ -12,7 +12,6 @@ namespace Microsoft.SCIM
     [DataContract]
     public abstract class Schematized : IJsonSerializable
     {
-        [DataMember(Name = AttributeNames.Schemas, Order = 0)]
         private List<string> schemas;
         private IReadOnlyCollection<string> schemasWrapper;
 
@@ -25,6 +24,7 @@ namespace Microsoft.SCIM
             this.OnInitialized();
         }
 
+        [DataMember(Name = AttributeNames.Schemas, Order = 0)]
         public virtual IReadOnlyCollection<string> Schemas
         {
             get

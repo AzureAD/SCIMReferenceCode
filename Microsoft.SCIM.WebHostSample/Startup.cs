@@ -15,6 +15,7 @@ namespace Microsoft.SCIM.WebHostSample
     using Microsoft.Extensions.Hosting;
     using Microsoft.IdentityModel.Tokens;
     using Microsoft.SCIM.WebHostSample.Provider;
+    using Newtonsoft.Json;
 
     public class Startup
     {
@@ -94,7 +95,10 @@ namespace Microsoft.SCIM.WebHostSample
                 });
             }
 
-            services.AddControllers().AddNewtonsoftJson();
+            services.AddControllers().AddNewtonsoftJson(options =>
+            {
+                options.SerializerSettings.NullValueHandling = NullValueHandling.Ignore;
+            });
             services.AddSingleton(typeof(IProvider), this.ProviderBehavior);
             services.AddSingleton(typeof(IMonitor), this.MonitoringBehavior);
         }

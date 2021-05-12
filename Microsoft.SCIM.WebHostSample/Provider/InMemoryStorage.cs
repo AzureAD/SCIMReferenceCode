@@ -22,12 +22,7 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                                         () =>
                                             new InMemoryStorage());
 
-        public static InMemoryStorage Instance
-        {
-            get
-            {
-                return InMemoryStorage.InstanceValue.Value;
-            }
-        }
+        public static InMemoryStorage Instance => InMemoryStorage.InstanceValue.Value;
+        
     }
 }

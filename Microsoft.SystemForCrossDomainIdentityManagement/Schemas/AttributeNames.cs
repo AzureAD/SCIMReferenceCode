@@ -12,6 +12,7 @@ namespace Microsoft.SCIM
         public const string Attributes = "attributes";
         public const string AuthenticationSchemes = "authenticationSchemes";
         public const string Bulk = "bulk";
+        public const string CanonicalValues = "canonicalValues";
         public const string CaseExact = "caseExact";
         public const string ChangePassword = "changePassword";
         public const string ChangePollingInterval = AttributeNames.NotBefore;
@@ -72,6 +73,7 @@ namespace Microsoft.SCIM
         public const string Primary = "primary";
         public const string ProfileUrl = "profileUrl";
         public const string ProxyAddresses = "proxyAddresses";
+        public const string ReferenceTypes = "referenceTypes";
         public const string Region = "region";
         public const string Roles = "roles";
         public const string Required = "required";
@@ -83,6 +85,7 @@ namespace Microsoft.SCIM
         public const string Sort = "sort";
         public const string Specification = "specUrl";
         public const string StreetAddress = "streetAddress";
+        public const string SubAttributes = "subAttributes";
         public const string Supported = "supported";
         public const string TimeZone = "timezone";
         public const string Title = "title";

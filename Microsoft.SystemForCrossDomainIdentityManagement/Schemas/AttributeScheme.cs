@@ -5,7 +5,9 @@
 namespace Microsoft.SCIM
 {
     using System;
+    using System.Collections.Generic;
     using System.Runtime.Serialization;
+    using System.Linq;
 
     [DataContract]
     public sealed class AttributeScheme
@@ -18,6 +20,15 @@ namespace Microsoft.SCIM
         private string returnedValue;
         private Uniqueness uniqueness;
         private string uniquenessValue;
+        private List<AttributeScheme> subAttributes;
+        private IReadOnlyCollection<AttributeScheme> subAttributesWrapper;
+        private List<string> canonicalValues;
+        private IReadOnlyCollection<string> canonicalValuesWrapper;
+
+        private List<string> referenceTypes;
+        private IReadOnlyCollection<string> referenceTypesWrapper;
+
+        private object thisLock;
 
         public AttributeScheme()
         {
@@ -30,6 +41,8 @@ namespace Microsoft.SCIM
                 throw new ArgumentNullException(nameof(name));
             }
 
+            this.OnInitialization();
+            this.OnInitialized();
             this.Name = name;
             this.DataType = type;
             this.Plural = plural;
@@ -198,6 +211,85 @@ namespace Microsoft.SCIM
             {
                 this.uniqueness = (Uniqueness)Enum.Parse(typeof(Uniqueness), value);
                 this.uniquenessValue = value;
+            }
+        }
+
+        [DataMember(Name = AttributeNames.SubAttributes)]
+        public IReadOnlyCollection<AttributeScheme> SubAttributes => this.subAttributesWrapper.Count == 0 ? null : this.subAttributesWrapper;
+        
+        [DataMember(Name = AttributeNames.CanonicalValues)]
+        public IReadOnlyCollection<string> CanonicalValues => this.canonicalValuesWrapper.Count == 0 ? null : this.canonicalValuesWrapper;
+       
+        [DataMember(Name = AttributeNames.ReferenceTypes)]
+        public IReadOnlyCollection<string> ReferenceTypes => this.referenceTypesWrapper.Count == 0 ? null : this.referenceTypesWrapper;
+        
+        public void AddSubAttribute(AttributeScheme subAttribute)
+        {
+
+            Func<bool> containsFunction =
+                new Func<bool>(
+                        () =>
+                            this
+                            .subAttributes
+                            .Any(
+                                (AttributeScheme item) =>
+                                    string.Equals(item.Name, subAttribute.Name, StringComparison.OrdinalIgnoreCase)));
+            AddItemFunction(subAttribute, subAttributes, containsFunction);
+        }
+        public void AddCanonicalValues(string canonicalValue)
+        {
+            Func<bool> containsFunction =
+                new Func<bool>(
+                        () =>
+                            this
+                            .canonicalValues
+                            .Any(
+                                (string item) =>
+                                    string.Equals(item, canonicalValue, StringComparison.OrdinalIgnoreCase)));
+            AddItemFunction(canonicalValue, canonicalValues, containsFunction);
+        }
+        public void AddReferenceTypes(string referenceType)
+        {
+            Func<bool> containsFunction =
+                new Func<bool>(
+                        () =>
+                            this
+                            .referenceTypes
+                            .Any(
+                                (string item) =>
+                                    string.Equals(item, referenceType, StringComparison.OrdinalIgnoreCase)));
+            AddItemFunction(referenceType, referenceTypes, containsFunction);
+        }
+        private void OnInitialization()
+        {
+            this.thisLock = new object();
+            this.subAttributes = new List<AttributeScheme>();
+            this.canonicalValues = new List<string>();
+            this.referenceTypes = new List<string>();
+        }
+
+        private void OnInitialized()
+        {
+            this.subAttributesWrapper = this.subAttributes.AsReadOnly();
+            this.canonicalValuesWrapper = this.canonicalValues.AsReadOnly();
+            this.referenceTypesWrapper = this.referenceTypes.AsReadOnly();
+        }
+        private void AddItemFunction<T>(T item, List<T> itemCollection, Func<bool> containsFunction)
+        {
+            if (null == item)
+            {
+
+                throw new ArgumentNullException(nameof(item));
+            }
+            if (!containsFunction())
+            {
+                lock (this.thisLock)
+                {
+                    if (!containsFunction())
+                    {
+                        itemCollection.Add(item);
+                    }
+                }
             }
         }
     }

@@ -42,6 +42,11 @@ namespace Microsoft.SCIM
             SchemaIdentifiers.VersionSchemasCore2 +
             Types.User;
 
+        public const string Core2Schema =
+            SchemaIdentifiers.PrefixTypes2 +
+            SchemaIdentifiers.VersionSchemasCore2 +
+            Types.Schema;
+
         public const string PrefixExtension =
             SchemaIdentifiers.PrefixTypes2 +
             SchemaIdentifiers.Extension;

@@ -7,9 +7,11 @@ namespace Microsoft.SCIM
     using System.Net;
     using System.Net.Http;
     using System.Web.Http;
+    using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
 
     [Route(ServiceConstants.RouteSchemas)]
+    [Authorize]
     [ApiController]
     public sealed class SchemasController : ControllerTemplate
     {
@@ -18,7 +20,7 @@ namespace Microsoft.SCIM
         {
         }
 
-        public IEnumerable<TypeScheme> Get()
+        public QueryResponseBase Get()
         {
             string correlationIdentifier = null;
 
@@ -36,8 +38,15 @@ namespace Microsoft.SCIM
                     throw new HttpResponseException(HttpStatusCode.InternalServerError);
                 }
 
-                IEnumerable<TypeScheme> result = provider.Schema;
+                IReadOnlyCollection<Resource> resources = provider.Schema;
+                QueryResponseBase result = new QueryResponse(resources);
+                
+                result.TotalResults =
+                    result.ItemsPerPage =
+                        resources.Count;
+                result.StartIndex = 1;
                 return result;
+                
             }
             catch (ArgumentException argumentException)
             {
