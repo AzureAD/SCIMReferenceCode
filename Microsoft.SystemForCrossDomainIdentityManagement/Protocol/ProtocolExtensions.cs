@@ -13,20 +13,31 @@ namespace Microsoft.SCIM
     using System.Net.Http;
     using System.Net.Http.Formatting;
     using System.Text;
+    using System.Text.RegularExpressions;
     using System.Threading.Tasks;
     using System.Web;
     using Newtonsoft.Json;
+    using Newtonsoft.Json.Linq;
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "None")]
     public static class ProtocolExtensions
     {
+        private const string BulkIdentifierPattern =
+            @"^((\s*)bulkId(\s*):(\s*)(?<" +
+            ProtocolExtensions.ExpressionGroupNameBulkIdentifier +
+            @">[^\s]*))";
+
+        private const string ExpressionGroupNameBulkIdentifier = "identifier";
         public const string MethodNameDelete = "DELETE";
         public const string MethodNamePatch = "PATCH";
         private static readonly Lazy<HttpMethod> MethodPatch =
             new Lazy<HttpMethod>(
                 () =>
                     new HttpMethod(ProtocolExtensions.MethodNamePatch));
-
+        private static readonly Lazy<Regex> BulkIdentifierExpression =
+            new Lazy<Regex>(
+                () =>
+                    new Regex(ProtocolExtensions.BulkIdentifierPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled));
         private interface IHttpRequestMessageWriter : IDisposable
         {
             void Close();
@@ -157,6 +168,10 @@ namespace Microsoft.SCIM
                                      .ToArray();
 
                                 IList<Member> buffer = new List<Member>();
+                                if(null == group.Members)
+                                {
+                                    group.Members = new List<Member>();
+                                }
                                 foreach (Member member in membersToAdd)
                                 {
                                     //O(n) with the number of group members, so for large groups this is not optimal
@@ -800,7 +815,6 @@ namespace Microsoft.SCIM
             string baseResourceIdentifierValue = baseResourceIdentifier.ToString();
             string resultValue =
                 baseResourceIdentifierValue +
-                ServiceConstants.SeparatorSegments +
                 SchemaConstants.PathInterface +
                 ServiceConstants.SeparatorSegments +
                 path;
@@ -876,8 +890,8 @@ namespace Microsoft.SCIM
             Uri typeResource = resource.GetTypeIdentifier(baseResourceIdentifier);
             string escapedIdentifier = Uri.EscapeDataString(resource.Identifier);
             string resultValue =
-                baseResourceIdentifier.ToString() +
-                ServiceConstants.SeparatorSegments +
+                typeResource.ToString() +
+                ServiceConstants.SeparatorSegments + 
                 escapedIdentifier;
             result = new Uri(resultValue);
             return result;
@@ -1399,6 +1413,129 @@ namespace Microsoft.SCIM
             return result;
         }
 
+        public static bool References(this PatchRequest2Base<PatchOperation2Combined> patch, string referee)
+        {
+            if (null == patch)
+            {
+                throw new ArgumentNullException(nameof(patch));
+            }
+
+            if (string.IsNullOrWhiteSpace(referee))
+            {
+                throw new ArgumentNullException(nameof(referee));
+            }
+
+            bool result = patch.TryFindReference(referee, out IReadOnlyCollection<OperationValue> _);
+            return result;
+        }
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "0", Justification = "False analysis of the 'this' parameter of an extension method")]
+        public static bool TryFindReference(
+            this PatchRequest2Base<PatchOperation2Combined> patch,
+            string referee,
+            out IReadOnlyCollection<OperationValue> references)
+        {
+            if (null == patch)
+            {
+                throw new ArgumentNullException(nameof(patch));
+            }
+
+            references = null;
+
+            if (string.IsNullOrWhiteSpace(referee))
+            {
+                throw new ArgumentNullException(nameof(referee));
+            }
+
+            List<OperationValue> patchOperation2Values = new List<OperationValue>();
+
+            foreach (PatchOperation2Combined operation in patch.Operations)
+            {
+                OperationValue[] values = null;
+                if (operation?.Value != null)
+                {
+                    values =
+                    JsonConvert.DeserializeObject<OperationValue[]>(
+                        operation.Value,
+                        ProtocolConstants.JsonSettings.Value);
+                }
+
+                if (values == null)
+                {
+                    string value = null;
+                    if (operation?.Value != null)
+                    {
+                        value = JsonConvert.DeserializeObject<string>(operation.Value, ProtocolConstants.JsonSettings.Value);
+                    }
+
+                    OperationValue valueSingle = new OperationValue()
+                    {
+                        Value = value
+                    };
+                    patchOperation2Values.Add(valueSingle);
+                }
+                else
+                {
+                    foreach (OperationValue value in values)
+                    {
+                        patchOperation2Values.Add(value);
+                    }
+                }
+
+            }
+
+            IReadOnlyCollection<OperationValue> patchOperationValues = patchOperation2Values.AsReadOnly();
+
+            IList<OperationValue> referencesBuffer = new List<OperationValue>(patchOperationValues.Count);
+            foreach (OperationValue patchOperationValue in patchOperationValues)
+            {
+                if (!patchOperationValue.TryParseBulkIdentifierReferenceValue(out string value))
+                {
+                    value = patchOperationValue.Value;
+                }
+
+                if (string.Equals(referee, value,StringComparison.InvariantCulture))
+                {
+                    referencesBuffer.Add(patchOperationValue);
+                }
+            }
+
+            references = referencesBuffer.ToArray();
+            bool result = references.Any();
+            return result;
+        }
+
+        private static bool TryParseBulkIdentifierReferenceValue(string value, out string bulkIdentifier)
+        {
+            bulkIdentifier = null;
+
+            if (string.IsNullOrEmpty(value))
+            {
+                return false;
+            }
+
+            Match match = ProtocolExtensions.BulkIdentifierExpression.Value.Match(value);
+            bool result = match.Success;
+            if (result)
+            {
+                bulkIdentifier = match.Groups[ProtocolExtensions.ExpressionGroupNameBulkIdentifier].Value;
+            }
+
+            return result;
+        }
+
+        public static bool TryParseBulkIdentifierReferenceValue(this OperationValue value, out string bulkIdentifier)
+        {
+            bulkIdentifier = null;
+
+            if (null == value)
+            {
+                return false;
+            }
+
+            bool result = ProtocolExtensions.TryParseBulkIdentifierReferenceValue(value.Value, out bulkIdentifier);
+            return result;
+        }
 
 
         private sealed class HttpRequestMessageWriter : IHttpRequestMessageWriter
@@ -1497,6 +1634,7 @@ namespace Microsoft.SCIM
                     await this.innerWriter.WriteLineAsync(line).ConfigureAwait(false);
                 }
             }
+
         }
     }
 }

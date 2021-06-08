@@ -13,7 +13,7 @@ namespace Microsoft.SCIM
     public sealed class SchematizedJsonDeserializingFactory : SchematizedJsonDeserializingFactoryBase
     {
         private ISchematizedJsonDeserializingFactory<PatchRequest2> patchSerializer;
-
+       
         public override IReadOnlyCollection<IExtension> Extensions
         {
             get;
@@ -142,7 +142,7 @@ namespace Microsoft.SCIM
                 return result;
             }
         }
-
+       
         public override Schematized Create(IReadOnlyDictionary<string, object> json)
         {
             if (null == json)

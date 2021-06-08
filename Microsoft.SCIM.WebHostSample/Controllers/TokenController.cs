@@ -27,13 +27,11 @@ namespace Microsoft.SCIM.WebHostSample.Controllers
 
         private string GenerateJSONWebToken()
         {
-            // Create token key
             SymmetricSecurityKey securityKey =
                 new SymmetricSecurityKey(Encoding.UTF8.GetBytes(this.configuration["Token:IssuerSigningKey"]));
             SigningCredentials credentials =
                 new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
-            // Set token expiration
             DateTime startTime = DateTime.UtcNow;
             DateTime expiryTime;
             if (double.TryParse(this.configuration["Token:TokenLifetimeInMins"], out double tokenExpiration))
@@ -41,7 +39,6 @@ namespace Microsoft.SCIM.WebHostSample.Controllers
             else
                 expiryTime = startTime.AddMinutes(defaultTokenExpirationTimeInMins);
 
-            // Generate the token
             JwtSecurityToken token =
                 new JwtSecurityToken(
                     this.configuration["Token:TokenIssuer"],
