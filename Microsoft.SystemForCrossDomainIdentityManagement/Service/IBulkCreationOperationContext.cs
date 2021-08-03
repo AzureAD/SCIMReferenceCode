@@ -4,12 +4,8 @@
 
 namespace Microsoft.SCIM
 {
-    using System.Collections.Generic;
-
-    public interface IJsonSerializable
+    public interface IBulkCreationOperationContext : IBulkOperationContext<Resource>, IBulkCreationOperationState
     {
-        Dictionary<string, object> ToJson();
-        string Serialize();
-
+        IBulkOperationState<Resource> PendingState { get; }
     }
 }
