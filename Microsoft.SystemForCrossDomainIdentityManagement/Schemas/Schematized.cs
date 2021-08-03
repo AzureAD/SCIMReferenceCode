@@ -25,6 +25,7 @@ namespace Microsoft.SCIM
             this.OnInitialized();
         }
 
+
         public virtual IReadOnlyCollection<string> Schemas
         {
             get
