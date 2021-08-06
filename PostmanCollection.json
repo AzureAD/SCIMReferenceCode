@@ -399,7 +399,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"UserName\": \"UserName123\",\r\n    \"Active\": true,\r\n    \"DisplayName\": \"BobIsAmazing\",\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\"\r\n    ],\r\n  \"externalId\": \"${__UUID}\",\r\n    \"name\": {\r\n        \"formatted\": \"Ryan Leenay\",\r\n        \"familyName\": \"Leenay\",\r\n        \"givenName\": \"Ryan\"\r\n    },\r\n    \"emails\": [\r\n        {\r\n            \"Primary\": true,\r\n            \"type\": \"work\",\r\n            \"value\": \"testing@bob.com\"\r\n        },\r\n        {\r\n            \"Primary\": false,\r\n            \"type\": \"home\",\r\n            \"value\": \"testinghome@bob.com\"\r\n        }\r\n    ]\r\n}",
+							"raw": "{\r\n    \"userName\": \"UserName123\",\r\n    \"active\": true,\r\n    \"displayName\": \"BobIsAmazing\",\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\"\r\n    ],\r\n  \"externalId\": \"${__UUID}\",\r\n    \"name\": {\r\n        \"formatted\": \"Ryan Leenay\",\r\n        \"familyName\": \"Leenay\",\r\n        \"givenName\": \"Ryan\"\r\n    },\r\n    \"emails\": [\r\n        {\r\n            \"Primary\": true,\r\n            \"type\": \"work\",\r\n            \"value\": \"testing@bob.com\"\r\n        },\r\n        {\r\n            \"Primary\": false,\r\n            \"type\": \"home\",\r\n            \"value\": \"testinghome@bob.com\"\r\n        }\r\n    ]\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -464,7 +464,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"UserName\": \"UserName222\",\r\n    \"Active\": true,\r\n    \"DisplayName\": \"lennay\",\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\",\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\"\r\n    ],\r\n  \"externalId\": \"${__UUID}\",\r\n    \"name\": {\r\n        \"formatted\": \"Adrew Ryan\",\r\n        \"familyName\": \"Ryan\",\r\n        \"givenName\": \"Andrew\"\r\n    },\r\n    \"emails\": [\r\n        {\r\n            \"Primary\": true,\r\n            \"type\": \"work\",\r\n            \"value\": \"testing@bob2.com\"\r\n        },\r\n        {\r\n            \"Primary\": false,\r\n            \"type\": \"home\",\r\n            \"value\": \"testinghome@bob3.com\"\r\n        }\r\n    ],\r\n    \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\": {\r\n    \t\t\"Department\": \"bob\",\r\n    \t\t\"Manager\" : { \"Value\": \"SuzzyQ\" }\r\n    }\r\n}",
+							"raw": "{\r\n    \"userName\": \"UserName222\",\r\n    \"active\": true,\r\n    \"displayName\": \"lennay\",\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\",\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\"\r\n    ],\r\n  \"externalId\": \"${__UUID}\",\r\n    \"name\": {\r\n        \"formatted\": \"Adrew Ryan\",\r\n        \"familyName\": \"Ryan\",\r\n        \"givenName\": \"Andrew\"\r\n    },\r\n    \"emails\": [\r\n        {\r\n            \"Primary\": true,\r\n            \"type\": \"work\",\r\n            \"value\": \"testing@bob2.com\"\r\n        },\r\n        {\r\n            \"Primary\": false,\r\n            \"type\": \"home\",\r\n            \"value\": \"testinghome@bob3.com\"\r\n        }\r\n    ],\r\n    \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\": {\r\n    \t\t\"Department\": \"bob\",\r\n    \t\t\"Manager\" : { \"Value\": \"SuzzyQ\" }\r\n    }\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -830,7 +830,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"UserName\": \"UserNameReplace2\",\r\n    \"Active\": true,\r\n    \"DisplayName\": \"BobIsAmazing\",\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\",\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\"\r\n    ],\r\n    \"id\": \"{{id2}}\",\r\n    \"externalId\": \"${__UUID}\",\r\n    \"name\": {\r\n        \"formatted\": \"NewName\",\r\n        \"familyName\": \"Leenay\",\r\n        \"givenName\": \"Ryan\"\r\n    },\r\n    \"emails\": [\r\n        {\r\n            \"Primary\": true,\r\n            \"type\": \"work\",\r\n            \"value\": \"testing@bobREPLACE.com\"\r\n        },\r\n        {\r\n            \"Primary\": false,\r\n            \"type\": \"home\",\r\n            \"value\": \"testinghome@bob.com\"\r\n        }\r\n    ]\r\n}",
+							"raw": "{\r\n    \"userName\": \"UserNameReplace2\",\r\n    \"active\": true,\r\n    \"displayName\": \"BobIsAmazing\",\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\",\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\"\r\n    ],\r\n    \"id\": \"{{id2}}\",\r\n    \"externalId\": \"${__UUID}\",\r\n    \"name\": {\r\n        \"formatted\": \"NewName\",\r\n        \"familyName\": \"Leenay\",\r\n        \"givenName\": \"Ryan\"\r\n    },\r\n    \"emails\": [\r\n        {\r\n            \"Primary\": true,\r\n            \"type\": \"work\",\r\n            \"value\": \"testing@bobREPLACE.com\"\r\n        },\r\n        {\r\n            \"Primary\": false,\r\n            \"type\": \"home\",\r\n            \"value\": \"testinghome@bob.com\"\r\n        }\r\n    ]\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1110,7 +1110,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"UserName\": \"UserName333\",\r\n    \"Active\": true,\r\n    \"DisplayName\": \"lennay\",\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\",\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\"\r\n    ],\r\n  \"externalId\": \"${__UUID}\",\r\n    \"name\": {\r\n        \"formatted\": \"Adrew Ryan\",\r\n        \"familyName\": \"Ryan\",\r\n        \"givenName\": \"Andrew\"\r\n    },\r\n    \"emails\": [\r\n        {\r\n            \"Primary\": true,\r\n            \"type\": \"work\",\r\n            \"value\": \"testing@bob2.com\"\r\n        },\r\n        {\r\n            \"Primary\": false,\r\n            \"type\": \"home\",\r\n            \"value\": \"testinghome@bob3.com\"\r\n        }\r\n    ]\r\n}",
+							"raw": "{\r\n    \"userName\": \"UserName333\",\r\n    \"active\": true,\r\n    \"displayName\": \"lennay\",\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\",\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\"\r\n    ],\r\n  \"externalId\": \"${__UUID}\",\r\n    \"name\": {\r\n        \"formatted\": \"Adrew Ryan\",\r\n        \"familyName\": \"Ryan\",\r\n        \"givenName\": \"Andrew\"\r\n    },\r\n    \"emails\": [\r\n        {\r\n            \"Primary\": true,\r\n            \"type\": \"work\",\r\n            \"value\": \"testing@bob2.com\"\r\n        },\r\n        {\r\n            \"Primary\": false,\r\n            \"type\": \"home\",\r\n            \"value\": \"testinghome@bob3.com\"\r\n        }\r\n    ]\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -1173,7 +1173,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"UserName\": \"UserName444\",\r\n    \"Active\": true,\r\n    \"DisplayName\": \"lennay\",\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\",\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\"\r\n    ],\r\n  \"externalId\": \"${__UUID}\",\r\n    \"name\": {\r\n        \"formatted\": \"Adrew Ryan\",\r\n        \"familyName\": \"Ryan\",\r\n        \"givenName\": \"Andrew\"\r\n    },\r\n    \"emails\": [\r\n        {\r\n            \"Primary\": true,\r\n            \"type\": \"work\",\r\n            \"value\": \"testing@bob2.com\"\r\n        },\r\n        {\r\n            \"Primary\": false,\r\n            \"type\": \"home\",\r\n            \"value\": \"testinghome@bob3.com\"\r\n        }\r\n    ]\r\n}",
+							"raw": "{\r\n    \"userName\": \"UserName444\",\r\n    \"active\": true,\r\n    \"displayName\": \"lennay\",\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\",\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\"\r\n    ],\r\n  \"externalId\": \"${__UUID}\",\r\n    \"name\": {\r\n        \"formatted\": \"Adrew Ryan\",\r\n        \"familyName\": \"Ryan\",\r\n        \"givenName\": \"Andrew\"\r\n    },\r\n    \"emails\": [\r\n        {\r\n            \"Primary\": true,\r\n            \"type\": \"work\",\r\n            \"value\": \"testing@bob2.com\"\r\n        },\r\n        {\r\n            \"Primary\": false,\r\n            \"type\": \"home\",\r\n            \"value\": \"testinghome@bob3.com\"\r\n        }\r\n    ]\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2055,7 +2055,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"UserName\": \"UserName111\",\r\n    \"Active\": true,\r\n    \"DisplayName\": \"BobIsAmazing\",\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\",\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\"\r\n    ],\r\n  \"externalId\": \"${__UUID}\",\r\n    \"name\": {\r\n        \"formatted\": \"Ryan Leenay\",\r\n        \"familyName\": \"Leenay\",\r\n        \"givenName\": \"Ryan\"\r\n    },\r\n    \"emails\": [\r\n        {\r\n            \"Primary\": true,\r\n            \"type\": \"work\",\r\n            \"value\": \"emailName357\"\r\n        },\r\n        {\r\n            \"Primary\": false,\r\n            \"type\": \"home\",\r\n            \"value\": \"testinghome@bob.com\"\r\n        }\r\n    ]\r\n}",
+							"raw": "{\r\n    \"userName\": \"UserName111\",\r\n    \"active\": true,\r\n    \"displayName\": \"BobIsAmazing\",\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\",\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\"\r\n    ],\r\n  \"externalId\": \"${__UUID}\",\r\n    \"name\": {\r\n        \"formatted\": \"Ryan Leenay\",\r\n        \"familyName\": \"Leenay\",\r\n        \"givenName\": \"Ryan\"\r\n    },\r\n    \"emails\": [\r\n        {\r\n            \"Primary\": true,\r\n            \"type\": \"work\",\r\n            \"value\": \"emailName357\"\r\n        },\r\n        {\r\n            \"Primary\": false,\r\n            \"type\": \"home\",\r\n            \"value\": \"testinghome@bob.com\"\r\n        }\r\n    ]\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -2118,7 +2118,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\r\n    \"UserName\": \"UserName222\",\r\n    \"Active\": true,\r\n    \"DisplayName\": \"BobIsAmazing\",\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\",\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\"\r\n    ],\r\n  \"externalId\": \"${__UUID}\",\r\n    \"name\": {\r\n        \"formatted\": \"Ryan Leenay\",\r\n        \"familyName\": \"Leenay\",\r\n        \"givenName\": \"Ryan\"\r\n    },\r\n    \"emails\": [\r\n        {\r\n            \"Primary\": true,\r\n            \"type\": \"work\",\r\n            \"value\": \"jump@bob.com\"\r\n        },\r\n        {\r\n            \"Primary\": false,\r\n            \"type\": \"home\",\r\n            \"value\": \"testinghome@bob.com\"\r\n        }\r\n    ]\r\n}",
+							"raw": "{\r\n    \"userName\": \"UserName222\",\r\n    \"active\": true,\r\n    \"displayName\": \"BobIsAmazing\",\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\",\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\"\r\n    ],\r\n  \"externalId\": \"${__UUID}\",\r\n    \"name\": {\r\n        \"formatted\": \"Ryan Leenay\",\r\n        \"familyName\": \"Leenay\",\r\n        \"givenName\": \"Ryan\"\r\n    },\r\n    \"emails\": [\r\n        {\r\n            \"Primary\": true,\r\n            \"type\": \"work\",\r\n            \"value\": \"jump@bob.com\"\r\n        },\r\n        {\r\n            \"Primary\": false,\r\n            \"type\": \"home\",\r\n            \"value\": \"testinghome@bob.com\"\r\n        }\r\n    ]\r\n}",
 							"options": {
 								"raw": {
 									"language": "json"
