@@ -4,12 +4,7 @@
 
 namespace Microsoft.SCIM
 {
-    using System.Collections.Generic;
-
-    public interface IJsonSerializable
+    public interface IBulkUpdateOperationContext : IBulkOperationContext<IPatch>, IBulkUpdateOperationState
     {
-        Dictionary<string, object> ToJson();
-        string Serialize();
-
     }
 }

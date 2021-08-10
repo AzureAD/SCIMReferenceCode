@@ -4,20 +4,21 @@
 
 namespace Microsoft.SCIM
 {
-    using System;
-    using System.Collections.Generic;
     using System.Runtime.Serialization;
 
     [DataContract]
-    public sealed class PatchRequest2 : PatchRequest2Base<PatchOperation2Combined>
+    public sealed class BulkRequest2 : BulkOperations<BulkRequestOperation>
     {
-        public PatchRequest2()
+        public BulkRequest2()
+            : base(ProtocolSchemaIdentifiers.Version2BulkRequest)
         {
         }
 
-        public PatchRequest2(IReadOnlyCollection<PatchOperation2Combined> operations)
-            : base(operations)
+        [DataMember(Name = ProtocolAttributeNames.FailOnErrors, Order = 1)]
+        public int? FailOnErrors
         {
+            get;
+            set;
         }
     }
 }

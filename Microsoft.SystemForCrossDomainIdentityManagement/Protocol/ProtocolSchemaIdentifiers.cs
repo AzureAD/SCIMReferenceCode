@@ -16,6 +16,9 @@ namespace Microsoft.SCIM
         public const string PrefixMessages2 = ProtocolSchemaIdentifiers.PrefixMessages + ProtocolSchemaIdentifiers.VersionMessages2;
 
         private const string ResponseList = "ListResponse";
+        private const string RequestBulk = "BulkRequest";
+
+        private const string ResponseBulk = "BulkResponse";
 
         public const string Version2Error =
             ProtocolSchemaIdentifiers.PrefixMessages2 + ProtocolSchemaIdentifiers.Error;
@@ -25,5 +28,10 @@ namespace Microsoft.SCIM
 
         public const string Version2PatchOperation =
             ProtocolSchemaIdentifiers.PrefixMessages2 + ProtocolSchemaIdentifiers.OperationPatch;
+        public const string Version2BulkRequest =
+             ProtocolSchemaIdentifiers.PrefixMessages2 + ProtocolSchemaIdentifiers.RequestBulk;
+
+        public const string Version2BulkResponse =
+            ProtocolSchemaIdentifiers.PrefixMessages2 + ProtocolSchemaIdentifiers.ResponseBulk;
     }
 }
