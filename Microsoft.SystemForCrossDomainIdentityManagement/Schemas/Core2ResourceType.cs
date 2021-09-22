@@ -8,19 +8,12 @@ namespace Microsoft.SCIM
     using System.Runtime.Serialization;
 
     [DataContract]
-    public sealed class Core2ResourceType : Schematized
+    public sealed class Core2ResourceType : Resource
     {
         private Uri endpoint;
 
         [DataMember(Name = AttributeNames.Endpoint)]
         private string endpointValue;
-
-        [DataMember(Name = AttributeNames.Identifier)]
-        public string Identifier
-        {
-            get;
-            set;
-        }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1823:AvoidUnusedPrivateFields", Justification = "Serialized")]
         [DataMember(Name = AttributeNames.Name)]

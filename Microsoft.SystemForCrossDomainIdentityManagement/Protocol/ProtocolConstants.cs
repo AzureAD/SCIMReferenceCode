@@ -13,6 +13,7 @@ namespace Microsoft.SCIM
         public const string ContentType = "application/scim+json";
         public const string PathGroups = "Groups";
         public const string PathUsers = "Users";
+        public const string PathBulk = "Bulk";
         public const string PathWebBatchInterface = SchemaConstants.PathInterface + "/batch";
 
         public readonly static Lazy<JsonSerializerSettings> JsonSettings =

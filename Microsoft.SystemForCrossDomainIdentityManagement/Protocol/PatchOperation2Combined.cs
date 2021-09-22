@@ -28,6 +28,26 @@ namespace Microsoft.SCIM
             : base(operationName, pathExpression)
         {
         }
+        public static PatchOperation2Combined Create(OperationName operationName, string pathExpression, string value)
+        {
+            if (string.IsNullOrWhiteSpace(pathExpression))
+            {
+                throw new ArgumentNullException(nameof(pathExpression));
+            }
+
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new ArgumentNullException(nameof(value));
+            }
+
+            OperationValue operationValue = new OperationValue();
+            operationValue.Value = value;
+
+            PatchOperation2Combined result = new PatchOperation2Combined(operationName, pathExpression);
+            result.Value = JsonConvert.SerializeObject(operationValue);
+
+            return result;
+        }
 
         public string Value
         {

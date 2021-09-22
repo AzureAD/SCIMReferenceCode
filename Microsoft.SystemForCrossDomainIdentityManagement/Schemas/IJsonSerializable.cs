@@ -10,5 +10,6 @@ namespace Microsoft.SCIM
     {
         Dictionary<string, object> ToJson();
         string Serialize();
+
     }
 }
