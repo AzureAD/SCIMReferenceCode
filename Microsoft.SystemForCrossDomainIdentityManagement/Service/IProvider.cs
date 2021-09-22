@@ -27,5 +27,6 @@ namespace Microsoft.SCIM
         Task<Resource> ReplaceAsync(IRequest<Resource> request);
         Task<Resource> RetrieveAsync(IRequest<IResourceRetrievalParameters> request);
         Task UpdateAsync(IRequest<IPatch> request);
+        Task<BulkResponse2> ProcessAsync(IRequest<BulkRequest2> request);
     }
 }

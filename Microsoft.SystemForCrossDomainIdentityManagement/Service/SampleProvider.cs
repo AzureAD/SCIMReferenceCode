@@ -7,7 +7,6 @@ namespace Microsoft.SCIM
     using System.Globalization;
     using System.Linq;
     using System.Net;
-    using System.Threading;
     using System.Threading.Tasks;
     using System.Web.Http;
     using Newtonsoft.Json;
@@ -60,8 +59,6 @@ namespace Microsoft.SCIM
 
         private readonly Core2Group sampleGroup;
         private readonly Core2EnterpriseUser sampleUser;
-
-        private JsonDeserializingFactory<Schematized> jsonDeserializingFactory;
 
         public SampleProvider()
         {
@@ -142,18 +139,6 @@ namespace Microsoft.SCIM
                 {
                     DisplayName = SampleProvider.GroupName,
                 };
-        }
-
-        private JsonDeserializingFactory<Schematized> JsonDeserializingFactory
-        {
-            get
-            {
-                JsonDeserializingFactory<Schematized> result =
-                    LazyInitializer.EnsureInitialized<JsonDeserializingFactory<Schematized>>(
-                        ref this.jsonDeserializingFactory,
-                        this.InitializeJsonDeserializingFactory);
-                return result;
-            }
         }
 
         public Core2Group SampleGroup
@@ -273,19 +258,6 @@ namespace Microsoft.SCIM
                     string.Equals(SampleProvider.IdentifierGroup, containerIdentifier.Identifier, StringComparison.OrdinalIgnoreCase)
                 && string.Equals(SampleProvider.IdentifierUser, memberIdentifier, StringComparison.OrdinalIgnoreCase);
 
-            return result;
-        }
-
-        private JsonDeserializingFactory<Schematized> InitializeJsonDeserializingFactory()
-        {
-            JsonDeserializingFactory<Schematized> result =
-                new SchematizedJsonDeserializingFactory()
-                {
-                    Extensions = this.Extensions,
-                    GroupDeserializationBehavior = this.GroupDeserializationBehavior,
-                    PatchRequest2DeserializationBehavior = this.PatchRequestDeserializationBehavior,
-                    UserDeserializationBehavior = this.UserDeserializationBehavior
-                };
             return result;
         }
 

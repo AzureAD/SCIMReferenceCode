@@ -25,6 +25,7 @@ namespace Microsoft.SCIM
             this.OnInitialized();
         }
 
+
         public virtual IReadOnlyCollection<string> Schemas
         {
             get
@@ -113,8 +114,10 @@ namespace Microsoft.SCIM
 
         public virtual string Serialize()
         {
+            
             IDictionary<string, object> json = this.ToJson();
             string result = JsonFactory.Instance.Create(json, true);
+            
             return result;
         }
 

@@ -6,15 +6,18 @@ namespace Microsoft.SCIM.WebHostSample
 {
     using System.Text;
     using System.Threading.Tasks;
+    using Microsoft.AspNetCore.Authentication;
     using Microsoft.AspNetCore.Authentication.JwtBearer;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
+    using Microsoft.AspNetCore.Mvc;
     using Microsoft.AspNetCore.Routing;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
     using Microsoft.IdentityModel.Tokens;
     using Microsoft.SCIM.WebHostSample.Provider;
+    using Newtonsoft.Json;
 
     public class Startup
     {
@@ -37,75 +40,31 @@ namespace Microsoft.SCIM.WebHostSample
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
-            if (this.environment.IsDevelopment())
+            void ConfigureMvcNewtonsoftJsonOptions(MvcNewtonsoftJsonOptions options) => options.SerializerSettings.NullValueHandling = NullValueHandling.Ignore;
+
+            void ConfigureAuthenticationOptions(AuthenticationOptions options)
             {
-                // Development environment code
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            }
 
-                if (bool.Parse(this.configuration["Token:UseAzureADToken"]))
+            void ConfigureJwtBearerOptons( JwtBearerOptions options)
+            {
+                if (this.environment.IsDevelopment())
                 {
-                    services.AddAuthentication(options =>
-                    {
-                        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-                    })
-                    .AddJwtBearer(options =>
-                    {
-                        options.Authority = this.configuration["Token:TokenIssuer"];
-                        options.Audience = this.configuration["Token:TokenAudience"];
-                        options.Events = new JwtBearerEvents
-                        {
-                            OnTokenValidated = context =>
-                            {
-                                // NOTE: You can optionally take action when the OAuth 2.0 bearer token was validated.
-
-                                return Task.CompletedTask;
-                            },
-                            OnAuthenticationFailed = AuthenticationFailed
-                        };
-                    });
+                    options.TokenValidationParameters =
+                       new TokenValidationParameters
+                       {
+                           ValidateIssuer = false,
+                           ValidateAudience = false,
+                           ValidateLifetime = false,
+                           ValidateIssuerSigningKey = false,
+                           ValidIssuer = this.configuration["Token:TokenIssuer"],
+                           ValidAudience = this.configuration["Token:TokenAudience"],
+                           IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(this.configuration["Token:IssuerSigningKey"]))
+                       };
                 }
                 else
-                {
-                    // Validation for bearer token for authorization used during testing.
-                    // NOTE: It's not recommended to use this code in production, it is not meant to replace proper OAuth authentication.
-                    //       This option is primarily available for testing purposes.
-                    services.AddAuthentication(options =>
-                    {
-                        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-                    })
-                    .AddJwtBearer(options =>
-                    {
-                        options.TokenValidationParameters =
-                            new TokenValidationParameters
-                            {
-                                ValidateIssuer = false,
-                                ValidateAudience = false,
-                                ValidateLifetime = false,
-                                ValidateIssuerSigningKey = false,
-                                ValidIssuer = this.configuration["Token:TokenIssuer"],
-                                ValidAudience = this.configuration["Token:TokenAudience"],
-                                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(this.configuration["Token:IssuerSigningKey"]))
-                            };
-                    });
-                }
-            }
-            else
-            {
-                // Leave the optional Secret Token field blank
-                // Azure AD includes an OAuth bearer token issued from Azure AD with each request
-                // The following code validates the Azure AD-issued token
-                // NOTE: It's not recommended to leave this field blank and rely on a token generated by Azure AD. 
-                //       This option is primarily available for testing purposes.
-                services.AddAuthentication(options =>
-                {
-                    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-                })
-                .AddJwtBearer(options =>
                 {
                     options.Authority = this.configuration["Token:TokenIssuer"];
                     options.Audience = this.configuration["Token:TokenAudience"];
@@ -113,16 +72,17 @@ namespace Microsoft.SCIM.WebHostSample
                     {
                         OnTokenValidated = context =>
                         {
-                            // NOTE: You can optionally take action when the OAuth 2.0 bearer token was validated.
-
                             return Task.CompletedTask;
                         },
                         OnAuthenticationFailed = AuthenticationFailed
                     };
-                });
+                }
+
             }
 
-            services.AddControllers().AddNewtonsoftJson();
+            services.AddAuthentication(ConfigureAuthenticationOptions).AddJwtBearer(ConfigureJwtBearerOptons);
+            services.AddControllers().AddNewtonsoftJson(ConfigureMvcNewtonsoftJsonOptions);
+
             services.AddSingleton(typeof(IProvider), this.ProviderBehavior);
             services.AddSingleton(typeof(IMonitor), this.MonitoringBehavior);
         }
@@ -136,7 +96,6 @@ namespace Microsoft.SCIM.WebHostSample
             }
 
             app.UseHsts();
-
             app.UseRouting();
             app.UseHttpsRedirection();
             app.UseAuthentication();

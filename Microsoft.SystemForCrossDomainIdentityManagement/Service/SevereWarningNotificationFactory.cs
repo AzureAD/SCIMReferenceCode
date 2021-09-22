@@ -15,13 +15,7 @@ namespace Microsoft.SCIM
         {
         }
 
-        public static SevereWarningNotificationFactory Instance
-        {
-            get
-            {
-                return SevereWarningNotificationFactory.Singleton.Value;
-            }
-        }
+        public static SevereWarningNotificationFactory Instance => SevereWarningNotificationFactory.Singleton.Value;
 
         public override Notification<Exception> CreateNotification(
             Exception payload,
