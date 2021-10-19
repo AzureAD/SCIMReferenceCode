@@ -95,63 +95,131 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                 throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidParameters);
             }
 
-            Resource[] results;
-            IFilter queryFilter = parameters.AlternateFilters.SingleOrDefault();
-            if (queryFilter == null)
-            {
-                IEnumerable<Core2EnterpriseUser> allUsers = this.storage.Users.Values;
-                results =
-                    allUsers.Select((Core2EnterpriseUser user) => user as Resource).ToArray();
+            IEnumerable<Resource> results = new List<Core2EnterpriseUser>();
 
-                return Task.FromResult(results);
+            if (parameters.AlternateFilters.Count <= 0)
+            {
+                results = this.storage.Users.Values.Select(
+                    (Core2EnterpriseUser user) => user as Resource);
+            }
+            else
+            {
+                    results = new List<Core2EnterpriseUser>();
+
+                foreach (IFilter queryFilter in parameters.AlternateFilters)
+                {
+                    IEnumerable<Core2EnterpriseUser> users = this.storage.Users.Values;
+
+                    IFilter andFilter = queryFilter;
+                    IFilter currentFilter = andFilter;
+                    do
+                    {
+                        if (string.IsNullOrWhiteSpace(andFilter.AttributePath))
+                        {
+                            throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidParameters);
+                        }
+
+                        else if (string.IsNullOrWhiteSpace(andFilter.ComparisonValue))
+                        {
+                            throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidParameters);
+                        }
+
+                        // UserName filter
+                        else if (andFilter.AttributePath.Equals(AttributeNames.UserName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (andFilter.FilterOperator != ComparisonOperator.Equals)
+                            {
+                                throw new NotSupportedException(
+                                    string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterOperatorNotSupportedTemplate, andFilter.FilterOperator));
+                            }
+
+                            users =
+                                users.Where(
+                                    item =>
+                                       string.Equals(
+                                            item.UserName,
+                                           andFilter.ComparisonValue,
+                                           StringComparison.OrdinalIgnoreCase));
+
+                            //return Task.FromResult(results);
+                        }
+
+                        // ExternalId filter
+                        else if (andFilter.AttributePath.Equals(AttributeNames.ExternalIdentifier, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (andFilter.FilterOperator != ComparisonOperator.Equals)
+                            {
+                                throw new NotSupportedException(
+                                    string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterOperatorNotSupportedTemplate, andFilter.FilterOperator));
+                            }
+
+                            users =
+                                users.Where(
+                                    item =>
+                                       string.Equals(
+                                            item.ExternalIdentifier,
+                                           andFilter.ComparisonValue,
+                                           StringComparison.OrdinalIgnoreCase)).ToList();
+
+                            //return Task.FromResult(results);
+                        }
+
+                        //
+                        else if (andFilter.AttributePath.Equals(AttributeNames.Active, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (andFilter.FilterOperator != ComparisonOperator.Equals)
+                            {
+                                throw new NotSupportedException(
+                                    string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterOperatorNotSupportedTemplate, andFilter.FilterOperator));
+                            }
+
+                            users =
+                                users.Where(
+                                    item =>
+                                       item.Active == bool.Parse(andFilter.ComparisonValue)).ToList();
+
+                            //return Task.FromResult(results);
+                        }
+
+                        //
+                        else if (andFilter.AttributePath.Equals($"{AttributeNames.Metadata}.{AttributeNames.LastModified}", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (andFilter.FilterOperator == ComparisonOperator.EqualOrGreaterThan)
+                            {
+                                users =
+                                    users.Where(
+                                        item =>
+                                           item.Metadata.LastModified >= DateTime.Parse(andFilter.ComparisonValue).ToUniversalTime()).ToList();
+                            }
+                            else if (andFilter.FilterOperator == ComparisonOperator.EqualOrLessThan)
+                            {
+                                users =
+                                    users.Where(
+                                        item =>
+                                           item.Metadata.LastModified <= DateTime.Parse(andFilter.ComparisonValue).ToUniversalTime()).ToList();
+                            }
+                            else
+                                throw new NotSupportedException(
+                                    string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterOperatorNotSupportedTemplate, andFilter.FilterOperator));
+
+
+
+                            //return Task.FromResult(results);
+                        }
+                        else
+                            throw new NotSupportedException(
+                                string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterAttributePathNotSupportedTemplate, andFilter.AttributePath));
+
+                        currentFilter = andFilter;
+                        andFilter = andFilter.AdditionalFilter;
+
+                    } while (currentFilter.AdditionalFilter != null);
+
+                    results = results.Union(users.Select((Core2EnterpriseUser user) => user as Resource).ToList());
+                }
             }
 
-            if (string.IsNullOrWhiteSpace(queryFilter.AttributePath))
-            {
-                throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidParameters);
-            }
-
-            if (string.IsNullOrWhiteSpace(queryFilter.ComparisonValue))
-            {
-                throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidParameters);
-            }
-
-            if (queryFilter.FilterOperator != ComparisonOperator.Equals)
-            {
-                throw new NotSupportedException(string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterOperatorNotSupportedTemplate, queryFilter.FilterOperator.ToString()));
-            }
-
-            if (queryFilter.AttributePath.Equals(AttributeNames.UserName))
-            {
-                IEnumerable<Core2EnterpriseUser> allUsers = this.storage.Users.Values;
-                results =
-                    allUsers.Where(
-                        (Core2EnterpriseUser item) =>
-                           string.Equals(
-                                item.UserName,
-                               parameters.AlternateFilters.Single().ComparisonValue,
-                               StringComparison.OrdinalIgnoreCase))
-                               .Select((Core2EnterpriseUser user) => user as Resource).ToArray();
-
-                return Task.FromResult(results);
-            }
-
-            if (queryFilter.AttributePath.Equals(AttributeNames.ExternalIdentifier))
-            {
-                IEnumerable<Core2EnterpriseUser> allUsers = this.storage.Users.Values;
-                results =
-                    allUsers.Where(
-                        (Core2EnterpriseUser item) =>
-                           string.Equals(
-                                item.ExternalIdentifier,
-                               parameters.AlternateFilters.Single().ComparisonValue,
-                               StringComparison.OrdinalIgnoreCase))
-                               .Select((Core2EnterpriseUser user) => user as Resource).ToArray();
-
-                return Task.FromResult(results);
-            }
-
-            throw new NotSupportedException(string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterAttributePathNotSupportedTemplate, queryFilter.AttributePath));
+            return Task.FromResult(results.ToArray());
         }
 
         public override Task<Resource> ReplaceAsync(Resource resource, string correlationIdentifier)
