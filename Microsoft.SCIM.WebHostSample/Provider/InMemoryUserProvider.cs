@@ -164,7 +164,27 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                             //return Task.FromResult(results);
                         }
 
-                        //
+                        // Id filter
+                        else if (andFilter.AttributePath.Equals(AttributeNames.Identifier, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (andFilter.FilterOperator != ComparisonOperator.Equals)
+                            {
+                                throw new NotSupportedException(
+                                    string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterOperatorNotSupportedTemplate, andFilter.FilterOperator));
+                            }
+
+                            users =
+                                users.Where(
+                                    item =>
+                                       string.Equals(
+                                            item.Identifier,
+                                           andFilter.ComparisonValue,
+                                           StringComparison.OrdinalIgnoreCase)).ToList();
+
+                            //return Task.FromResult(results);
+                        }
+
+                        // Active filter
                         else if (andFilter.AttributePath.Equals(AttributeNames.Active, StringComparison.OrdinalIgnoreCase))
                         {
                             if (andFilter.FilterOperator != ComparisonOperator.Equals)
@@ -219,7 +239,13 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                 }
             }
 
-            return Task.FromResult(results.ToArray());
+            if (parameters.PaginationParameters != null)
+            {
+                int count = parameters.PaginationParameters.Count.HasValue ? parameters.PaginationParameters.Count.Value : 0;
+                return Task.FromResult(results.Take(count).ToArray());
+            }
+            else
+                return Task.FromResult(results.ToArray());
         }
 
         public override Task<Resource> ReplaceAsync(Resource resource, string correlationIdentifier)
