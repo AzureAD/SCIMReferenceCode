@@ -9,21 +9,21 @@ namespace Microsoft.SCIM
     [DataContract]
     public abstract class ErrorBase : Schematized
     {
-        [DataMember(Name = "scimType")] //AttributeNames.ScimType
+        [DataMember(Name = "scimType", Order = 1)] //AttributeNames.ScimType
         public virtual string ScimType
         {
             get;
             set;
         }
 
-        [DataMember(Name = "detail")] //AttributeNames.Detail
+        [DataMember(Name = "detail", Order = 2)] //AttributeNames.Detail
         public virtual string Detail
         {
             get;
             set;
         }
 
-        [DataMember(Name = "status")] //AttributeNames.Status
+        [DataMember(Name = "status", Order = 3)] //AttributeNames.Status
         public virtual int Status
         {
             get;
