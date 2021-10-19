@@ -210,6 +210,9 @@ The status code of the response was {1}</value>
   <data name="MonitorOutputTemplate" xml:space="preserve">
     <value>{0}: {1}</value>
   </data>
+  <data name="ResourceNotFoundTemplate" xml:space="preserve">
+    <value>Resource {0} not found.</value>
+  </data>
   <data name="SeparatorHeaderValues" xml:space="preserve">
     <value>,</value>
   </data>

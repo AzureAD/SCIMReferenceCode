@@ -22,7 +22,7 @@ namespace Microsoft.SCIM {
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "16.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    internal class SystemForCrossDomainIdentityManagementServiceResources {
+    public class SystemForCrossDomainIdentityManagementServiceResources {
         
         private static global::System.Resources.ResourceManager resourceMan;
         
@@ -36,7 +36,7 @@ namespace Microsoft.SCIM {
         ///   Returns the cached ResourceManager instance used by this class.
         /// </summary>
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
-        internal static global::System.Resources.ResourceManager ResourceManager {
+        public static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
                     global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Microsoft.SCIM.SystemForCrossDomainIdentityManagementServiceResources", typeof(SystemForCrossDomainIdentityManagementServiceResources).Assembly);
@@ -51,7 +51,7 @@ namespace Microsoft.SCIM {
         ///   resource lookups using this strongly typed resource class.
         /// </summary>
         [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
-        internal static global::System.Globalization.CultureInfo Culture {
+        public static global::System.Globalization.CultureInfo Culture {
             get {
                 return resourceCulture;
             }
@@ -63,7 +63,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to Filtering by this attribute is not supported: {0}..
         /// </summary>
-        internal static string ExceptionFilterAttributePathNotSupportedTemplate {
+        public static string ExceptionFilterAttributePathNotSupportedTemplate {
             get {
                 return ResourceManager.GetString("ExceptionFilterAttributePathNotSupportedTemplate", resourceCulture);
             }
@@ -72,7 +72,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to Only a query with exactly one filter is supported..
         /// </summary>
-        internal static string ExceptionFilterCount {
+        public static string ExceptionFilterCount {
             get {
                 return ResourceManager.GetString("ExceptionFilterCount", resourceCulture);
             }
@@ -81,7 +81,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to The filter is not supported..
         /// </summary>
-        internal static string ExceptionFilterNotSupported {
+        public static string ExceptionFilterNotSupported {
             get {
                 return ResourceManager.GetString("ExceptionFilterNotSupported", resourceCulture);
             }
@@ -90,7 +90,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to This filter operator is not supported: {0}..
         /// </summary>
-        internal static string ExceptionFilterOperatorNotSupportedTemplate {
+        public static string ExceptionFilterOperatorNotSupportedTemplate {
             get {
                 return ResourceManager.GetString("ExceptionFilterOperatorNotSupportedTemplate", resourceCulture);
             }
@@ -99,7 +99,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to A batch is invalid..
         /// </summary>
-        internal static string ExceptionInvalidBatch {
+        public static string ExceptionInvalidBatch {
             get {
                 return ResourceManager.GetString("ExceptionInvalidBatch", resourceCulture);
             }
@@ -108,7 +108,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to The context is invalid..
         /// </summary>
-        internal static string ExceptionInvalidContext {
+        public static string ExceptionInvalidContext {
             get {
                 return ResourceManager.GetString("ExceptionInvalidContext", resourceCulture);
             }
@@ -117,7 +117,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to An identifier is invalid..
         /// </summary>
-        internal static string ExceptionInvalidIdentifier {
+        public static string ExceptionInvalidIdentifier {
             get {
                 return ResourceManager.GetString("ExceptionInvalidIdentifier", resourceCulture);
             }
@@ -126,7 +126,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to An operation is invalid..
         /// </summary>
-        internal static string ExceptionInvalidOperation {
+        public static string ExceptionInvalidOperation {
             get {
                 return ResourceManager.GetString("ExceptionInvalidOperation", resourceCulture);
             }
@@ -135,7 +135,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to The operation with this identifier is not valid: {0}..
         /// </summary>
-        internal static string ExceptionInvalidOperationTemplate {
+        public static string ExceptionInvalidOperationTemplate {
             get {
                 return ResourceManager.GetString("ExceptionInvalidOperationTemplate", resourceCulture);
             }
@@ -144,7 +144,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to The parameters are invalid..
         /// </summary>
-        internal static string ExceptionInvalidParameters {
+        public static string ExceptionInvalidParameters {
             get {
                 return ResourceManager.GetString("ExceptionInvalidParameters", resourceCulture);
             }
@@ -153,7 +153,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to The request is invalid..
         /// </summary>
-        internal static string ExceptionInvalidRequest {
+        public static string ExceptionInvalidRequest {
             get {
                 return ResourceManager.GetString("ExceptionInvalidRequest", resourceCulture);
             }
@@ -162,7 +162,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to The resource is invalid..
         /// </summary>
-        internal static string ExceptionInvalidResource {
+        public static string ExceptionInvalidResource {
             get {
                 return ResourceManager.GetString("ExceptionInvalidResource", resourceCulture);
             }
@@ -171,7 +171,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to The response is invalid..
         /// </summary>
-        internal static string ExceptionInvalidResponse {
+        public static string ExceptionInvalidResponse {
             get {
                 return ResourceManager.GetString("ExceptionInvalidResponse", resourceCulture);
             }
@@ -180,7 +180,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to The state is invalid..
         /// </summary>
-        internal static string ExceptionInvalidState {
+        public static string ExceptionInvalidState {
             get {
                 return ResourceManager.GetString("ExceptionInvalidState", resourceCulture);
             }
@@ -189,7 +189,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to The requested state transition is invalid..
         /// </summary>
-        internal static string ExceptionInvalidStateTransition {
+        public static string ExceptionInvalidStateTransition {
             get {
                 return ResourceManager.GetString("ExceptionInvalidStateTransition", resourceCulture);
             }
@@ -198,7 +198,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to This method is not supported: {0}..
         /// </summary>
-        internal static string ExceptionMethodNotSupportedTemplate {
+        public static string ExceptionMethodNotSupportedTemplate {
             get {
                 return ResourceManager.GetString("ExceptionMethodNotSupportedTemplate", resourceCulture);
             }
@@ -207,7 +207,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to The monitoring behavior has not been properly initialized..
         /// </summary>
-        internal static string ExceptionNotInitializedMonitoringBehavior {
+        public static string ExceptionNotInitializedMonitoringBehavior {
             get {
                 return ResourceManager.GetString("ExceptionNotInitializedMonitoringBehavior", resourceCulture);
             }
@@ -216,7 +216,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to The provider behavior has not been properly initialized..
         /// </summary>
-        internal static string ExceptionNotInitializedProviderBehavior {
+        public static string ExceptionNotInitializedProviderBehavior {
             get {
                 return ResourceManager.GetString("ExceptionNotInitializedProviderBehavior", resourceCulture);
             }
@@ -225,7 +225,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to Pagination is not supported for this type of resource: {0}.
         /// </summary>
-        internal static string ExceptionPaginationIsNotSupportedTemplate {
+        public static string ExceptionPaginationIsNotSupportedTemplate {
             get {
                 return ResourceManager.GetString("ExceptionPaginationIsNotSupportedTemplate", resourceCulture);
             }
@@ -234,7 +234,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to The query is not supported..
         /// </summary>
-        internal static string ExceptionQueryNotSupported {
+        public static string ExceptionQueryNotSupported {
             get {
                 return ResourceManager.GetString("ExceptionQueryNotSupported", resourceCulture);
             }
@@ -243,7 +243,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to {0}: {1}.
         /// </summary>
-        internal static string HeaderTemplate {
+        public static string HeaderTemplate {
             get {
                 return ResourceManager.GetString("HeaderTemplate", resourceCulture);
             }
@@ -252,7 +252,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to Data has been read..
         /// </summary>
-        internal static string InformationRead {
+        public static string InformationRead {
             get {
                 return ResourceManager.GetString("InformationRead", resourceCulture);
             }
@@ -263,7 +263,7 @@ namespace Microsoft.SCIM {
         ///
         ///The status code of the response was {1}.
         /// </summary>
-        internal static string InformationRequestProcessedTemplate {
+        public static string InformationRequestProcessedTemplate {
             get {
                 return ResourceManager.GetString("InformationRequestProcessedTemplate", resourceCulture);
             }
@@ -272,7 +272,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to This request was received: {0}..
         /// </summary>
-        internal static string InformationRequestReceivedTemplate {
+        public static string InformationRequestReceivedTemplate {
             get {
                 return ResourceManager.GetString("InformationRequestReceivedTemplate", resourceCulture);
             }
@@ -281,7 +281,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to Data has been written..
         /// </summary>
-        internal static string InformationWrote {
+        public static string InformationWrote {
             get {
                 return ResourceManager.GetString("InformationWrote", resourceCulture);
             }
@@ -291,7 +291,7 @@ namespace Microsoft.SCIM {
         ///   Looks up a localized string similar to {0} {1}
         ///{2}.
         /// </summary>
-        internal static string MessageTemplate {
+        public static string MessageTemplate {
             get {
                 return ResourceManager.GetString("MessageTemplate", resourceCulture);
             }
@@ -300,7 +300,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to {0}@.
         /// </summary>
-        internal static string MonitorCorrelationIdentifierPrefixTemplate {
+        public static string MonitorCorrelationIdentifierPrefixTemplate {
             get {
                 return ResourceManager.GetString("MonitorCorrelationIdentifierPrefixTemplate", resourceCulture);
             }
@@ -309,7 +309,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to {0}: {1} (Critical? {2}).
         /// </summary>
-        internal static string MonitorOutputExceptionTemplate {
+        public static string MonitorOutputExceptionTemplate {
             get {
                 return ResourceManager.GetString("MonitorOutputExceptionTemplate", resourceCulture);
             }
@@ -318,7 +318,7 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to {0}: {1} (Verbose? {2}).
         /// </summary>
-        internal static string MonitorOutputInformationTemplate {
+        public static string MonitorOutputInformationTemplate {
             get {
                 return ResourceManager.GetString("MonitorOutputInformationTemplate", resourceCulture);
             }
@@ -327,16 +327,25 @@ namespace Microsoft.SCIM {
         /// <summary>
         ///   Looks up a localized string similar to {0}: {1}.
         /// </summary>
-        internal static string MonitorOutputTemplate {
+        public static string MonitorOutputTemplate {
             get {
                 return ResourceManager.GetString("MonitorOutputTemplate", resourceCulture);
             }
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Resource {0} not found..
+        /// </summary>
+        public static string ResourceNotFoundTemplate {
+            get {
+                return ResourceManager.GetString("ResourceNotFoundTemplate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to ,.
         /// </summary>
-        internal static string SeparatorHeaderValues {
+        public static string SeparatorHeaderValues {
             get {
                 return ResourceManager.GetString("SeparatorHeaderValues", resourceCulture);
             }
@@ -349,7 +358,7 @@ namespace Microsoft.SCIM {
         ///Received: 
         ///{1}.
         /// </summary>
-        internal static string WarningUnexpectedWatermarkTemplate {
+        public static string WarningUnexpectedWatermarkTemplate {
             get {
                 return ResourceManager.GetString("WarningUnexpectedWatermarkTemplate", resourceCulture);
             }

@@ -83,12 +83,12 @@ namespace Microsoft.SCIM.WebHostSample.Provider
 
             if (null == parameters.AlternateFilters)
             {
-                throw new ArgumentException(SampleServiceResources.ExceptionInvalidParameters);
+                throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidParameters);
             }
 
             if (string.IsNullOrWhiteSpace(parameters.SchemaIdentifier))
             {
-                throw new ArgumentException(SampleServiceResources.ExceptionInvalidParameters);
+                throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidParameters);
             }
 
             Resource[] results;
@@ -102,17 +102,17 @@ namespace Microsoft.SCIM.WebHostSample.Provider
             {
                 if (string.IsNullOrWhiteSpace(queryFilter.AttributePath))
                 {
-                    throw new ArgumentException(SampleServiceResources.ExceptionInvalidParameters);
+                    throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidParameters);
                 }
 
                 if (string.IsNullOrWhiteSpace(queryFilter.ComparisonValue))
                 {
-                    throw new ArgumentException(SampleServiceResources.ExceptionInvalidParameters);
+                    throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidParameters);
                 }
 
                 if (queryFilter.FilterOperator != ComparisonOperator.Equals)
                 {
-                    throw new NotSupportedException(SampleServiceResources.UnsupportedComparisonOperator);
+                    throw new NotSupportedException(string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterOperatorNotSupportedTemplate, queryFilter.FilterOperator));
                 }
 
                 if (queryFilter.AttributePath.Equals(AttributeNames.DisplayName))
@@ -128,7 +128,7 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                 }
                 else
                 {
-                    throw new NotSupportedException(SampleServiceResources.UnsupportedFilterAttributeGroup);
+                    throw new NotSupportedException(string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterAttributePathNotSupportedTemplate, queryFilter.AttributePath));
                 }
             }
 
@@ -238,17 +238,17 @@ namespace Microsoft.SCIM.WebHostSample.Provider
 
             if (null == patch.ResourceIdentifier)
             {
-                throw new ArgumentException(SampleServiceResources.ExceptionInvalidPatch);
+                throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidOperation);
             }
 
             if (string.IsNullOrWhiteSpace(patch.ResourceIdentifier.Identifier))
             {
-                throw new ArgumentException(SampleServiceResources.ExceptionInvalidPatch);
+                throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidOperation);
             }
 
             if (null == patch.PatchRequest)
             {
-                throw new ArgumentException(SampleServiceResources.ExceptionInvalidPatch);
+                throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidOperation);
             }
 
             PatchRequest2 patchRequest =
