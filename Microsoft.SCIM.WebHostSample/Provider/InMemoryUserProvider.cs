@@ -9,7 +9,6 @@ namespace Microsoft.SCIM.WebHostSample.Provider
     using System.Threading.Tasks;
     using System.Web.Http;
     using Microsoft.SCIM;
-    using Microsoft.SCIM.WebHostSample.Resources;
 
     public class InMemoryUserProvider : ProviderBase
     {
@@ -140,8 +139,6 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                                             item.UserName,
                                            andFilter.ComparisonValue,
                                            StringComparison.OrdinalIgnoreCase));
-
-                            //return Task.FromResult(results);
                         }
 
                         // ExternalId filter
@@ -160,8 +157,6 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                                             item.ExternalIdentifier,
                                            andFilter.ComparisonValue,
                                            StringComparison.OrdinalIgnoreCase)).ToList();
-
-                            //return Task.FromResult(results);
                         }
 
                         // Id filter
@@ -180,8 +175,6 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                                             item.Identifier,
                                            andFilter.ComparisonValue,
                                            StringComparison.OrdinalIgnoreCase)).ToList();
-
-                            //return Task.FromResult(results);
                         }
 
                         // Active filter
@@ -197,11 +190,9 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                                 users.Where(
                                     item =>
                                        item.Active == bool.Parse(andFilter.ComparisonValue)).ToList();
-
-                            //return Task.FromResult(results);
                         }
 
-                        //
+                        // LastModified filter
                         else if (andFilter.AttributePath.Equals($"{AttributeNames.Metadata}.{AttributeNames.LastModified}", StringComparison.OrdinalIgnoreCase))
                         {
                             if (andFilter.FilterOperator == ComparisonOperator.EqualOrGreaterThan)
@@ -221,10 +212,6 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                             else
                                 throw new NotSupportedException(
                                     string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterOperatorNotSupportedTemplate, andFilter.FilterOperator));
-
-
-
-                            //return Task.FromResult(results);
                         }
                         else
                             throw new NotSupportedException(
