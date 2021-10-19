@@ -44,6 +44,11 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                 throw new HttpResponseException(HttpStatusCode.Conflict);
             }
 
+            // Update metadata
+            DateTime created = DateTime.UtcNow;
+            user.Metadata.Created = created;
+            user.Metadata.LastModified = created; 
+            
             string resourceIdentifier = Guid.NewGuid().ToString();
             resource.Identifier = resourceIdentifier;
             this.storage.Users.Add(resourceIdentifier, user);
@@ -163,10 +168,9 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                 throw new HttpResponseException(HttpStatusCode.BadRequest);
             }
 
-            IEnumerable<Core2EnterpriseUser> exisitingUsers = this.storage.Users.Values;
             if
             (
-                exisitingUsers.Any(
+                this.storage.Users.Values.Any(
                     (Core2EnterpriseUser exisitingUser) =>
                         string.Equals(exisitingUser.UserName, user.UserName, StringComparison.Ordinal) &&
                         !string.Equals(exisitingUser.Identifier, user.Identifier, StringComparison.OrdinalIgnoreCase))
@@ -175,10 +179,19 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                 throw new HttpResponseException(HttpStatusCode.Conflict);
             }
 
-            if (!this.storage.Users.TryGetValue(user.Identifier, out Core2EnterpriseUser _))
+            Core2EnterpriseUser exisitingUser = this.storage.Users.Values
+                .FirstOrDefault(
+                    (Core2EnterpriseUser exisitingUser) =>
+                        string.Equals(exisitingUser.Identifier, user.Identifier, StringComparison.OrdinalIgnoreCase)
+                );
+            if (exisitingUser == null)
             {
                 throw new HttpResponseException(HttpStatusCode.NotFound);
             }
+
+            // Update metadata
+            user.Metadata.Created = exisitingUser.Metadata.Created;
+            user.Metadata.LastModified = DateTime.UtcNow;
 
             this.storage.Users[user.Identifier] = user;
             Resource result = user as Resource;
@@ -251,6 +264,9 @@ namespace Microsoft.SCIM.WebHostSample.Provider
             if (this.storage.Users.TryGetValue(patch.ResourceIdentifier.Identifier, out Core2EnterpriseUser user))
             {
                 user.Apply(patchRequest);
+
+                // Update metadata
+                user.Metadata.LastModified = DateTime.UtcNow;
             }
             else
             {
