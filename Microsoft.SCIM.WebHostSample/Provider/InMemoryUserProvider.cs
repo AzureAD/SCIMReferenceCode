@@ -33,12 +33,12 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                 throw new HttpResponseException(HttpStatusCode.BadRequest);
             }
 
-            IEnumerable<Core2EnterpriseUser> exisitingUsers = this.storage.Users.Values;
+            IEnumerable<Core2EnterpriseUser> existingUsers = this.storage.Users.Values;
             if
             (
-                exisitingUsers.Any(
-                    (Core2EnterpriseUser exisitingUser) =>
-                        string.Equals(exisitingUser.UserName, user.UserName, StringComparison.Ordinal))
+                existingUsers.Any(
+                    (Core2EnterpriseUser existingUser) =>
+                        string.Equals(existingUser.UserName, user.UserName, StringComparison.Ordinal))
             )
             {
                 throw new HttpResponseException(HttpStatusCode.Conflict);
@@ -163,13 +163,13 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                 throw new HttpResponseException(HttpStatusCode.BadRequest);
             }
 
-            IEnumerable<Core2EnterpriseUser> exisitingUsers = this.storage.Users.Values;
+            IEnumerable<Core2EnterpriseUser> existingUsers = this.storage.Users.Values;
             if
             (
-                exisitingUsers.Any(
-                    (Core2EnterpriseUser exisitingUser) =>
-                        string.Equals(exisitingUser.UserName, user.UserName, StringComparison.Ordinal) &&
-                        !string.Equals(exisitingUser.Identifier, user.Identifier, StringComparison.OrdinalIgnoreCase))
+                existingUsers.Any(
+                    (Core2EnterpriseUser existingUser) =>
+                        string.Equals(existingUser.UserName, user.UserName, StringComparison.Ordinal) &&
+                        !string.Equals(existingUser.Identifier, user.Identifier, StringComparison.OrdinalIgnoreCase))
             )
             {
                 throw new HttpResponseException(HttpStatusCode.Conflict);
