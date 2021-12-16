@@ -1,0 +1,883 @@
+{
+	"info": {
+		"_postman_id": "2a0040af-4f1a-4c48-a860-0c2c6c5d8641",
+		"name": "SCIM Inbound",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Get Token",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"var jsonData = pm.response.json();\r",
+							"pm.collectionVariables.set(\"accessToken\", jsonData.token);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": [
+						{
+							"key": "client_id",
+							"value": "{{clientId}}",
+							"type": "text"
+						},
+						{
+							"key": "scope",
+							"value": "",
+							"type": "text"
+						},
+						{
+							"key": "client_secret",
+							"value": "{{clientSecret}}",
+							"type": "text"
+						},
+						{
+							"key": "grant_type",
+							"value": "client_credentials",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "https://login.microsoftonline.com/{{tenant}}/oauth2/v2.0/token",
+					"protocol": "https",
+					"host": [
+						"login",
+						"microsoftonline",
+						"com"
+					],
+					"path": [
+						"{{tenant}}",
+						"oauth2",
+						"v2.0",
+						"token"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Test Connection",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://{{endpoint}}/scim/Users?count=1",
+					"protocol": "https",
+					"host": [
+						"{{endpoint}}"
+					],
+					"path": [
+						"scim",
+						"Users"
+					],
+					"query": [
+						{
+							"key": "count",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Employee",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"pm.variables.set('givenName', pm.variables.replaceIn(\"{{$randomFirstName}}\"));\r",
+							"console.log(pm.variables.get('givenName'));\r",
+							"pm.variables.set('familyName', pm.variables.replaceIn(\"{{$randomLastName}}\"));\r",
+							"console.log(pm.variables.get('familyName'));\r",
+							"pm.variables.set('displayName', pm.variables.get('givenName') + \" \" + pm.variables.get('familyName'));\r",
+							"console.log(pm.variables.get('displayName'));\r",
+							"pm.variables.set('userName', (pm.variables.get('givenName') + pm.variables.get('familyName').substring(0, 1)).toLowerCase());\r",
+							"console.log(pm.variables.get('userName'));"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 201\", function () {\r",
+							"    pm.response.to.have.status(201);\r",
+							"});\r",
+							"\r",
+							"var jsonData = pm.response.json();\r",
+							"pm.collectionVariables.set(\"lastManagerUserId\", jsonData.id);\r",
+							"pm.collectionVariables.set(\"lastUserId\", jsonData.id);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\",\r\n        \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\"\r\n    ],\r\n    \"externalId\": \"{{$guid}}\",\r\n    \"userName\": \"{{userName}}\",\r\n    \"name\": {\r\n        \"givenName\": \"{{givenName}}\",\r\n        \"familyName\": \"{{familyName}}\"\r\n    },\r\n    \"active\": true,\r\n    \"displayName\": \"{{displayName}}\",\r\n    \"locale\": \"{{$randomCountryCode}}\",\r\n    \"userType\": \"Employee\",\r\n    \"title\": \"{{$randomJobTitle}}\",\r\n    \"emails\": [\r\n        {\r\n            \"value\": \"{{$isoTimestamp}}\",\r\n            \"display\": \"john@woodgrove.com\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        },\r\n\t\t{\r\n\t\t\t\"value\": \"john@example.com\",\r\n\t\t\t\"display\": \"john@example.com\",\r\n\t\t\t\"type\": \"home\"\r\n\t\t}\r\n    ],\r\n    \"phoneNumbers\": [\r\n        {\r\n            \"value\": \"+1 {{$randomPhoneNumber}}\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        }\r\n    ],\r\n    \"addresses\": [\r\n        {\r\n            \"streetAddress\": \"One Microsoft Way\",\r\n            \"locality\": \"Redmond\",\r\n            \"region\": \"WA\",\r\n            \"postalCode\": \"98052\",\r\n            \"country\": \"US\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        }\r\n    ],\r\n    \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\": {\r\n        \"employeeNumber\": \"{{$randomInt}}\",\r\n        \"organization\": \"SCIM Corporation\",\r\n        \"department\": \"{{$randomJobArea}}\"\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://{{endpoint}}/scim/Users",
+					"protocol": "https",
+					"host": [
+						"{{endpoint}}"
+					],
+					"path": [
+						"scim",
+						"Users"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Contractor with manager (last user)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"pm.variables.set('givenName', pm.variables.replaceIn(\"{{$randomFirstName}}\"));\r",
+							"console.log(pm.variables.get('givenName'));\r",
+							"pm.variables.set('familyName', pm.variables.replaceIn(\"{{$randomLastName}}\"));\r",
+							"console.log(pm.variables.get('familyName'));\r",
+							"pm.variables.set('displayName', pm.variables.get('givenName') + \" \" + pm.variables.get('familyName'));\r",
+							"console.log(pm.variables.get('displayName'));\r",
+							"pm.variables.set('userName', (pm.variables.get('givenName') + pm.variables.get('familyName').substring(0, 1)).toLowerCase());\r",
+							"console.log(pm.variables.get('userName'));"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 201\", function () {\r",
+							"    pm.response.to.have.status(201);\r",
+							"});\r",
+							"\r",
+							"var jsonData = pm.response.json();\r",
+							"pm.collectionVariables.set(\"lastUserId\", jsonData.id);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\",\r\n        \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\"\r\n    ],\r\n    \"externalId\": \"{{$guid}}\",\r\n    \"userName\": \"{{userName}}\",\r\n    \"name\": {\r\n        \"givenName\": \"{{givenName}}\",\r\n        \"familyName\": \"{{familyName}}\"\r\n    },\r\n    \"active\": true,\r\n    \"displayName\": \"{{displayName}}\",\r\n    \"locale\": \"{{$randomCountryCode}}\",\r\n    \"userType\": \"Contractor\",\r\n    \"title\": \"{{$randomJobTitle}}\",\r\n    \"emails\": [\r\n        {\r\n            \"value\": \"john@woodgrove.com\",\r\n            \"display\": \"john@woodgrove.com\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        },\r\n\t\t{\r\n\t\t\t\"value\": \"john@example.com\",\r\n\t\t\t\"display\": \"john@example.com\",\r\n\t\t\t\"type\": \"home\"\r\n\t\t}\r\n    ],\r\n    \"phoneNumbers\": [\r\n        {\r\n            \"value\": \"+1 {{$randomPhoneNumber}}\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        }\r\n    ],\r\n    \"addresses\": [\r\n        {\r\n            \"streetAddress\": \"One Microsoft Way\",\r\n            \"locality\": \"Redmond\",\r\n            \"region\": \"WA\",\r\n            \"postalCode\": \"98052\",\r\n            \"country\": \"US\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        }\r\n    ],\r\n    \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\": {\r\n        \"employeeNumber\": \"{{$randomInt}}\",\r\n        \"organization\": \"SCIM Corporation\",\r\n        \"department\": \"{{$randomJobArea}}\",\r\n        \"manager\": {\r\n            \"value\": \"{{lastUserId}}\"\r\n        }\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://{{endpoint}}/scim/Users",
+					"protocol": "https",
+					"host": [
+						"{{endpoint}}"
+					],
+					"path": [
+						"scim",
+						"Users"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Employee with manager (last user)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"pm.variables.set('givenName', pm.variables.replaceIn(\"{{$randomFirstName}}\"));\r",
+							"console.log(pm.variables.get('givenName'));\r",
+							"pm.variables.set('familyName', pm.variables.replaceIn(\"{{$randomLastName}}\"));\r",
+							"console.log(pm.variables.get('familyName'));\r",
+							"pm.variables.set('displayName', pm.variables.get('givenName') + \" \" + pm.variables.get('familyName'));\r",
+							"console.log(pm.variables.get('displayName'));\r",
+							"pm.variables.set('userName', (pm.variables.get('givenName') + pm.variables.get('familyName').substring(0, 1)).toLowerCase());\r",
+							"console.log(pm.variables.get('userName'));"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 201\", function () {\r",
+							"    pm.response.to.have.status(201);\r",
+							"});\r",
+							"\r",
+							"var jsonData = pm.response.json();\r",
+							"pm.collectionVariables.set(\"lastUserId\", jsonData.id);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\",\r\n        \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\"\r\n    ],\r\n    \"externalId\": \"{{$guid}}\",\r\n    \"userName\": \"{{userName}}\",\r\n    \"name\": {\r\n        \"givenName\": \"{{givenName}}\",\r\n        \"familyName\": \"{{familyName}}\"\r\n    },\r\n    \"active\": false,\r\n    \"displayName\": \"{{displayName}}\",\r\n    \"locale\": \"{{$randomCountryCode}}\",\r\n    \"userType\": \"Employee\",\r\n    \"title\": \"{{$randomJobTitle}}\",\r\n    \"emails\": [\r\n        {\r\n            \"value\": \"john@woodgrove.com\",\r\n            \"display\": \"john@woodgrove.com\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        },\r\n\t\t{\r\n\t\t\t\"value\": \"john@example.com\",\r\n\t\t\t\"display\": \"john@example.com\",\r\n\t\t\t\"type\": \"home\"\r\n\t\t}\r\n    ],\r\n    \"phoneNumbers\": [\r\n        {\r\n            \"value\": \"+1 {{$randomPhoneNumber}}\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        }\r\n    ],\r\n    \"addresses\": [\r\n        {\r\n            \"streetAddress\": \"One Microsoft Way\",\r\n            \"locality\": \"Redmond\",\r\n            \"region\": \"WA\",\r\n            \"postalCode\": \"98052\",\r\n            \"country\": \"US\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        }\r\n    ],\r\n    \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\": {\r\n        \"employeeNumber\": \"{{$randomInt}}\",\r\n        \"organization\": \"SCIM Corporation\",\r\n        \"department\": \"{{$randomJobArea}}\",\r\n        \"manager\": {\r\n            \"value\": \"{{lastUserId}}\"\r\n        }\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://{{endpoint}}/scim/Users",
+					"protocol": "https",
+					"host": [
+						"{{endpoint}}"
+					],
+					"path": [
+						"scim",
+						"Users"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Employee (inactive)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"pm.variables.set('givenName', pm.variables.replaceIn(\"{{$randomFirstName}}\"));\r",
+							"console.log(pm.variables.get('givenName'));\r",
+							"pm.variables.set('familyName', pm.variables.replaceIn(\"{{$randomLastName}}\"));\r",
+							"console.log(pm.variables.get('familyName'));\r",
+							"pm.variables.set('displayName', pm.variables.get('givenName') + \" \" + pm.variables.get('familyName'));\r",
+							"console.log(pm.variables.get('displayName'));\r",
+							"pm.variables.set('userName', (pm.variables.get('givenName') + pm.variables.get('familyName').substring(0, 1)).toLowerCase());\r",
+							"console.log(pm.variables.get('userName'));"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 201\", function () {\r",
+							"    pm.response.to.have.status(201);\r",
+							"});\r",
+							"\r",
+							"var jsonData = pm.response.json();\r",
+							"pm.collectionVariables.set(\"lastInactiveUserId\", jsonData.id);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\",\r\n        \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\"\r\n    ],\r\n    \"externalId\": \"{{$guid}}\",\r\n    \"userName\": \"{{userName}}\",\r\n    \"name\": {\r\n        \"givenName\": \"{{givenName}}\",\r\n        \"familyName\": \"{{familyName}}\"\r\n    },\r\n    \"active\": false,\r\n    \"displayName\": \"{{displayName}}\",\r\n    \"locale\": \"{{$randomCountryCode}}\",\r\n    \"userType\": \"Employee\",\r\n    \"title\": \"{{$randomJobTitle}}\",\r\n    \"emails\": [\r\n        {\r\n            \"value\": \"john@woodgrove.com\",\r\n            \"display\": \"john@woodgrove.com\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        },\r\n\t\t{\r\n\t\t\t\"value\": \"john@example.com\",\r\n\t\t\t\"display\": \"john@example.com\",\r\n\t\t\t\"type\": \"home\"\r\n\t\t}\r\n    ],\r\n    \"phoneNumbers\": [\r\n        {\r\n            \"value\": \"+1 {{$randomPhoneNumber}}\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        }\r\n    ],\r\n    \"addresses\": [\r\n        {\r\n            \"streetAddress\": \"One Microsoft Way\",\r\n            \"locality\": \"Redmond\",\r\n            \"region\": \"WA\",\r\n            \"postalCode\": \"98052\",\r\n            \"country\": \"US\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        }\r\n    ],\r\n    \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\": {\r\n        \"employeeNumber\": \"{{$randomInt}}\",\r\n        \"organization\": \"SCIM Corporation\",\r\n        \"department\": \"{{$randomJobArea}}\"\r\n    }\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://{{endpoint}}/scim/Users",
+					"protocol": "https",
+					"host": [
+						"{{endpoint}}"
+					],
+					"path": [
+						"scim",
+						"Users"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "On Demand",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://{{endpoint}}/scim/Users?filter=id eq \"{{lastUserId}}\"",
+					"protocol": "https",
+					"host": [
+						"{{endpoint}}"
+					],
+					"path": [
+						"scim",
+						"Users"
+					],
+					"query": [
+						{
+							"key": "filter",
+							"value": "id eq \"{{lastUserId}}\""
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "FullSync (page 1)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"pm.collectionVariables.set('lastWatermark', pm.variables.replaceIn(\"{{$isoTimestamp}}\"));\r",
+							"console.log(pm.collectionVariables.get('lastWatermark'));"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://{{endpoint}}/scim/Users?filter=active eq true and (meta.lastModified ge \"0001-01-03T00:00:00.0000000Z\" and meta.lastModified le \"{{lastWatermark}}\")&count=5&startIndex=1",
+					"protocol": "https",
+					"host": [
+						"{{endpoint}}"
+					],
+					"path": [
+						"scim",
+						"Users"
+					],
+					"query": [
+						{
+							"key": "filter",
+							"value": "active eq true and (meta.lastModified ge \"0001-01-03T00:00:00.0000000Z\" and meta.lastModified le \"{{lastWatermark}}\")"
+						},
+						{
+							"key": "count",
+							"value": "5"
+						},
+						{
+							"key": "startIndex",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "FullSync (page 2)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"console.log(pm.collectionVariables.get('lastWatermark'));"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://{{endpoint}}/scim/Users?filter=active eq true and (meta.lastModified ge \"0001-01-03T00:00:00.0000000Z\" and meta.lastModified le \"{{lastWatermark}}\")&count=5&startIndex=6",
+					"protocol": "https",
+					"host": [
+						"{{endpoint}}"
+					],
+					"path": [
+						"scim",
+						"Users"
+					],
+					"query": [
+						{
+							"key": "filter",
+							"value": "active eq true and (meta.lastModified ge \"0001-01-03T00:00:00.0000000Z\" and meta.lastModified le \"{{lastWatermark}}\")"
+						},
+						{
+							"key": "count",
+							"value": "5"
+						},
+						{
+							"key": "startIndex",
+							"value": "6"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update User (lastname)",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "PATCH",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:api:messages:2.0:PatchOp\"\r\n    ],\r\n    \"Operations\": [\r\n        {\r\n            \"op\": \"replace\",\r\n            \"path\": \"name.familyName\",\r\n            \"value\": \"{{$randomLastName}}\"\r\n        }\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://{{endpoint}}/scim/Users/{{lastUserId}}",
+					"protocol": "https",
+					"host": [
+						"{{endpoint}}"
+					],
+					"path": [
+						"scim",
+						"Users",
+						"{{lastUserId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update User (active)",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "PATCH",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:api:messages:2.0:PatchOp\"\r\n    ],\r\n    \"Operations\": [\r\n        {\r\n            \"op\": \"replace\",\r\n            \"path\": \"active\",\r\n            \"value\": true\r\n        }\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://{{endpoint}}/scim/Users/{{lastInactiveUserId}}",
+					"protocol": "https",
+					"host": [
+						"{{endpoint}}"
+					],
+					"path": [
+						"scim",
+						"Users",
+						"{{lastInactiveUserId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update User (manager)",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "PATCH",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"type": "text",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:api:messages:2.0:PatchOp\"\r\n    ],\r\n    \"Operations\": [\r\n        {\r\n            \"op\": \"replace\",\r\n            \"path\": \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User.manager\",\r\n            \"value\": \"{{lastManagerUserId}}\"\r\n        }\r\n    ]\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://{{endpoint}}/scim/Users/{{lastUserId}}",
+					"protocol": "https",
+					"host": [
+						"{{endpoint}}"
+					],
+					"path": [
+						"scim",
+						"Users",
+						"{{lastUserId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "DeltaSync",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"pm.variables.set('currentTime', pm.variables.replaceIn(\"{{$isoTimestamp}}\"));\r",
+							"console.log(pm.variables.get('currentTime'));"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"if (pm.response.code == 200){\r",
+							"    pm.collectionVariables.set('lastWatermark', pm.variables.get('currentTime'));\r",
+							"    console.log(pm.collectionVariables.get('lastWatermark'));\r",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://{{endpoint}}/scim/Users?filter=active eq true and (meta.lastModified ge \"{{lastWatermark}}\" and meta.lastModified le \"{{currentTime}}\")&count=100&startindex=0",
+					"protocol": "https",
+					"host": [
+						"{{endpoint}}"
+					],
+					"path": [
+						"scim",
+						"Users"
+					],
+					"query": [
+						{
+							"key": "filter",
+							"value": "active eq true and (meta.lastModified ge \"{{lastWatermark}}\" and meta.lastModified le \"{{currentTime}}\")"
+						},
+						{
+							"key": "count",
+							"value": "100"
+						},
+						{
+							"key": "startindex",
+							"value": "0"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "DeltaSync 2",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Body contians id1\", function () {",
+							"        var id = pm.environment.get(\"id1\");",
+							"pm.expect(pm.response.text()).to.include(id);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://{{Server}}{{Port}}/{{Api}}/Users?filter=(ActiVe eq true) and meta.lastmodified ge \"2021-09-23T19:35:41.8420572Z\"",
+					"protocol": "https",
+					"host": [
+						"{{Server}}{{Port}}"
+					],
+					"path": [
+						"{{Api}}",
+						"Users"
+					],
+					"query": [
+						{
+							"key": "filter",
+							"value": "(ActiVe eq true) and meta.lastmodified ge \"2021-09-23T19:35:41.8420572Z\""
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete User 5",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 204\", function () {",
+							"    pm.response.to.have.status(204);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{id1}}",
+					"protocol": "https",
+					"host": [
+						"{{Server}}{{Port}}"
+					],
+					"path": [
+						"{{Api}}",
+						"Users",
+						"{{id1}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get User by ID",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://{{endpoint}}/scim/Users/{{lastUserId}}",
+					"protocol": "https",
+					"host": [
+						"{{endpoint}}"
+					],
+					"path": [
+						"scim",
+						"Users",
+						"{{lastUserId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get all users",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://{{endpoint}}/scim/Users",
+					"protocol": "https",
+					"host": [
+						"{{endpoint}}"
+					],
+					"path": [
+						"scim",
+						"Users"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "tenantId",
+			"value": ""
+		},
+		{
+			"key": "clientId",
+			"value": ""
+		},
+		{
+			"key": "clientSecret",
+			"value": ""
+		},
+		{
+			"key": "endpoint",
+			"value": "localhost:5001"
+		},
+		{
+			"key": "lastUserId",
+			"value": ""
+		},
+		{
+			"key": "lastInactiveUserId",
+			"value": ""
+		},
+		{
+			"key": "lastManagerUserId",
+			"value": ""
+		},
+		{
+			"key": "lastWatermark",
+			"value": ""
+		},
+		{
+			"key": "accessToken",
+			"value": ""
+		}
+	]
+}

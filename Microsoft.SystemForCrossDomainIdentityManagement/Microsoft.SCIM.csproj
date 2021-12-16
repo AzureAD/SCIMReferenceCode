@@ -6,10 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Schemas\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Json.Net" Version="1.0.18" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="3.1.1" />
@@ -49,7 +45,7 @@
 
   <ItemGroup>
     <EmbeddedResource Update="SystemForCrossDomainIdentityManagementServiceResources.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
+      <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>SystemForCrossDomainIdentityManagementServiceResources.Designer.cs</LastGenOutput>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
