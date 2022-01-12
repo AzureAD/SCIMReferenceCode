@@ -212,6 +212,12 @@ namespace Microsoft.SCIM
                 case ComparisonOperator.GreaterThan:
                     operatorValue = ComparisonOperatorValue.gt;
                     break;
+                case ComparisonOperator.EqualOrLessThan:
+                    operatorValue = ComparisonOperatorValue.le;
+                    break;
+                case ComparisonOperator.LessThan:
+                    operatorValue = ComparisonOperatorValue.lt;
+                    break;
                 case ComparisonOperator.Includes:
                     operatorValue = ComparisonOperatorValue.includes;
                     break;
