@@ -5,6 +5,7 @@ namespace Microsoft.SCIM.WebHostSample.Provider
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Linq.Expressions;
     using System.Net;
     using System.Threading.Tasks;
     using System.Web.Http;
@@ -94,7 +95,10 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                 throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidParameters);
             }
 
-            IEnumerable<Resource> results = new List<Core2EnterpriseUser>();
+            IEnumerable<Resource> results;
+            var predicate = PredicateBuilder.False<Core2EnterpriseUser>();
+            Expression<Func<Core2EnterpriseUser, bool>> predicateAnd;
+
 
             if (parameters.AlternateFilters.Count <= 0)
             {
@@ -103,11 +107,10 @@ namespace Microsoft.SCIM.WebHostSample.Provider
             }
             else
             {
-                    results = new List<Core2EnterpriseUser>();
 
                 foreach (IFilter queryFilter in parameters.AlternateFilters)
                 {
-                    IEnumerable<Core2EnterpriseUser> users = this.storage.Users.Values;
+                    predicateAnd = PredicateBuilder.True<Core2EnterpriseUser>();
 
                     IFilter andFilter = queryFilter;
                     IFilter currentFilter = andFilter;
@@ -132,13 +135,10 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                                     string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterOperatorNotSupportedTemplate, andFilter.FilterOperator));
                             }
 
-                            users =
-                                users.Where(
-                                    item =>
-                                       string.Equals(
-                                            item.UserName,
-                                           andFilter.ComparisonValue,
-                                           StringComparison.OrdinalIgnoreCase));
+                            string userName = andFilter.ComparisonValue;
+                            predicateAnd = predicateAnd.And(p => string.Equals(p.UserName, userName, StringComparison.OrdinalIgnoreCase));
+
+                           
                         }
 
                         // ExternalId filter
@@ -150,34 +150,13 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                                     string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterOperatorNotSupportedTemplate, andFilter.FilterOperator));
                             }
 
-                            users =
-                                users.Where(
-                                    item =>
-                                       string.Equals(
-                                            item.ExternalIdentifier,
-                                           andFilter.ComparisonValue,
-                                           StringComparison.OrdinalIgnoreCase)).ToList();
+                            string externalIdentifier = andFilter.ComparisonValue;
+                            predicateAnd = predicateAnd.And(p => string.Equals(p.ExternalIdentifier, externalIdentifier, StringComparison.OrdinalIgnoreCase));
+
+                           
                         }
 
-                        // Id filter
-                        else if (andFilter.AttributePath.Equals(AttributeNames.Identifier, StringComparison.OrdinalIgnoreCase))
-                        {
-                            if (andFilter.FilterOperator != ComparisonOperator.Equals)
-                            {
-                                throw new NotSupportedException(
-                                    string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterOperatorNotSupportedTemplate, andFilter.FilterOperator));
-                            }
-
-                            users =
-                                users.Where(
-                                    item =>
-                                       string.Equals(
-                                            item.Identifier,
-                                           andFilter.ComparisonValue,
-                                           StringComparison.OrdinalIgnoreCase)).ToList();
-                        }
-
-                        // Active filter
+                        //Active Filter
                         else if (andFilter.AttributePath.Equals(AttributeNames.Active, StringComparison.OrdinalIgnoreCase))
                         {
                             if (andFilter.FilterOperator != ComparisonOperator.Equals)
@@ -186,32 +165,34 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                                     string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterOperatorNotSupportedTemplate, andFilter.FilterOperator));
                             }
 
-                            users =
-                                users.Where(
-                                    item =>
-                                       item.Active == bool.Parse(andFilter.ComparisonValue)).ToList();
+                            bool active = bool.Parse(andFilter.ComparisonValue);
+                            predicateAnd = predicateAnd.And(p => p.Active == active);
+
                         }
 
-                        // LastModified filter
+                        //
                         else if (andFilter.AttributePath.Equals($"{AttributeNames.Metadata}.{AttributeNames.LastModified}", StringComparison.OrdinalIgnoreCase))
                         {
                             if (andFilter.FilterOperator == ComparisonOperator.EqualOrGreaterThan)
                             {
-                                users =
-                                    users.Where(
-                                        item =>
-                                           item.Metadata.LastModified >= DateTime.Parse(andFilter.ComparisonValue).ToUniversalTime()).ToList();
+                                DateTime comparisonValue = DateTime.Parse(andFilter.ComparisonValue).ToUniversalTime();
+                                predicateAnd = predicateAnd.And(p => p.Metadata.LastModified >= comparisonValue);
+
+                               
                             }
                             else if (andFilter.FilterOperator == ComparisonOperator.EqualOrLessThan)
                             {
-                                users =
-                                    users.Where(
-                                        item =>
-                                           item.Metadata.LastModified <= DateTime.Parse(andFilter.ComparisonValue).ToUniversalTime()).ToList();
+                                DateTime comparisonValue = DateTime.Parse(andFilter.ComparisonValue).ToUniversalTime();
+                                predicateAnd = predicateAnd.And(p => p.Metadata.LastModified <= comparisonValue);
+
+                                
                             }
                             else
                                 throw new NotSupportedException(
                                     string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterOperatorNotSupportedTemplate, andFilter.FilterOperator));
+
+
+
                         }
                         else
                             throw new NotSupportedException(
@@ -222,17 +203,20 @@ namespace Microsoft.SCIM.WebHostSample.Provider
 
                     } while (currentFilter.AdditionalFilter != null);
 
-                    results = results.Union(users.Select((Core2EnterpriseUser user) => user as Resource).ToList());
+                    predicate = predicate.Or(predicateAnd);
+
                 }
+
+                results = this.storage.Users.Values.Where(predicate.Compile());
             }
 
             if (parameters.PaginationParameters != null)
             {
                 int count = parameters.PaginationParameters.Count.HasValue ? parameters.PaginationParameters.Count.Value : 0;
-                return Task.FromResult(results.Take(count).ToArray());
+                return Task.FromResult((results.Take(count).ToArray()));
             }
             else
-                return Task.FromResult(results.ToArray());
+                return Task.FromResult((results.ToArray()));
         }
 
         public override Task<Resource> ReplaceAsync(Resource resource, string correlationIdentifier)
