@@ -170,7 +170,7 @@ namespace Microsoft.SCIM.WebHostSample.Provider
 
                         }
 
-                        //
+                        //LastModified filter
                         else if (andFilter.AttributePath.Equals($"{AttributeNames.Metadata}.{AttributeNames.LastModified}", StringComparison.OrdinalIgnoreCase))
                         {
                             if (andFilter.FilterOperator == ComparisonOperator.EqualOrGreaterThan)
@@ -213,10 +213,10 @@ namespace Microsoft.SCIM.WebHostSample.Provider
             if (parameters.PaginationParameters != null)
             {
                 int count = parameters.PaginationParameters.Count.HasValue ? parameters.PaginationParameters.Count.Value : 0;
-                return Task.FromResult((results.Take(count).ToArray()));
+                return Task.FromResult(results.Take(count).ToArray());
             }
             else
-                return Task.FromResult((results.ToArray()));
+                return Task.FromResult(results.ToArray());
         }
 
         public override Task<Resource> ReplaceAsync(Resource resource, string correlationIdentifier)
