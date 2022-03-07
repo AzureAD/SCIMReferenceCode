@@ -44,6 +44,10 @@ namespace Microsoft.SCIM.WebHostSample.Provider
             {
                 throw new HttpResponseException(HttpStatusCode.Conflict);
             }
+            //Update Metadata
+            DateTime created = DateTime.UtcNow;
+            group.Metadata.Created = created;
+            group.Metadata.LastModified = created;
 
             string resourceIdentifier = Guid.NewGuid().ToString();
             resource.Identifier = resourceIdentifier;
@@ -154,10 +158,10 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                 throw new HttpResponseException(HttpStatusCode.BadRequest);
             }
 
-            IEnumerable<Core2Group> exisitingGroups = this.storage.Groups.Values;
+            Core2Group exisitingGroups = resource as Core2Group;
             if
             (
-                exisitingGroups.Any(
+                this.storage.Groups.Values.Any(
                     (Core2Group exisitingUser) =>
                         string.Equals(exisitingUser.DisplayName, group.DisplayName, StringComparison.Ordinal) &&
                         !string.Equals(exisitingUser.Identifier, group.Identifier, StringComparison.OrdinalIgnoreCase))
@@ -170,6 +174,10 @@ namespace Microsoft.SCIM.WebHostSample.Provider
             {
                 throw new HttpResponseException(HttpStatusCode.NotFound);
             }
+
+            // Update metadata
+            group.Metadata.Created = exisitingGroups.Metadata.Created;
+            group.Metadata.LastModified = DateTime.UtcNow;
 
             this.storage.Groups[group.Identifier] = group;
             Resource result = group as Resource;
@@ -241,6 +249,8 @@ namespace Microsoft.SCIM.WebHostSample.Provider
             if (this.storage.Groups.TryGetValue(patch.ResourceIdentifier.Identifier, out Core2Group group))
             {
                 group.Apply(patchRequest);
+                // Update metadata
+                group.Metadata.LastModified = DateTime.UtcNow;
             }
             else
             {
