@@ -1116,7 +1116,7 @@ namespace Microsoft.SCIM
             if
             (
                 !string.Equals(
-                    Microsoft.SCIM.AttributeNames.PhoneNumbers,
+                    Microsoft.SCIM.AttributeNames.Roles,
                     operation.Path.AttributePath,
                     StringComparison.OrdinalIgnoreCase)
             )
@@ -1156,10 +1156,10 @@ namespace Microsoft.SCIM
             }
 
             Role role;
-            Role roleAddressExisting;
+            Role roleExisting;
             if (roles != null)
             {
-                roleAddressExisting =
+                roleExisting =
                     role =
                         roles
                         .SingleOrDefault(
@@ -1168,7 +1168,7 @@ namespace Microsoft.SCIM
             }
             else
             {
-                roleAddressExisting = null;
+                roleExisting = null;
                 role =
                     new Role()
                     {
@@ -1191,7 +1191,7 @@ namespace Microsoft.SCIM
             IEnumerable<Role> result;
             if (string.IsNullOrWhiteSpace(role.Value))
             {
-                if (roleAddressExisting != null)
+                if (roleExisting != null)
                 {
                     result =
                         roles
@@ -1207,7 +1207,7 @@ namespace Microsoft.SCIM
                 return result;
             }
 
-            if (roleAddressExisting != null)
+            if (roleExisting != null)
             {
                 return roles;
             }
