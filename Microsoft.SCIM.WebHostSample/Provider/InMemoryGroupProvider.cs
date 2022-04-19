@@ -5,11 +5,11 @@ namespace Microsoft.SCIM.WebHostSample.Provider
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Linq.Expressions;
     using System.Net;
     using System.Threading.Tasks;
     using System.Web.Http;
     using Microsoft.SCIM;
-    using Microsoft.SCIM.WebHostSample.Resources;
 
     public class InMemoryGroupProvider : ProviderBase
     {
@@ -44,6 +44,10 @@ namespace Microsoft.SCIM.WebHostSample.Provider
             {
                 throw new HttpResponseException(HttpStatusCode.Conflict);
             }
+            //Update Metadata
+            DateTime created = DateTime.UtcNow;
+            group.Metadata.Created = created;
+            group.Metadata.LastModified = created;
 
             string resourceIdentifier = Guid.NewGuid().ToString();
             resource.Identifier = resourceIdentifier;
@@ -83,83 +87,61 @@ namespace Microsoft.SCIM.WebHostSample.Provider
 
             if (null == parameters.AlternateFilters)
             {
-                throw new ArgumentException(SampleServiceResources.ExceptionInvalidParameters);
+                throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidParameters);
             }
 
             if (string.IsNullOrWhiteSpace(parameters.SchemaIdentifier))
             {
-                throw new ArgumentException(SampleServiceResources.ExceptionInvalidParameters);
+                throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidParameters);
             }
 
-            Resource[] results;
+            IEnumerable<Resource> results;
             IFilter queryFilter = parameters.AlternateFilters.SingleOrDefault();
-            IEnumerable<Core2Group> buffer = Enumerable.Empty<Core2Group>();
+
+            var predicate = PredicateBuilder.False<Core2Group>();
+            Expression<Func<Core2Group, bool>> predicateAnd;
+            predicateAnd = PredicateBuilder.True<Core2Group>();
+
             if (queryFilter == null)
             {
-                buffer = this.storage.Groups.Values;
+                results = this.storage.Groups.Values.Select(
+                    (Core2Group user) => user as Resource);
             }
             else
             {
                 if (string.IsNullOrWhiteSpace(queryFilter.AttributePath))
                 {
-                    throw new ArgumentException(SampleServiceResources.ExceptionInvalidParameters);
+                    throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidParameters);
                 }
 
                 if (string.IsNullOrWhiteSpace(queryFilter.ComparisonValue))
                 {
-                    throw new ArgumentException(SampleServiceResources.ExceptionInvalidParameters);
+                    throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidParameters);
                 }
 
                 if (queryFilter.FilterOperator != ComparisonOperator.Equals)
                 {
-                    throw new NotSupportedException(SampleServiceResources.UnsupportedComparisonOperator);
+                    throw new NotSupportedException(string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterOperatorNotSupportedTemplate, queryFilter.FilterOperator));
                 }
+
 
                 if (queryFilter.AttributePath.Equals(AttributeNames.DisplayName))
                 {
-                    buffer =
-                        this.storage.Groups.Values
-                        .Where(
-                            (Core2Group item) =>
-                               string.Equals(
-                                   item.DisplayName,
-                                   parameters.AlternateFilters.Single().ComparisonValue,
-                                   StringComparison.OrdinalIgnoreCase));
+                    
+                    string displayName = queryFilter.ComparisonValue;
+                    predicateAnd = predicateAnd.And(p => string.Equals(p.DisplayName, displayName, StringComparison.OrdinalIgnoreCase));
+                  
                 }
                 else
                 {
-                    throw new NotSupportedException(SampleServiceResources.UnsupportedFilterAttributeGroup);
+                    throw new NotSupportedException(string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterAttributePathNotSupportedTemplate, queryFilter.AttributePath));
                 }
             }
+            
+            predicate = predicate.Or(predicateAnd);
+            results = this.storage.Groups.Values.Where(predicate.Compile());
 
-            results =
-                buffer
-                .Select((Core2Group item) =>
-                 {
-                     Core2Group bufferItem =
-                     new Core2Group
-                     {
-                         DisplayName = item.DisplayName,
-                         ExternalIdentifier = item.ExternalIdentifier,
-                         Identifier = item.Identifier,
-                         Members = item.Members,
-                         Metadata = item.Metadata
-                     };
-
-                     if (parameters?.ExcludedAttributePaths?.Any(
-                             (string excludedAttributes) =>
-                                 excludedAttributes.Equals(AttributeNames.Members, StringComparison.OrdinalIgnoreCase))
-                         == true)
-                     {
-                         bufferItem.Members = null;
-                     }
-
-                     return bufferItem;
-                 })
-                .Select((Core2Group item) => item as Resource)
-                .ToArray();
-
-            return Task.FromResult(results);
+            return Task.FromResult(results.ToArray());
         }
 
         public override Task<Resource> ReplaceAsync(Resource resource, string correlationIdentifier)
@@ -176,10 +158,10 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                 throw new HttpResponseException(HttpStatusCode.BadRequest);
             }
 
-            IEnumerable<Core2Group> exisitingGroups = this.storage.Groups.Values;
+            Core2Group exisitingGroups = resource as Core2Group;
             if
             (
-                exisitingGroups.Any(
+                this.storage.Groups.Values.Any(
                     (Core2Group exisitingUser) =>
                         string.Equals(exisitingUser.DisplayName, group.DisplayName, StringComparison.Ordinal) &&
                         !string.Equals(exisitingUser.Identifier, group.Identifier, StringComparison.OrdinalIgnoreCase))
@@ -192,6 +174,10 @@ namespace Microsoft.SCIM.WebHostSample.Provider
             {
                 throw new HttpResponseException(HttpStatusCode.NotFound);
             }
+
+            // Update metadata
+            group.Metadata.Created = exisitingGroups.Metadata.Created;
+            group.Metadata.LastModified = DateTime.UtcNow;
 
             this.storage.Groups[group.Identifier] = group;
             Resource result = group as Resource;
@@ -238,17 +224,17 @@ namespace Microsoft.SCIM.WebHostSample.Provider
 
             if (null == patch.ResourceIdentifier)
             {
-                throw new ArgumentException(SampleServiceResources.ExceptionInvalidPatch);
+                throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidOperation);
             }
 
             if (string.IsNullOrWhiteSpace(patch.ResourceIdentifier.Identifier))
             {
-                throw new ArgumentException(SampleServiceResources.ExceptionInvalidPatch);
+                throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidOperation);
             }
 
             if (null == patch.PatchRequest)
             {
-                throw new ArgumentException(SampleServiceResources.ExceptionInvalidPatch);
+                throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidOperation);
             }
 
             PatchRequest2 patchRequest =
@@ -263,6 +249,8 @@ namespace Microsoft.SCIM.WebHostSample.Provider
             if (this.storage.Groups.TryGetValue(patch.ResourceIdentifier.Identifier, out Core2Group group))
             {
                 group.Apply(patchRequest);
+                // Update metadata
+                group.Metadata.LastModified = DateTime.UtcNow;
             }
             else
             {

@@ -11,6 +11,8 @@ namespace Microsoft.SCIM
         Equals,
         EqualOrGreaterThan,
         GreaterThan,
+        EqualOrLessThan,
+        LessThan,
         Includes,
         IsMemberOf,
         MatchesExpression,

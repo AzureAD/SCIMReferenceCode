@@ -283,6 +283,12 @@ namespace Microsoft.SCIM
                     case ComparisonOperatorValue.gt:
                         this.filterOperator = ComparisonOperator.GreaterThan;
                         break;
+                    case ComparisonOperatorValue.le:
+                        this.filterOperator = ComparisonOperator.EqualOrLessThan;
+                        break;
+                    case ComparisonOperatorValue.lt:
+                        this.filterOperator = ComparisonOperator.LessThan;
+                        break;
                     case ComparisonOperatorValue.includes:
                         this.filterOperator = ComparisonOperator.Includes;
                         break;
@@ -791,23 +797,23 @@ namespace Microsoft.SCIM
 
                 if (this.Quoted)
                 {
-                    this.DataType = AttributeDataType.String;
+                    this.DataType = AttributeDataType.@string;
                 }
                 else if (bool.TryParse(this.Value, out bool _))
                 {
-                    this.DataType = AttributeDataType.Boolean;
+                    this.DataType = AttributeDataType.boolean;
                 }
                 else if (long.TryParse(this.Value, out long _))
                 {
-                    this.DataType = AttributeDataType.Integer;
+                    this.DataType = AttributeDataType.integer;
                 }
                 else if (double.TryParse(this.Value, out double _))
                 {
-                    this.DataType = AttributeDataType.Decimal;
+                    this.DataType = AttributeDataType.@decimal;
                 }
                 else
                 {
-                    this.DataType = AttributeDataType.String;
+                    this.DataType = AttributeDataType.@string;
                 }
             }
 

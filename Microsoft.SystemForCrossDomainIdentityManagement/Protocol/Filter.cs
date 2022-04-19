@@ -64,7 +64,7 @@ namespace Microsoft.SCIM
             this.AttributePath = attributePath;
             this.FilterOperator = filterOperator;
             this.ComparisonValue = comparisonValue;
-            this.DataType = AttributeDataType.String;
+            this.DataType = AttributeDataType.@string;
         }
 
         public Filter(IFilter other)
@@ -212,6 +212,12 @@ namespace Microsoft.SCIM
                 case ComparisonOperator.GreaterThan:
                     operatorValue = ComparisonOperatorValue.gt;
                     break;
+                case ComparisonOperator.EqualOrLessThan:
+                    operatorValue = ComparisonOperatorValue.le;
+                    break;
+                case ComparisonOperator.LessThan:
+                    operatorValue = ComparisonOperatorValue.lt;
+                    break;
                 case ComparisonOperator.Includes:
                     operatorValue = ComparisonOperatorValue.includes;
                     break;
@@ -236,12 +242,12 @@ namespace Microsoft.SCIM
             }
 
             string rightHandSide;
-            AttributeDataType effectiveDataType = this.DataType ?? AttributeDataType.String;
+            AttributeDataType effectiveDataType = this.DataType ?? AttributeDataType.@string;
             switch (effectiveDataType)
             {
-                case AttributeDataType.Boolean:
-                case AttributeDataType.Decimal:
-                case AttributeDataType.Integer:
+                case AttributeDataType.boolean:
+                case AttributeDataType.@decimal:
+                case AttributeDataType.integer:
                     rightHandSide = this.ComparisonValue;
                     break;
                 default:
@@ -375,32 +381,32 @@ namespace Microsoft.SCIM
 
             switch (dataType.Value)
             {
-                case AttributeDataType.Boolean:
+                case AttributeDataType.boolean:
                     if (!bool.TryParse(value, out bool _))
                     {
                         throw new InvalidOperationException(
                             SystemForCrossDomainIdentityManagementProtocolResources.ExceptionInvalidValue);
                     }
                     break;
-                case AttributeDataType.Decimal:
+                case AttributeDataType.@decimal:
                     if (!double.TryParse(value, out double _))
                     {
                         throw new InvalidOperationException(
                             SystemForCrossDomainIdentityManagementProtocolResources.ExceptionInvalidValue);
                     }
                     break;
-                case AttributeDataType.Integer:
+                case AttributeDataType.integer:
                     if (!long.TryParse(value, out long _))
                     {
                         throw new InvalidOperationException(
                             SystemForCrossDomainIdentityManagementProtocolResources.ExceptionInvalidValue);
                     }
                     break;
-                case AttributeDataType.Binary:
-                case AttributeDataType.Complex:
-                case AttributeDataType.DateTime:
-                case AttributeDataType.Reference:
-                case AttributeDataType.String:
+                case AttributeDataType.binary:
+                case AttributeDataType.complex:
+                case AttributeDataType.dateTime:
+                case AttributeDataType.reference:
+                case AttributeDataType.@string:
                     break;
                 default:
                     string unsupported = Enum.GetName(typeof(AttributeDataType), dataType.Value);

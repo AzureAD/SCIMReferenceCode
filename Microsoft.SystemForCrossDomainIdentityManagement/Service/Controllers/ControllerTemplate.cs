@@ -20,6 +20,7 @@ namespace Microsoft.SCIM
 
         internal readonly IMonitor monitor;
         internal readonly IProvider provider;
+
         internal ControllerTemplate(IProvider provider, IMonitor monitor)
         {
             this.monitor = monitor;
@@ -55,6 +56,11 @@ namespace Microsoft.SCIM
             HttpRequestMessageFeature hreqmf = new HttpRequestMessageFeature(this.HttpContext);
             HttpRequestMessage result = hreqmf.HttpRequestMessage;
             return result;
+        }
+
+        protected ObjectResult ScimError(HttpStatusCode httpStatusCode, string message)
+        {
+            return StatusCode((int)httpStatusCode, new Core2Error(message, (int)httpStatusCode));
         }
 
         protected virtual bool TryGetMonitor(out IMonitor monitor)
@@ -213,7 +219,7 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                return this.BadRequest();
+                return this.ScimError(HttpStatusCode.BadRequest, argumentException.Message);
             }
             catch (NotImplementedException notImplementedException)
             {
@@ -227,7 +233,7 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                throw new HttpResponseException(HttpStatusCode.NotImplemented);
+                return this.ScimError(HttpStatusCode.NotImplemented, notImplementedException.Message);
             }
             catch (NotSupportedException notSupportedException)
             {
@@ -241,7 +247,7 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                throw new HttpResponseException(HttpStatusCode.NotImplemented);
+                return this.ScimError(HttpStatusCode.BadRequest, notSupportedException.Message);
             }
             catch (HttpResponseException responseException)
             {
@@ -258,7 +264,7 @@ namespace Microsoft.SCIM
                     }
                 }
 
-                throw;
+                return this.ScimError(HttpStatusCode.InternalServerError, responseException.Message);
             }
             catch (Exception exception)
             {
@@ -272,7 +278,7 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                throw;
+                return this.ScimError(HttpStatusCode.InternalServerError, exception.Message);
             }
         }
 
@@ -285,7 +291,7 @@ namespace Microsoft.SCIM
             {
                 if (string.IsNullOrWhiteSpace(identifier))
                 {
-                    return this.BadRequest();
+                    return this.ScimError(HttpStatusCode.BadRequest, SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidIdentifier);
                 }
 
                 HttpRequestMessage request = this.ConvertRequest();
@@ -299,7 +305,7 @@ namespace Microsoft.SCIM
                 {
                     if (resourceQuery.Filters.Count != 1)
                     {
-                        return this.BadRequest();
+                        return this.ScimError(HttpStatusCode.BadRequest, SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterCount);
                     }
 
                     IFilter filter = new Filter(AttributeNames.Identifier, ComparisonOperator.Equals, identifier);
@@ -327,7 +333,7 @@ namespace Microsoft.SCIM
                             .ConfigureAwait(false);
                     if (!queryResponse.Resources.Any())
                     {
-                        return this.NotFound();
+                        return this.ScimError(HttpStatusCode.NotFound, string.Format(SystemForCrossDomainIdentityManagementServiceResources.ResourceNotFoundTemplate, identifier));
                     }
 
                     Resource result = queryResponse.Resources.Single();
@@ -347,7 +353,7 @@ namespace Microsoft.SCIM
                             .ConfigureAwait(false);
                     if (null == result)
                     {
-                        return this.NotFound();
+                        return this.ScimError(HttpStatusCode.NotFound, string.Format(SystemForCrossDomainIdentityManagementServiceResources.ResourceNotFoundTemplate, identifier));
                     }
 
                     return this.Ok(result);
@@ -365,7 +371,7 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                return this.BadRequest();
+                return this.ScimError(HttpStatusCode.BadRequest, argumentException.Message);
             }
             catch (NotImplementedException notImplementedException)
             {
@@ -379,7 +385,7 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                throw new HttpResponseException(HttpStatusCode.NotImplemented);
+                return this.ScimError(HttpStatusCode.NotImplemented, notImplementedException.Message);
             }
             catch (NotSupportedException notSupportedException)
             {
@@ -393,7 +399,7 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                throw new HttpResponseException(HttpStatusCode.NotImplemented);
+                return this.ScimError(HttpStatusCode.BadRequest, notSupportedException.Message);
             }
             catch (HttpResponseException responseException)
             {
@@ -412,10 +418,10 @@ namespace Microsoft.SCIM
 
                 if (responseException.Response?.StatusCode == HttpStatusCode.NotFound)
                 {
-                    return this.NotFound();
+                    return this.ScimError(HttpStatusCode.NotFound, string.Format(SystemForCrossDomainIdentityManagementServiceResources.ResourceNotFoundTemplate, identifier));
                 }
 
-                throw;
+                return this.ScimError(HttpStatusCode.InternalServerError, responseException.Message);
             }
             catch (Exception exception)
             {
@@ -429,7 +435,7 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                throw;
+                return this.ScimError(HttpStatusCode.InternalServerError, exception.Message);
             }
         }
 
@@ -656,12 +662,12 @@ namespace Microsoft.SCIM
             {
                 if (null == resource)
                 {
-                    return this.BadRequest();
+                    return this.ScimError(HttpStatusCode.BadRequest, SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidResource);
                 }
 
                 if (string.IsNullOrEmpty(identifier))
                 {
-                    return this.BadRequest();
+                    return this.ScimError(HttpStatusCode.BadRequest, SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidIdentifier);
                 }
 
                 HttpRequestMessage request = this.ConvertRequest();
@@ -687,7 +693,7 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                return this.BadRequest();
+                return this.ScimError(HttpStatusCode.BadRequest, argumentException.Message);
             }
             catch (NotImplementedException notImplementedException)
             {
@@ -701,7 +707,7 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                throw new HttpResponseException(HttpStatusCode.NotImplemented);
+                return this.ScimError(HttpStatusCode.NotImplemented, notImplementedException.Message);
             }
             catch (NotSupportedException notSupportedException)
             {
@@ -715,7 +721,26 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                throw new HttpResponseException(HttpStatusCode.NotImplemented);
+                return this.ScimError(HttpStatusCode.BadRequest, notSupportedException.Message);
+            }
+            catch (HttpResponseException httpResponseException)
+            {
+                if (this.TryGetMonitor(out IMonitor monitor))
+                {
+                    IExceptionNotification notification =
+                        ExceptionNotificationFactory.Instance.CreateNotification(
+                            httpResponseException,
+                            correlationIdentifier,
+                            ServiceNotificationIdentifiers.ControllerTemplatePostNotSupportedException);
+                    monitor.Report(notification);
+                }
+
+                if (httpResponseException.Response.StatusCode == HttpStatusCode.NotFound)
+                    return this.ScimError(HttpStatusCode.NotFound, string.Format(SystemForCrossDomainIdentityManagementServiceResources.ResourceNotFoundTemplate, identifier));
+                else if (httpResponseException.Response.StatusCode == HttpStatusCode.Conflict)
+                    return this.ScimError(HttpStatusCode.Conflict, SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidRequest);
+                else
+                    return this.ScimError(HttpStatusCode.BadRequest, httpResponseException.Message);
             }
             catch (Exception exception)
             {
@@ -729,7 +754,7 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                throw;
+                return this.ScimError(HttpStatusCode.InternalServerError, exception.Message);
             }
         }
     }
