@@ -1,8 +1,9 @@
 {
 	"info": {
-		"_postman_id": "2a0040af-4f1a-4c48-a860-0c2c6c5d8641",
+		"_postman_id": "84ab2a66-d719-44cd-ba9d-b4265aa5392e",
 		"name": "SCIM Inbound",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "13581040"
 	},
 	"item": [
 		{
@@ -204,7 +205,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\",\r\n        \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\"\r\n    ],\r\n    \"externalId\": \"{{$guid}}\",\r\n    \"userName\": \"{{userName}}\",\r\n    \"name\": {\r\n        \"givenName\": \"{{givenName}}\",\r\n        \"familyName\": \"{{familyName}}\"\r\n    },\r\n    \"active\": true,\r\n    \"displayName\": \"{{displayName}}\",\r\n    \"locale\": \"{{$randomCountryCode}}\",\r\n    \"userType\": \"Contractor\",\r\n    \"title\": \"{{$randomJobTitle}}\",\r\n    \"emails\": [\r\n        {\r\n            \"value\": \"john@woodgrove.com\",\r\n            \"display\": \"john@woodgrove.com\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        },\r\n\t\t{\r\n\t\t\t\"value\": \"john@example.com\",\r\n\t\t\t\"display\": \"john@example.com\",\r\n\t\t\t\"type\": \"home\"\r\n\t\t}\r\n    ],\r\n    \"phoneNumbers\": [\r\n        {\r\n            \"value\": \"+1 {{$randomPhoneNumber}}\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        }\r\n    ],\r\n    \"addresses\": [\r\n        {\r\n            \"streetAddress\": \"One Microsoft Way\",\r\n            \"locality\": \"Redmond\",\r\n            \"region\": \"WA\",\r\n            \"postalCode\": \"98052\",\r\n            \"country\": \"US\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        }\r\n    ],\r\n    \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\": {\r\n        \"employeeNumber\": \"{{$randomInt}}\",\r\n        \"organization\": \"SCIM Corporation\",\r\n        \"department\": \"{{$randomJobArea}}\",\r\n        \"manager\": {\r\n            \"value\": \"{{lastUserId}}\"\r\n        }\r\n    }\r\n}",
+					"raw": "{\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\",\r\n        \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\"\r\n    ],\r\n    \"externalId\": \"{{$guid}}\",\r\n    \"userName\": \"{{userName}}\",\r\n    \"name\": {\r\n        \"givenName\": \"{{givenName}}\",\r\n        \"familyName\": \"{{familyName}}\"\r\n    },\r\n    \"active\": true,\r\n    \"displayName\": \"{{displayName}}\",\r\n    \"locale\": \"{{$randomCountryCode}}\",\r\n    \"userType\": \"Contractor\",\r\n    \"title\": \"{{$randomJobTitle}}\",\r\n    \"emails\": [\r\n        {\r\n            \"value\": \"john@woodgrove.com\",\r\n            \"display\": \"john@woodgrove.com\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        },\r\n        {\r\n            \"value\": \"john@example.com\",\r\n            \"display\": \"john@example.com\",\r\n            \"type\": \"home\"\r\n        }\r\n    ],\r\n    \"phoneNumbers\": [\r\n        {\r\n            \"value\": \"+1 {{$randomPhoneNumber}}\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        }\r\n    ],\r\n    \"addresses\": [\r\n        {\r\n            \"streetAddress\": \"One Microsoft Way\",\r\n            \"locality\": \"Redmond\",\r\n            \"region\": \"WA\",\r\n            \"postalCode\": \"98052\",\r\n            \"country\": \"US\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        }\r\n    ],\r\n    \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\": {\r\n        \"employeeNumber\": \"{{$randomInt}}\",\r\n        \"organization\": \"SCIM Corporation\",\r\n        \"department\": \"{{$randomJobArea}}\",\r\n        \"manager\": {\r\n            \"value\": \"{{lastUserId}}\"\r\n        }\r\n    }\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -264,7 +265,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\",\r\n        \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\"\r\n    ],\r\n    \"externalId\": \"{{$guid}}\",\r\n    \"userName\": \"{{userName}}\",\r\n    \"name\": {\r\n        \"givenName\": \"{{givenName}}\",\r\n        \"familyName\": \"{{familyName}}\"\r\n    },\r\n    \"active\": false,\r\n    \"displayName\": \"{{displayName}}\",\r\n    \"locale\": \"{{$randomCountryCode}}\",\r\n    \"userType\": \"Employee\",\r\n    \"title\": \"{{$randomJobTitle}}\",\r\n    \"emails\": [\r\n        {\r\n            \"value\": \"john@woodgrove.com\",\r\n            \"display\": \"john@woodgrove.com\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        },\r\n\t\t{\r\n\t\t\t\"value\": \"john@example.com\",\r\n\t\t\t\"display\": \"john@example.com\",\r\n\t\t\t\"type\": \"home\"\r\n\t\t}\r\n    ],\r\n    \"phoneNumbers\": [\r\n        {\r\n            \"value\": \"+1 {{$randomPhoneNumber}}\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        }\r\n    ],\r\n    \"addresses\": [\r\n        {\r\n            \"streetAddress\": \"One Microsoft Way\",\r\n            \"locality\": \"Redmond\",\r\n            \"region\": \"WA\",\r\n            \"postalCode\": \"98052\",\r\n            \"country\": \"US\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        }\r\n    ],\r\n    \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\": {\r\n        \"employeeNumber\": \"{{$randomInt}}\",\r\n        \"organization\": \"SCIM Corporation\",\r\n        \"department\": \"{{$randomJobArea}}\",\r\n        \"manager\": {\r\n            \"value\": \"{{lastUserId}}\"\r\n        }\r\n    }\r\n}",
+					"raw": "{\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\",\r\n        \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\"\r\n    ],\r\n    \"externalId\": \"{{$guid}}\",\r\n    \"userName\": \"{{userName}}\",\r\n    \"name\": {\r\n        \"givenName\": \"{{givenName}}\",\r\n        \"familyName\": \"{{familyName}}\"\r\n    },\r\n    \"active\": false,\r\n    \"displayName\": \"{{displayName}}\",\r\n    \"locale\": \"{{$randomCountryCode}}\",\r\n    \"userType\": \"Employee\",\r\n    \"title\": \"{{$randomJobTitle}}\",\r\n    \"emails\": [\r\n        {\r\n            \"value\": \"john@woodgrove.com\",\r\n            \"display\": \"john@woodgrove.com\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        },\r\n        {\r\n            \"value\": \"john@example.com\",\r\n            \"display\": \"john@example.com\",\r\n            \"type\": \"home\"\r\n        }\r\n    ],\r\n    \"phoneNumbers\": [\r\n        {\r\n            \"value\": \"+1 {{$randomPhoneNumber}}\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        }\r\n    ],\r\n    \"addresses\": [\r\n        {\r\n            \"streetAddress\": \"One Microsoft Way\",\r\n            \"locality\": \"Redmond\",\r\n            \"region\": \"WA\",\r\n            \"postalCode\": \"98052\",\r\n            \"country\": \"US\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        }\r\n    ],\r\n    \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\": {\r\n        \"employeeNumber\": \"{{$randomInt}}\",\r\n        \"organization\": \"SCIM Corporation\",\r\n        \"department\": \"{{$randomJobArea}}\",\r\n        \"manager\": {\r\n            \"value\": \"{{lastUserId}}\"\r\n        }\r\n    }\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -324,7 +325,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\",\r\n        \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\"\r\n    ],\r\n    \"externalId\": \"{{$guid}}\",\r\n    \"userName\": \"{{userName}}\",\r\n    \"name\": {\r\n        \"givenName\": \"{{givenName}}\",\r\n        \"familyName\": \"{{familyName}}\"\r\n    },\r\n    \"active\": false,\r\n    \"displayName\": \"{{displayName}}\",\r\n    \"locale\": \"{{$randomCountryCode}}\",\r\n    \"userType\": \"Employee\",\r\n    \"title\": \"{{$randomJobTitle}}\",\r\n    \"emails\": [\r\n        {\r\n            \"value\": \"john@woodgrove.com\",\r\n            \"display\": \"john@woodgrove.com\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        },\r\n\t\t{\r\n\t\t\t\"value\": \"john@example.com\",\r\n\t\t\t\"display\": \"john@example.com\",\r\n\t\t\t\"type\": \"home\"\r\n\t\t}\r\n    ],\r\n    \"phoneNumbers\": [\r\n        {\r\n            \"value\": \"+1 {{$randomPhoneNumber}}\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        }\r\n    ],\r\n    \"addresses\": [\r\n        {\r\n            \"streetAddress\": \"One Microsoft Way\",\r\n            \"locality\": \"Redmond\",\r\n            \"region\": \"WA\",\r\n            \"postalCode\": \"98052\",\r\n            \"country\": \"US\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        }\r\n    ],\r\n    \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\": {\r\n        \"employeeNumber\": \"{{$randomInt}}\",\r\n        \"organization\": \"SCIM Corporation\",\r\n        \"department\": \"{{$randomJobArea}}\"\r\n    }\r\n}",
+					"raw": "{\r\n    \"schemas\": [\r\n        \"urn:ietf:params:scim:schemas:core:2.0:User\",\r\n        \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\"\r\n    ],\r\n    \"externalId\": \"{{$guid}}\",\r\n    \"userName\": \"{{userName}}\",\r\n    \"name\": {\r\n        \"givenName\": \"{{givenName}}\",\r\n        \"familyName\": \"{{familyName}}\"\r\n    },\r\n    \"active\": false,\r\n    \"displayName\": \"{{displayName}}\",\r\n    \"locale\": \"{{$randomCountryCode}}\",\r\n    \"userType\": \"Employee\",\r\n    \"title\": \"{{$randomJobTitle}}\",\r\n    \"emails\": [\r\n        {\r\n            \"value\": \"john@woodgrove.com\",\r\n            \"display\": \"john@woodgrove.com\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        },\r\n        {\r\n            \"value\": \"john@example.com\",\r\n            \"display\": \"john@example.com\",\r\n            \"type\": \"home\"\r\n        }\r\n    ],\r\n    \"phoneNumbers\": [\r\n        {\r\n            \"value\": \"+1 {{$randomPhoneNumber}}\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        }\r\n    ],\r\n    \"addresses\": [\r\n        {\r\n            \"streetAddress\": \"One Microsoft Way\",\r\n            \"locality\": \"Redmond\",\r\n            \"region\": \"WA\",\r\n            \"postalCode\": \"98052\",\r\n            \"country\": \"US\",\r\n            \"type\": \"work\",\r\n            \"primary\": true\r\n        }\r\n    ],\r\n    \"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\": {\r\n        \"employeeNumber\": \"{{$randomInt}}\",\r\n        \"organization\": \"SCIM Corporation\",\r\n        \"department\": \"{{$randomJobArea}}\"\r\n    }\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -710,13 +711,13 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "https://{{Server}}{{Port}}/{{Api}}/Users?filter=(ActiVe eq true) and meta.lastmodified ge \"2021-09-23T19:35:41.8420572Z\"",
+					"raw": "https://{{endpoint}}/scim/Users?filter=(ActiVe eq true) and meta.lastmodified ge \"2021-09-23T19:35:41.8420572Z\"",
 					"protocol": "https",
 					"host": [
-						"{{Server}}{{Port}}"
+						"{{endpoint}}"
 					],
 					"path": [
-						"{{Api}}",
+						"scim",
 						"Users"
 					],
 					"query": [
@@ -758,13 +759,13 @@
 				"method": "DELETE",
 				"header": [],
 				"url": {
-					"raw": "https://{{Server}}{{Port}}/{{Api}}/Users/{{id1}}",
+					"raw": "https://{{endpoint}}/scim/Users/{{id1}}",
 					"protocol": "https",
 					"host": [
-						"{{Server}}{{Port}}"
+						"{{endpoint}}"
 					],
 					"path": [
-						"{{Api}}",
+						"scim",
 						"Users",
 						"{{id1}}"
 					]
@@ -817,7 +818,7 @@
 		"bearer": [
 			{
 				"key": "token",
-				"value": "",
+				"value": "{{token}}",
 				"type": "string"
 			}
 		]
@@ -857,7 +858,7 @@
 		},
 		{
 			"key": "endpoint",
-			"value": "localhost:5001"
+			"value": "localhost:49166"
 		},
 		{
 			"key": "lastUserId",
