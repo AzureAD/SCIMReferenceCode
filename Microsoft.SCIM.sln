@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29709.97
+# Visual Studio Version 17
+VisualStudioVersion = 17.12.35707.178 d17.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.SCIM", "Microsoft.SystemForCrossDomainIdentityManagement\Microsoft.SCIM.csproj", "{C9ED6410-1995-4B98-AD57-C02D5F16631C}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.SCIM.WebHostSample", "Microsoft.SCIM.WebHostSample\Microsoft.SCIM.WebHostSample.csproj", "{238F1B05-D3EE-4AB4-871E-ADEA0A1665CF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Atmosera.SCIM.Rest", "Atmosera.SCIM.Rest\Atmosera.SCIM.Rest.csproj", "{2B19588F-F349-4F5E-872F-4A035649B4D1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{238F1B05-D3EE-4AB4-871E-ADEA0A1665CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{238F1B05-D3EE-4AB4-871E-ADEA0A1665CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{238F1B05-D3EE-4AB4-871E-ADEA0A1665CF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2B19588F-F349-4F5E-872F-4A035649B4D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B19588F-F349-4F5E-872F-4A035649B4D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B19588F-F349-4F5E-872F-4A035649B4D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B19588F-F349-4F5E-872F-4A035649B4D1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
