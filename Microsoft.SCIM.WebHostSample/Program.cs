@@ -36,7 +36,7 @@ if (environment == "Development")
 
 app.UseHsts();
 app.UseRouting();
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -94,8 +94,8 @@ void ConfigureServices(IServiceCollection services)
     services.AddAuthentication(ConfigureAuthenticationOptions).AddJwtBearer(ConfigureJwtBearerOptons);
     services.AddControllers().AddNewtonsoftJson(ConfigureMvcNewtonsoftJsonOptions);
 
-    services.AddSingleton(typeof(IProvider), monitoringBehavior);
-    services.AddSingleton(typeof(IMonitor), providerBehavior);
+    services.AddSingleton(typeof(IProvider), providerBehavior);
+    services.AddSingleton(typeof(IMonitor), monitoringBehavior);
 }
 
 Task AuthenticationFailed(AuthenticationFailedContext arg)
