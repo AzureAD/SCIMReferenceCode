@@ -1,0 +1,55 @@
+name: StandardLogicApp - Tag on merge to master
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp/VERSION'
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read VERSION and create tag
+        id: tag
+        run: |
+          FILE="Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp/VERSION"
+          VERSION=$(tr -d '[:space:]' < "$FILE")
+          TAG="scim-logicapp-template-v${VERSION}"
+
+          echo "VERSION: $VERSION"
+          echo "TAG:     $TAG"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG"         >> $GITHUB_OUTPUT
+
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "::notice::Tag $TAG already exists. Skipping tag creation."
+            echo "exists=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          echo "exists=false" >> $GITHUB_OUTPUT
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "StandardLogicApp $VERSION"
+          git push origin "$TAG"
+          echo "✅ Created and pushed tag $TAG"
+
+      - name: Create GitHub Release
+        if: steps.tag.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: StandardLogicApp v${{ steps.tag.outputs.version }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true

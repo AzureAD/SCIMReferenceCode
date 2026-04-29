@@ -1,0 +1,134 @@
+name: StandardLogicApp - Auto-bump VERSION on PR
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp/**'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: standardlogicapp-bump-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  autobump:
+    if: ${{ github.event.pull_request.head.repo.fork == false }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Loop guard - skip if last commit was an auto-bump
+        id: guard
+        run: |
+          LAST_MSG=$(git log -1 --pretty=%B)
+          if echo "$LAST_MSG" | grep -q '\[skip-bump\]'; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "Last commit is an auto-bump. Skipping."
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine bump type from PR labels
+        if: steps.guard.outputs.skip != 'true'
+        id: bumptype
+        env:
+          LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
+        run: |
+          if echo "$LABELS" | grep -q '"version:skip"'; then
+            echo "type=skip" >> $GITHUB_OUTPUT
+          elif echo "$LABELS" | grep -q '"version:major"'; then
+            echo "type=major" >> $GITHUB_OUTPUT
+          elif echo "$LABELS" | grep -q '"version:patch"'; then
+            echo "type=patch" >> $GITHUB_OUTPUT
+          else
+            echo "type=minor" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Read current and base VERSION
+        if: steps.guard.outputs.skip != 'true' && steps.bumptype.outputs.type != 'skip'
+        id: ver
+        run: |
+          FILE="Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp/VERSION"
+          CURRENT=$(tr -d '[:space:]' < "$FILE")
+          git fetch origin ${{ github.base_ref }} --depth=1
+          BASE=$(git show origin/${{ github.base_ref }}:"$FILE" 2>/dev/null | tr -d '[:space:]' || echo "")
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          echo "base=$BASE"       >> $GITHUB_OUTPUT
+          echo "Current PR VERSION: $CURRENT"
+          echo "Base   VERSION:     $BASE"
+
+      - name: Bump VERSION if unchanged
+        if: steps.guard.outputs.skip != 'true' && steps.bumptype.outputs.type != 'skip' && steps.ver.outputs.current == steps.ver.outputs.base
+        id: bump
+        run: |
+          FILE="Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp/VERSION"
+          CUR="${{ steps.ver.outputs.current }}"
+          TYPE="${{ steps.bumptype.outputs.type }}"
+
+          MAJOR=$(echo "$CUR" | cut -d. -f1)
+          MINOR=$(echo "$CUR" | cut -d. -f2)
+          PATCH=$(echo "$CUR" | cut -d. -f3)
+          [ -z "$MINOR" ] && MINOR=0
+          [ -z "$PATCH" ] && PATCH=0
+
+          case "$TYPE" in
+            major) NEW="$((MAJOR+1)).0" ;;
+            minor) NEW="${MAJOR}.$((MINOR+1))" ;;
+            patch) NEW="${MAJOR}.${MINOR}.$((PATCH+1))" ;;
+          esac
+
+          echo "$NEW" > "$FILE"
+          echo "new=$NEW" >> $GITHUB_OUTPUT
+          echo "Bumping $CUR -> $NEW ($TYPE)"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$FILE"
+          git commit -m "chore(StandardLogicApp): bump VERSION to $NEW [skip-bump]"
+          git push
+
+      - name: Comment resulting version on PR
+        if: steps.bump.outputs.new != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const v = '${{ steps.bump.outputs.new }}';
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `🔖 Auto-bumped \`StandardLogicApp/VERSION\` to **${v}**.\nOn merge to master, tag \`scim-logicapp-template-v${v}\` will be created.\n\nTo override, add one of: \`version:major\`, \`version:patch\`, \`version:skip\` and re-run.`
+            });
+
+      - name: Note when author already bumped
+        if: steps.guard.outputs.skip != 'true' && steps.bumptype.outputs.type != 'skip' && steps.ver.outputs.current != steps.ver.outputs.base && steps.bump.outputs.new == ''
+        run: |
+          echo "✅ VERSION already bumped from ${{ steps.ver.outputs.base }} to ${{ steps.ver.outputs.current }}. No action needed."
+
+  fork-pr-check:
+    if: ${{ github.event.pull_request.head.repo.fork == true }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require manual VERSION bump for fork PRs
+        run: |
+          FILE="Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp/VERSION"
+          git fetch origin ${{ github.base_ref }} --depth=1
+          CUR=$(tr -d '[:space:]' < "$FILE")
+          BASE=$(git show origin/${{ github.base_ref }}:"$FILE" 2>/dev/null | tr -d '[:space:]' || echo "")
+          if [ "$CUR" = "$BASE" ]; then
+            echo "::error::Fork PRs cannot be auto-bumped. Please bump $FILE manually."
+            exit 1
+          fi
+          echo "✅ VERSION bumped from $BASE to $CUR."
