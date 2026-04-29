@@ -1,0 +1,1545 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "contentVersion": "1.0.0.0",
+        "triggers": {
+            "manual": {
+                "type": "Request",
+                "kind": "Http",
+                "inputs": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "initializationData": {
+                                "type": "object",
+                                "properties": {
+                                    "syncJobId": {
+                                        "type": "string"
+                                    },
+                                    "targetAttributes": {
+                                        "type": "array"
+                                    },
+                                    "targetGroupAttributes": {
+                                        "type": "array"
+                                    },
+                                    "schema": {
+                                        "type": "object"
+                                    },
+                                    "sourceToTargetLookup": {
+                                        "type": "array"
+                                    }
+                                }
+                            },
+                            "EnabledTests": {
+                                "type": "string"
+                            },
+                            "parentRunId": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "actions": {
+            "Response_Immediate": {
+                "runAfter": {
+                    "Initialize_SCIM_Test_Variables": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Response",
+                "kind": "Http",
+                "inputs": {
+                    "statusCode": 202,
+                    "body": {
+                        "workflowRunId": "@workflow().run.name",
+                        "workflowName": "@workflow().name",
+                        "status": "Accepted",
+                        "message": "SCIMTests workflow started. Tests are running asynchronously."
+                    }
+                }
+            },
+            "Initialize_SCIM_Test_Variables": {
+                "runAfter": {},
+                "type": "InitializeVariable",
+                "inputs": {
+                    "variables": [
+                        {
+                            "name": "SchemaDiscoverabilityTestOutputs",
+                            "type": "Object",
+                            "value": {
+                                "overallResult": "SKIPPED",
+                                "result": "SKIPPED",
+                                "summary": null,
+                                "detailedResults": [],
+                                "errorDetails": {
+                                    "summary": null
+                                }
+                            }
+                        },
+                        {
+                            "name": "SCIMNullUpdateFailedActionName",
+                            "type": "string",
+                            "value": ""
+                        },
+                        {
+                            "name": "SCIMNullUpdateScopeExecutionStatus",
+                            "type": "string",
+                            "value": "InProgress"
+                        },
+                        {
+                            "name": "SCIMNullUpdateTestOutputs",
+                            "type": "Object",
+                            "value": {
+                                "overallResult": "SKIPPED",
+                                "result": "SKIPPED",
+                                "summary": null,
+                                "detailedResults": [],
+                                "errorDetails": {
+                                    "summary": null
+                                }
+                            }
+                        },
+                        {
+                            "name": "scimNullPatchOperations",
+                            "type": "Array",
+                            "value": []
+                        },
+                        {
+                            "name": "scimNullUpdateResults",
+                            "type": "Array",
+                            "value": []
+                        },
+                        {
+                            "name": "scimNullCreateBody",
+                            "type": "Object",
+                            "value": {}
+                        },
+                        {
+                            "name": "ValidateCredentialsTestOutputs",
+                            "type": "Object",
+                            "value": {
+                                "overallResult": "SKIPPED",
+                                "result": "SKIPPED",
+                                "summary": null,
+                                "detailedResults": [],
+                                "errorDetails": {
+                                    "summary": null
+                                }
+                            }
+                        },
+                        {
+                            "name": "flattenedUserAttrCount",
+                            "type": "Integer",
+                            "value": 0
+                        },
+                        {
+                            "name": "flattenedGroupAttrCount",
+                            "type": "Integer",
+                            "value": 0
+                        }
+                    ]
+                }
+            },
+            "SCIMTests_Scope": {
+                "actions": {
+                    "Schema_Discoverability_Test": {
+                        "actions": {
+                            "SCIM_Get_Schemas": {
+                                "type": "Http",
+                                "inputs": {
+                                    "uri": "@{concat(parameters('scimEndpoint'), '/Schemas')}",
+                                    "method": "GET",
+                                    "headers": {
+                                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                        "Accept": "@{parameters('scimContentType')}"
+                                    }
+                                }
+                            },
+                            "Reset_FlattenedUserAttrCount": {
+                                "runAfter": {
+                                    "SCIM_Get_Schemas": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "SetVariable",
+                                "inputs": {
+                                    "name": "flattenedUserAttrCount",
+                                    "value": 0
+                                }
+                            },
+                            "Reset_FlattenedGroupAttrCount": {
+                                "runAfter": {
+                                    "SCIM_Get_Schemas": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "SetVariable",
+                                "inputs": {
+                                    "name": "flattenedGroupAttrCount",
+                                    "value": 0
+                                }
+                            },
+                            "Filter_User_Schema": {
+                                "runAfter": {
+                                    "SCIM_Get_Schemas": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "Query",
+                                "inputs": {
+                                    "from": "@coalesce(body('SCIM_Get_Schemas')?['Resources'], json('[]'))",
+                                    "where": "@equals(item()?['id'], 'urn:ietf:params:scim:schemas:core:2.0:User')"
+                                }
+                            },
+                            "Filter_EnterpriseUser_Schema": {
+                                "runAfter": {
+                                    "SCIM_Get_Schemas": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "Query",
+                                "inputs": {
+                                    "from": "@coalesce(body('SCIM_Get_Schemas')?['Resources'], json('[]'))",
+                                    "where": "@equals(item()?['id'], 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User')"
+                                }
+                            },
+                            "Filter_Group_Schema": {
+                                "runAfter": {
+                                    "SCIM_Get_Schemas": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "Query",
+                                "inputs": {
+                                    "from": "@coalesce(body('SCIM_Get_Schemas')?['Resources'], json('[]'))",
+                                    "where": "@equals(item()?['id'], 'urn:ietf:params:scim:schemas:core:2.0:Group')"
+                                }
+                            },
+                            "Compose_Discovered_User_Attrs": {
+                                "runAfter": {
+                                    "Filter_User_Schema": [
+                                        "Succeeded"
+                                    ],
+                                    "Filter_EnterpriseUser_Schema": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "Compose",
+                                "inputs": "@union(coalesce(first(body('Filter_User_Schema'))?['attributes'], json('[]')), coalesce(first(body('Filter_EnterpriseUser_Schema'))?['attributes'], json('[]')))"
+                            },
+                            "Compose_Discovered_Group_Attrs": {
+                                "runAfter": {
+                                    "Filter_Group_Schema": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "Compose",
+                                "inputs": "@coalesce(first(body('Filter_Group_Schema'))?['attributes'], json('[]'))"
+                            },
+                            "Flatten_User_Attrs_Loop": {
+                                "runAfter": {
+                                    "Compose_Discovered_User_Attrs": [
+                                        "Succeeded"
+                                    ],
+                                    "Reset_FlattenedUserAttrCount": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "Foreach",
+                                "foreach": "@outputs('Compose_Discovered_User_Attrs')",
+                                "actions": {
+                                    "Check_User_Attr_Category": {
+                                        "type": "If",
+                                        "expression": {
+                                            "or": [
+                                                {
+                                                    "equals": [
+                                                        "@items('Flatten_User_Attrs_Loop')?['name']",
+                                                        "manager"
+                                                    ]
+                                                },
+                                                {
+                                                    "equals": [
+                                                        "@items('Flatten_User_Attrs_Loop')?['name']",
+                                                        "members"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        "actions": {
+                                            "Count_User_Reference_Attr": {
+                                                "type": "IncrementVariable",
+                                                "inputs": {
+                                                    "name": "flattenedUserAttrCount",
+                                                    "value": 1
+                                                }
+                                            }
+                                        },
+                                        "else": {
+                                            "actions": {
+                                                "Check_User_Is_Complex": {
+                                                    "type": "If",
+                                                    "expression": {
+                                                        "and": [
+                                                            {
+                                                                "equals": [
+                                                                    "@items('Flatten_User_Attrs_Loop')?['type']",
+                                                                    "complex"
+                                                                ]
+                                                            }
+                                                        ]
+                                                    },
+                                                    "actions": {
+                                                        "Check_User_Is_MultiValued": {
+                                                            "type": "If",
+                                                            "expression": {
+                                                                "and": [
+                                                                    {
+                                                                        "equals": [
+                                                                            "@coalesce(items('Flatten_User_Attrs_Loop')?['multiValued'], false)",
+                                                                            true
+                                                                        ]
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "actions": {
+                                                                "Get_User_Type_SubAttr": {
+                                                                    "type": "Query",
+                                                                    "inputs": {
+                                                                        "from": "@coalesce(items('Flatten_User_Attrs_Loop')?['subAttributes'], json('[]'))",
+                                                                        "where": "@equals(item()?['name'], 'type')"
+                                                                    }
+                                                                },
+                                                                "Get_User_Filterable_SubAttrs": {
+                                                                    "runAfter": {
+                                                                        "Get_User_Type_SubAttr": [
+                                                                            "Succeeded"
+                                                                        ]
+                                                                    },
+                                                                    "type": "Query",
+                                                                    "inputs": {
+                                                                        "from": "@coalesce(items('Flatten_User_Attrs_Loop')?['subAttributes'], json('[]'))",
+                                                                        "where": "@and(not(equals(item()?['name'], 'type')), not(equals(item()?['name'], 'primary')))"
+                                                                    }
+                                                                },
+                                                                "Compute_User_MultiValued_Expansion": {
+                                                                    "runAfter": {
+                                                                        "Get_User_Filterable_SubAttrs": [
+                                                                            "Succeeded"
+                                                                        ]
+                                                                    },
+                                                                    "type": "If",
+                                                                    "expression": {
+                                                                        "and": [
+                                                                            {
+                                                                                "greater": [
+                                                                                    "@length(body('Get_User_Type_SubAttr'))",
+                                                                                    0
+                                                                                ]
+                                                                            },
+                                                                            {
+                                                                                "greater": [
+                                                                                    "@length(coalesce(first(body('Get_User_Type_SubAttr'))?['canonicalValues'], json('[]')))",
+                                                                                    0
+                                                                                ]
+                                                                            }
+                                                                        ]
+                                                                    },
+                                                                    "actions": {
+                                                                        "Count_User_Canonical_Expansion": {
+                                                                            "type": "IncrementVariable",
+                                                                            "inputs": {
+                                                                                "name": "flattenedUserAttrCount",
+                                                                                "value": "@mul(length(coalesce(first(body('Get_User_Type_SubAttr'))?['canonicalValues'], json('[]'))), length(body('Get_User_Filterable_SubAttrs')))"
+                                                                            }
+                                                                        }
+                                                                    },
+                                                                    "else": {
+                                                                        "actions": {
+                                                                            "Count_User_Primary_Expansion": {
+                                                                                "type": "IncrementVariable",
+                                                                                "inputs": {
+                                                                                    "name": "flattenedUserAttrCount",
+                                                                                    "value": "@length(body('Get_User_Filterable_SubAttrs'))"
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            },
+                                                            "else": {
+                                                                "actions": {
+                                                                    "Get_User_Simple_SubAttrs": {
+                                                                        "type": "Query",
+                                                                        "inputs": {
+                                                                            "from": "@coalesce(items('Flatten_User_Attrs_Loop')?['subAttributes'], json('[]'))",
+                                                                            "where": "@and(not(equals(item()?['type'], 'complex')), not(equals(item()?['type'], 'reference')))"
+                                                                        }
+                                                                    },
+                                                                    "Count_User_Dot_Notation_Attrs": {
+                                                                        "runAfter": {
+                                                                            "Get_User_Simple_SubAttrs": [
+                                                                                "Succeeded"
+                                                                            ]
+                                                                        },
+                                                                        "type": "IncrementVariable",
+                                                                        "inputs": {
+                                                                            "name": "flattenedUserAttrCount",
+                                                                            "value": "@length(body('Get_User_Simple_SubAttrs'))"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    },
+                                                    "else": {
+                                                        "actions": {
+                                                            "Check_User_Not_Reference_Simple": {
+                                                                "type": "If",
+                                                                "expression": {
+                                                                    "and": [
+                                                                        {
+                                                                            "not": {
+                                                                                "equals": [
+                                                                                    "@items('Flatten_User_Attrs_Loop')?['type']",
+                                                                                    "reference"
+                                                                                ]
+                                                                            }
+                                                                        }
+                                                                    ]
+                                                                },
+                                                                "actions": {
+                                                                    "Count_User_Simple_Attr": {
+                                                                        "type": "IncrementVariable",
+                                                                        "inputs": {
+                                                                            "name": "flattenedUserAttrCount",
+                                                                            "value": 1
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "else": {
+                                                                    "actions": {}
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "runtimeConfiguration": {
+                                    "concurrency": {
+                                        "repetitions": 1
+                                    }
+                                }
+                            },
+                            "Flatten_Group_Attrs_Loop": {
+                                "runAfter": {
+                                    "Compose_Discovered_Group_Attrs": [
+                                        "Succeeded"
+                                    ],
+                                    "Reset_FlattenedGroupAttrCount": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "Foreach",
+                                "foreach": "@outputs('Compose_Discovered_Group_Attrs')",
+                                "actions": {
+                                    "Check_Group_Attr_Category": {
+                                        "type": "If",
+                                        "expression": {
+                                            "or": [
+                                                {
+                                                    "equals": [
+                                                        "@items('Flatten_Group_Attrs_Loop')?['name']",
+                                                        "manager"
+                                                    ]
+                                                },
+                                                {
+                                                    "equals": [
+                                                        "@items('Flatten_Group_Attrs_Loop')?['name']",
+                                                        "members"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        "actions": {
+                                            "Count_Group_Reference_Attr": {
+                                                "type": "IncrementVariable",
+                                                "inputs": {
+                                                    "name": "flattenedGroupAttrCount",
+                                                    "value": 1
+                                                }
+                                            }
+                                        },
+                                        "else": {
+                                            "actions": {
+                                                "Check_Group_Is_Complex": {
+                                                    "type": "If",
+                                                    "expression": {
+                                                        "and": [
+                                                            {
+                                                                "equals": [
+                                                                    "@items('Flatten_Group_Attrs_Loop')?['type']",
+                                                                    "complex"
+                                                                ]
+                                                            }
+                                                        ]
+                                                    },
+                                                    "actions": {
+                                                        "Check_Group_Is_MultiValued": {
+                                                            "type": "If",
+                                                            "expression": {
+                                                                "and": [
+                                                                    {
+                                                                        "equals": [
+                                                                            "@coalesce(items('Flatten_Group_Attrs_Loop')?['multiValued'], false)",
+                                                                            true
+                                                                        ]
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "actions": {
+                                                                "Get_Group_Type_SubAttr": {
+                                                                    "type": "Query",
+                                                                    "inputs": {
+                                                                        "from": "@coalesce(items('Flatten_Group_Attrs_Loop')?['subAttributes'], json('[]'))",
+                                                                        "where": "@equals(item()?['name'], 'type')"
+                                                                    }
+                                                                },
+                                                                "Get_Group_Filterable_SubAttrs": {
+                                                                    "runAfter": {
+                                                                        "Get_Group_Type_SubAttr": [
+                                                                            "Succeeded"
+                                                                        ]
+                                                                    },
+                                                                    "type": "Query",
+                                                                    "inputs": {
+                                                                        "from": "@coalesce(items('Flatten_Group_Attrs_Loop')?['subAttributes'], json('[]'))",
+                                                                        "where": "@and(not(equals(item()?['name'], 'type')), not(equals(item()?['name'], 'primary')))"
+                                                                    }
+                                                                },
+                                                                "Compute_Group_MultiValued_Expansion": {
+                                                                    "runAfter": {
+                                                                        "Get_Group_Filterable_SubAttrs": [
+                                                                            "Succeeded"
+                                                                        ]
+                                                                    },
+                                                                    "type": "If",
+                                                                    "expression": {
+                                                                        "and": [
+                                                                            {
+                                                                                "greater": [
+                                                                                    "@length(body('Get_Group_Type_SubAttr'))",
+                                                                                    0
+                                                                                ]
+                                                                            },
+                                                                            {
+                                                                                "greater": [
+                                                                                    "@length(coalesce(first(body('Get_Group_Type_SubAttr'))?['canonicalValues'], json('[]')))",
+                                                                                    0
+                                                                                ]
+                                                                            }
+                                                                        ]
+                                                                    },
+                                                                    "actions": {
+                                                                        "Count_Group_Canonical_Expansion": {
+                                                                            "type": "IncrementVariable",
+                                                                            "inputs": {
+                                                                                "name": "flattenedGroupAttrCount",
+                                                                                "value": "@mul(length(coalesce(first(body('Get_Group_Type_SubAttr'))?['canonicalValues'], json('[]'))), length(body('Get_Group_Filterable_SubAttrs')))"
+                                                                            }
+                                                                        }
+                                                                    },
+                                                                    "else": {
+                                                                        "actions": {
+                                                                            "Count_Group_Primary_Expansion": {
+                                                                                "type": "IncrementVariable",
+                                                                                "inputs": {
+                                                                                    "name": "flattenedGroupAttrCount",
+                                                                                    "value": "@length(body('Get_Group_Filterable_SubAttrs'))"
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            },
+                                                            "else": {
+                                                                "actions": {
+                                                                    "Get_Group_Simple_SubAttrs": {
+                                                                        "type": "Query",
+                                                                        "inputs": {
+                                                                            "from": "@coalesce(items('Flatten_Group_Attrs_Loop')?['subAttributes'], json('[]'))",
+                                                                            "where": "@and(not(equals(item()?['type'], 'complex')), not(equals(item()?['type'], 'reference')))"
+                                                                        }
+                                                                    },
+                                                                    "Count_Group_Dot_Notation_Attrs": {
+                                                                        "runAfter": {
+                                                                            "Get_Group_Simple_SubAttrs": [
+                                                                                "Succeeded"
+                                                                            ]
+                                                                        },
+                                                                        "type": "IncrementVariable",
+                                                                        "inputs": {
+                                                                            "name": "flattenedGroupAttrCount",
+                                                                            "value": "@length(body('Get_Group_Simple_SubAttrs'))"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    },
+                                                    "else": {
+                                                        "actions": {
+                                                            "Check_Group_Not_Reference_Simple": {
+                                                                "type": "If",
+                                                                "expression": {
+                                                                    "and": [
+                                                                        {
+                                                                            "not": {
+                                                                                "equals": [
+                                                                                    "@items('Flatten_Group_Attrs_Loop')?['type']",
+                                                                                    "reference"
+                                                                                ]
+                                                                            }
+                                                                        }
+                                                                    ]
+                                                                },
+                                                                "actions": {
+                                                                    "Count_Group_Simple_Attr": {
+                                                                        "type": "IncrementVariable",
+                                                                        "inputs": {
+                                                                            "name": "flattenedGroupAttrCount",
+                                                                            "value": 1
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "else": {
+                                                                    "actions": {}
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "runtimeConfiguration": {
+                                    "concurrency": {
+                                        "repetitions": 1
+                                    }
+                                }
+                            },
+                            "Compose_Schema_Discoverability_Summary": {
+                                "runAfter": {
+                                    "Flatten_User_Attrs_Loop": [
+                                        "Succeeded"
+                                    ],
+                                    "Flatten_Group_Attrs_Loop": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "Compose",
+                                "inputs": {
+                                    "testName": "SchemaDiscoveryTest",
+                                    "timestamp": "@utcNow()",
+                                    "schemasEndpointStatusCode": "@outputs('SCIM_Get_Schemas')['statusCode']",
+                                    "discoveredSchemasCount": "@length(coalesce(body('SCIM_Get_Schemas')?['Resources'], json('[]')))",
+                                    "userSchemaFound": "@greater(length(body('Filter_User_Schema')), 0)",
+                                    "enterpriseUserSchemaFound": "@greater(length(body('Filter_EnterpriseUser_Schema')), 0)",
+                                    "groupSchemaFound": "@greater(length(body('Filter_Group_Schema')), 0)",
+                                    "targetUserAttrCount": "@length(coalesce(triggerBody()?['initializationData']?['targetAttributes'], json('[]')))",
+                                    "discoveredUserAttrCount": "@variables('flattenedUserAttrCount')",
+                                    "userAttrCountCheckPassed": "@if(equals(length(coalesce(triggerBody()?['initializationData']?['targetAttributes'], json('[]'))), 0), true, greaterOrEquals(variables('flattenedUserAttrCount'), length(coalesce(triggerBody()?['initializationData']?['targetAttributes'], json('[]')))))",
+                                    "targetGroupAttrCount": "@length(coalesce(triggerBody()?['initializationData']?['targetGroupAttributes'], json('[]')))",
+                                    "discoveredGroupAttrCount": "@variables('flattenedGroupAttrCount')",
+                                    "groupAttrCountCheckPassed": "@if(equals(length(coalesce(triggerBody()?['initializationData']?['targetGroupAttributes'], json('[]'))), 0), true, greaterOrEquals(variables('flattenedGroupAttrCount'), length(coalesce(triggerBody()?['initializationData']?['targetGroupAttributes'], json('[]')))))",
+                                    "overallResult": "@if(and(equals(outputs('SCIM_Get_Schemas')['statusCode'], 200), greater(length(coalesce(body('SCIM_Get_Schemas')?['Resources'], json('[]'))), 0), if(equals(length(coalesce(triggerBody()?['initializationData']?['targetAttributes'], json('[]'))), 0), true, greaterOrEquals(variables('flattenedUserAttrCount'), length(coalesce(triggerBody()?['initializationData']?['targetAttributes'], json('[]'))))), if(equals(length(coalesce(triggerBody()?['initializationData']?['targetGroupAttributes'], json('[]'))), 0), true, greaterOrEquals(variables('flattenedGroupAttrCount'), length(coalesce(triggerBody()?['initializationData']?['targetGroupAttributes'], json('[]')))))), 'PASSED', 'FAILED')"
+                                }
+                            },
+                            "Set_SchemaDiscoverabilityTestOutputs": {
+                                "runAfter": {
+                                    "Compose_Schema_Discoverability_Summary": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "SetVariable",
+                                "inputs": {
+                                    "name": "SchemaDiscoverabilityTestOutputs",
+                                    "value": {
+                                        "overallResult": "@coalesce(outputs('Compose_Schema_Discoverability_Summary')?['overallResult'], 'FAILED')",
+                                        "result": "@if(equals(coalesce(outputs('Compose_Schema_Discoverability_Summary')?['overallResult'], 'FAILED'), 'PASSED'), 'success', if(not(equals(outputs('SCIM_Get_Schemas')['statusCode'], 200)), 'Could not reach the SCIM /Schemas endpoint.', if(equals(length(coalesce(body('SCIM_Get_Schemas')?['Resources'], json('[]'))), 0), 'The SCIM /Schemas endpoint returned no schemas.', 'The SCIM schema does not support all attributes required by the provisioning mapping.')))",
+                                        "summary": "@outputs('Compose_Schema_Discoverability_Summary')",
+                                        "detailedResults": [],
+                                        "errorDetails": {
+                                            "summary": "@if(equals(coalesce(outputs('Compose_Schema_Discoverability_Summary')?['overallResult'], 'FAILED'), 'PASSED'), null, trim(concat(if(not(equals(outputs('SCIM_Get_Schemas')['statusCode'], 200)), concat('Could not reach the SCIM /Schemas endpoint (HTTP ', string(outputs('SCIM_Get_Schemas')['statusCode']), '). '), ''), if(equals(length(coalesce(body('SCIM_Get_Schemas')?['Resources'], json('[]'))), 0), 'The SCIM /Schemas endpoint returned no schemas. ', ''), if(not(coalesce(outputs('Compose_Schema_Discoverability_Summary')?['userAttrCountCheckPassed'], false)), concat('User attributes - mapping: ', string(coalesce(outputs('Compose_Schema_Discoverability_Summary')?['targetUserAttrCount'], 0)), ', schema supports: ', string(coalesce(outputs('Compose_Schema_Discoverability_Summary')?['discoveredUserAttrCount'], 0)), '. '), ''), if(not(coalesce(outputs('Compose_Schema_Discoverability_Summary')?['groupAttrCountCheckPassed'], false)), concat('Group attributes - mapping: ', string(coalesce(outputs('Compose_Schema_Discoverability_Summary')?['targetGroupAttrCount'], 0)), ', schema supports: ', string(coalesce(outputs('Compose_Schema_Discoverability_Summary')?['discoveredGroupAttrCount'], 0)), '. '), ''))))"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "else": {
+                            "actions": {}
+                        },
+                        "expression": {
+                            "or": [
+                                {
+                                    "equals": [
+                                        "@triggerBody()?['EnabledTests']",
+                                        "All"
+                                    ]
+                                },
+                                {
+                                    "equals": [
+                                        "@triggerBody()?['EnabledTests']",
+                                        "SCIMTests"
+                                    ]
+                                },
+                                {
+                                    "equals": [
+                                        "@triggerBody()?['EnabledTests']",
+                                        "Schema_Discoverability_Test"
+                                    ]
+                                }
+                            ]
+                        },
+                        "type": "If"
+                    },
+                    "SCIM_Null_Update_Test": {
+                        "runAfter": {},
+                        "actions": {
+                            "SCIM_Null_Update_Test_Actions": {
+                                "actions": {
+                                    "Generate_SCIM_Null_Test_UserName": {
+                                        "type": "Compose",
+                                        "inputs": "@concat('scnull', substring(guid(), 0, 8))"
+                                    },
+                                    "Set_SCIM_Null_Create_Base_Body": {
+                                        "runAfter": {
+                                            "Generate_SCIM_Null_Test_UserName": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "SetVariable",
+                                        "inputs": {
+                                            "name": "scimNullCreateBody",
+                                            "value": {
+                                                "schemas": [
+                                                    "urn:ietf:params:scim:schemas:core:2.0:User",
+                                                    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+                                                ],
+                                                "userName": "@{concat(outputs('Generate_SCIM_Null_Test_UserName'), '@', coalesce(last(split(coalesce(triggerBody()?['initializationData']?['userBody']?['userPrincipalName'], 'x@test.com'), '@')), 'test.com'))}",
+                                                "active": true,
+                                                "externalId": "@outputs('Generate_SCIM_Null_Test_UserName')"
+                                            }
+                                        }
+                                    },
+                                    "ForEach_Build_Null_Create_Body": {
+                                        "foreach": "@coalesce(triggerBody()?['initializationData']?['sourceToTargetLookup'], json('[]'))",
+                                        "actions": {
+                                            "Compose_Null_Create_Source_Value": {
+                                                "type": "Compose",
+                                                "inputs": "@coalesce(if(contains(items('ForEach_Build_Null_Create_Body')?['source'], '.'), triggerBody()?['initializationData']?['userBody']?[first(split(items('ForEach_Build_Null_Create_Body')?['source'], '.'))][last(split(items('ForEach_Build_Null_Create_Body')?['source'], '.'))], if(startsWith(string(coalesce(triggerBody()?['initializationData']?['userBody']?[items('ForEach_Build_Null_Create_Body')?['source']], '')), '['), first(coalesce(triggerBody()?['initializationData']?['userBody']?[items('ForEach_Build_Null_Create_Body')?['source']], createArray(concat('Test', substring(guid(), 0, 6))))), triggerBody()?['initializationData']?['userBody']?[items('ForEach_Build_Null_Create_Body')?['source']])), concat('Test', substring(guid(), 0, 6)))"
+                                            },
+                                            "Compose_Null_Create_New_Body": {
+                                                "runAfter": {
+                                                    "Compose_Null_Create_Source_Value": [
+                                                        "Succeeded"
+                                                    ]
+                                                },
+                                                "type": "Compose",
+                                                "inputs": "@if(or(equals(items('ForEach_Build_Null_Create_Body')?['source'], 'manager'), equals(items('ForEach_Build_Null_Create_Body')?['target'], 'userName'), equals(items('ForEach_Build_Null_Create_Body')?['target'], 'active'), equals(items('ForEach_Build_Null_Create_Body')?['target'], 'externalId')), variables('scimNullCreateBody'), if(startsWith(items('ForEach_Build_Null_Create_Body')?['target'], 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:'), union(variables('scimNullCreateBody'), json(concat('{\"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User\":', string(setProperty(coalesce(variables('scimNullCreateBody')?['urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'], json('{}')), last(split(items('ForEach_Build_Null_Create_Body')?['target'], ':')), outputs('Compose_Null_Create_Source_Value'))), '}'))), if(contains(items('ForEach_Build_Null_Create_Body')?['target'], '['), setProperty(variables('scimNullCreateBody'), first(split(items('ForEach_Build_Null_Create_Body')?['target'], '[')), setProperty(coalesce(variables('scimNullCreateBody')?[first(split(items('ForEach_Build_Null_Create_Body')?['target'], '['))], json('{}')), first(skip(split(items('ForEach_Build_Null_Create_Body')?['target'], '\"'), 1)), setProperty(coalesce(variables('scimNullCreateBody')?[first(split(items('ForEach_Build_Null_Create_Body')?['target'], '['))]?[first(skip(split(items('ForEach_Build_Null_Create_Body')?['target'], '\"'), 1))], json(concat('{\"type\":\"', first(skip(split(items('ForEach_Build_Null_Create_Body')?['target'], '\"'), 1)), '\",\"primary\":', if(not(contains(string(coalesce(variables('scimNullCreateBody')?[first(split(items('ForEach_Build_Null_Create_Body')?['target'], '['))], json('{}'))), '\"primary\":true')), 'true', 'false'), '}'))), last(split(items('ForEach_Build_Null_Create_Body')?['target'], '.')), outputs('Compose_Null_Create_Source_Value')))), if(contains(items('ForEach_Build_Null_Create_Body')?['target'], '.'), setProperty(variables('scimNullCreateBody'), first(split(items('ForEach_Build_Null_Create_Body')?['target'], '.')), setProperty(coalesce(variables('scimNullCreateBody')?[first(split(items('ForEach_Build_Null_Create_Body')?['target'], '.'))], json('{}')), last(split(items('ForEach_Build_Null_Create_Body')?['target'], '.')), outputs('Compose_Null_Create_Source_Value'))), setProperty(variables('scimNullCreateBody'), items('ForEach_Build_Null_Create_Body')?['target'], outputs('Compose_Null_Create_Source_Value'))))))"
+                                            },
+                                            "Set_scimNullCreateBody": {
+                                                "runAfter": {
+                                                    "Compose_Null_Create_New_Body": [
+                                                        "Succeeded"
+                                                    ]
+                                                },
+                                                "type": "SetVariable",
+                                                "inputs": {
+                                                    "name": "scimNullCreateBody",
+                                                    "value": "@outputs('Compose_Null_Create_New_Body')"
+                                                }
+                                            }
+                                        },
+                                        "runAfter": {
+                                            "Set_SCIM_Null_Create_Base_Body": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "Foreach",
+                                        "runtimeConfiguration": {
+                                            "concurrency": {
+                                                "repetitions": 1
+                                            }
+                                        }
+                                    },
+                                    "SCIM_Create_Null_Test_User": {
+                                        "runAfter": {
+                                            "ForEach_Convert_To_Arrays": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "Http",
+                                        "inputs": {
+                                            "uri": "@{concat(parameters('scimEndpoint'), '/Users')}",
+                                            "method": "POST",
+                                            "headers": {
+                                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                "Content-Type": "@{parameters('scimContentType')}",
+                                                "Accept": "@{parameters('scimContentType')}"
+                                            },
+                                            "body": "@variables('scimNullCreateBody')"
+                                        }
+                                    },
+                                    "Compose_SCIM_Null_User_Id": {
+                                        "runAfter": {
+                                            "SCIM_Create_Null_Test_User": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "Compose",
+                                        "inputs": "@coalesce(body('SCIM_Create_Null_Test_User')?['id'], '')"
+                                    },
+                                    "SCIM_Get_User_Before_Null_Update": {
+                                        "runAfter": {
+                                            "Compose_SCIM_Null_User_Id": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "Http",
+                                        "inputs": {
+                                            "uri": "@{concat(parameters('scimEndpoint'), '/Users/', outputs('Compose_SCIM_Null_User_Id'))}",
+                                            "method": "GET",
+                                            "headers": {
+                                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                "Accept": "@{parameters('scimContentType')}"
+                                            }
+                                        }
+                                    },
+                                    "SCIM_Get_Schemas_For_Null_Test": {
+                                        "runAfter": {
+                                            "Compose_SCIM_Null_User_Id": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "Http",
+                                        "inputs": {
+                                            "uri": "@{concat(parameters('scimEndpoint'), '/Schemas')}",
+                                            "method": "GET",
+                                            "headers": {
+                                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                "Accept": "@{parameters('scimContentType')}"
+                                            }
+                                        }
+                                    },
+                                    "Filter_Null_Core_User_Schema": {
+                                        "runAfter": {
+                                            "SCIM_Get_Schemas_For_Null_Test": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "Query",
+                                        "inputs": {
+                                            "from": "@coalesce(body('SCIM_Get_Schemas_For_Null_Test')?['Resources'], json('[]'))",
+                                            "where": "@equals(item()?['id'], 'urn:ietf:params:scim:schemas:core:2.0:User')"
+                                        }
+                                    },
+                                    "Filter_Null_Enterprise_User_Schema": {
+                                        "runAfter": {
+                                            "SCIM_Get_Schemas_For_Null_Test": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "Query",
+                                        "inputs": {
+                                            "from": "@coalesce(body('SCIM_Get_Schemas_For_Null_Test')?['Resources'], json('[]'))",
+                                            "where": "@equals(item()?['id'], 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User')"
+                                        }
+                                    },
+                                    "Query_Required_Core_Attrs": {
+                                        "runAfter": {
+                                            "Filter_Null_Core_User_Schema": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "Query",
+                                        "inputs": {
+                                            "from": "@coalesce(first(body('Filter_Null_Core_User_Schema'))?['attributes'], json('[]'))",
+                                            "where": "@equals(item()?['required'], true)"
+                                        }
+                                    },
+                                    "Query_Required_Enterprise_Attrs": {
+                                        "runAfter": {
+                                            "Filter_Null_Enterprise_User_Schema": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "Query",
+                                        "inputs": {
+                                            "from": "@coalesce(first(body('Filter_Null_Enterprise_User_Schema'))?['attributes'], json('[]'))",
+                                            "where": "@equals(item()?['required'], true)"
+                                        }
+                                    },
+                                    "Filter_Null_Update_Target_Attributes": {
+                                        "runAfter": {
+                                            "SCIM_Get_User_Before_Null_Update": [
+                                                "Succeeded"
+                                            ],
+                                            "Query_Required_Core_Attrs": [
+                                                "Succeeded"
+                                            ],
+                                            "Query_Required_Enterprise_Attrs": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "Query",
+                                        "inputs": {
+                                            "from": "@coalesce(triggerBody()?['initializationData']?['sourceToTargetLookup'], json('[]'))",
+                                            "where": "@and(equals(coalesce(item()?['matchingPrecedence'], 0), 0), not(equals(coalesce(item()?['source'], ''), 'manager')), not(equals(coalesce(item()?['target'], ''), 'userName')), not(equals(coalesce(item()?['target'], ''), 'active')), not(equals(coalesce(item()?['target'], ''), 'externalId')), if(startsWith(coalesce(item()?['target'], ''), 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:'), not(contains(string(body('Query_Required_Enterprise_Attrs')), concat('\"name\":\"', last(split(item()?['target'], ':')), '\"'))), not(contains(string(body('Query_Required_Core_Attrs')), concat('\"name\":\"', if(contains(coalesce(item()?['target'], ''), '['), first(split(item()?['target'], '[')), if(contains(coalesce(item()?['target'], ''), '.'), first(split(item()?['target'], '.')), coalesce(item()?['target'], ''))), '\"')))))"
+                                        }
+                                    },
+                                    "ForEach_Build_Null_Patch_Operations": {
+                                        "foreach": "@body('Filter_Null_Update_Target_Attributes')",
+                                        "actions": {
+                                            "Append_Null_Patch_Operation": {
+                                                "runAfter": {
+                                                    "Compose_Null_Patch_Op": [
+                                                        "Succeeded"
+                                                    ]
+                                                },
+                                                "type": "AppendToArrayVariable",
+                                                "inputs": {
+                                                    "name": "scimNullPatchOperations",
+                                                    "value": "@outputs('Compose_Null_Patch_Op')"
+                                                }
+                                            },
+                                            "Compose_Null_Patch_Op": {
+                                                "type": "Compose",
+                                                "inputs": {
+                                                    "op": "replace",
+                                                    "path": "@{items('ForEach_Build_Null_Patch_Operations')?['target']}",
+                                                    "value": ""
+                                                }
+                                            }
+                                        },
+                                        "runAfter": {
+                                            "Filter_Null_Update_Target_Attributes": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "Foreach",
+                                        "runtimeConfiguration": {
+                                            "concurrency": {
+                                                "repetitions": 1
+                                            }
+                                        }
+                                    },
+                                    "Compose_SCIM_Null_Patch_Body": {
+                                        "runAfter": {
+                                            "ForEach_Build_Null_Patch_Operations": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "Compose",
+                                        "inputs": {
+                                            "schemas": [
+                                                "urn:ietf:params:scim:api:messages:2.0:PatchOp"
+                                            ],
+                                            "Operations": "@variables('scimNullPatchOperations')"
+                                        }
+                                    },
+                                    "SCIM_Patch_Null_Update": {
+                                        "runAfter": {
+                                            "Compose_SCIM_Null_Patch_Body": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "Http",
+                                        "inputs": {
+                                            "uri": "@{concat(parameters('scimEndpoint'), '/Users/', outputs('Compose_SCIM_Null_User_Id'))}",
+                                            "method": "PATCH",
+                                            "headers": {
+                                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                "Content-Type": "@{parameters('scimContentType')}",
+                                                "Accept": "@{parameters('scimContentType')}"
+                                            },
+                                            "body": "@outputs('Compose_SCIM_Null_Patch_Body')"
+                                        }
+                                    },
+                                    "SCIM_Get_User_After_Null_Update": {
+                                        "runAfter": {
+                                            "SCIM_Patch_Null_Update": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "Http",
+                                        "inputs": {
+                                            "uri": "@{concat(parameters('scimEndpoint'), '/Users/', outputs('Compose_SCIM_Null_User_Id'))}",
+                                            "method": "GET",
+                                            "headers": {
+                                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                "Accept": "@{parameters('scimContentType')}"
+                                            }
+                                        }
+                                    },
+                                    "ForEach_Verify_Null_Attributes": {
+                                        "foreach": "@body('Filter_Null_Update_Target_Attributes')",
+                                        "actions": {
+                                            "NullVerify_Filter_Array_By_Type": {
+                                                "type": "Query",
+                                                "inputs": {
+                                                    "from": "@if(contains(items('ForEach_Verify_Null_Attributes')?['target'], '[type eq'), coalesce(body('SCIM_Get_User_After_Null_Update')?[first(split(items('ForEach_Verify_Null_Attributes')?['target'], '['))], json('[]')), json('[]'))",
+                                                    "where": "@equals(toLower(item()?['type']), toLower(replace(replace(first(split(last(split(items('ForEach_Verify_Null_Attributes')?['target'], 'type eq ')), ']')), '\"', ''), '''', '')))"
+                                                }
+                                            },
+                                            "Compose_NullVerify_ActualValue": {
+                                                "runAfter": {
+                                                    "NullVerify_Filter_Array_By_Type": [
+                                                        "Succeeded",
+                                                        "Failed"
+                                                    ]
+                                                },
+                                                "type": "Compose",
+                                                "inputs": "@if(contains(items('ForEach_Verify_Null_Attributes')?['target'], '[type eq'), if(contains(items('ForEach_Verify_Null_Attributes')?['target'], '].'), coalesce(first(body('NullVerify_Filter_Array_By_Type'))?[last(split(items('ForEach_Verify_Null_Attributes')?['target'], '.'))], ''), coalesce(first(body('NullVerify_Filter_Array_By_Type'))?['value'], '')), if(and(contains(items('ForEach_Verify_Null_Attributes')?['target'], '.'), not(contains(items('ForEach_Verify_Null_Attributes')?['target'], ':'))), coalesce(body('SCIM_Get_User_After_Null_Update')?[first(split(items('ForEach_Verify_Null_Attributes')?['target'], '.'))]?[last(split(items('ForEach_Verify_Null_Attributes')?['target'], '.'))], ''), if(contains(items('ForEach_Verify_Null_Attributes')?['target'], 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:'), coalesce(body('SCIM_Get_User_After_Null_Update')?['urn:ietf:params:scim:schemas:extension:enterprise:2.0:User']?[last(split(items('ForEach_Verify_Null_Attributes')?['target'], ':'))], ''), coalesce(body('SCIM_Get_User_After_Null_Update')?[items('ForEach_Verify_Null_Attributes')?['target']], ''))))"
+                                            },
+                                            "Compose_NullVerify_IsNullOrEmpty": {
+                                                "runAfter": {
+                                                    "Compose_NullVerify_ActualValue": [
+                                                        "Succeeded"
+                                                    ]
+                                                },
+                                                "type": "Compose",
+                                                "inputs": "@or(equals(outputs('Compose_NullVerify_ActualValue'), ''), equals(outputs('Compose_NullVerify_ActualValue'), null))"
+                                            },
+                                            "Append_Null_Verification_Result": {
+                                                "runAfter": {
+                                                    "Compose_NullVerify_IsNullOrEmpty": [
+                                                        "Succeeded"
+                                                    ]
+                                                },
+                                                "type": "AppendToArrayVariable",
+                                                "inputs": {
+                                                    "name": "scimNullUpdateResults",
+                                                    "value": {
+                                                        "sourceAttribute": "@items('ForEach_Verify_Null_Attributes')?['source']",
+                                                        "targetAttribute": "@items('ForEach_Verify_Null_Attributes')?['target']",
+                                                        "actualValueAfterNull": "@outputs('Compose_NullVerify_ActualValue')",
+                                                        "isNullOrEmpty": "@outputs('Compose_NullVerify_IsNullOrEmpty')",
+                                                        "passed": "@outputs('Compose_NullVerify_IsNullOrEmpty')"
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        "runAfter": {
+                                            "SCIM_Get_User_After_Null_Update": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "Foreach",
+                                        "runtimeConfiguration": {
+                                            "concurrency": {
+                                                "repetitions": 1
+                                            }
+                                        }
+                                    },
+                                    "Filter_Failed_Null_Verifications": {
+                                        "runAfter": {
+                                            "ForEach_Verify_Null_Attributes": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "Query",
+                                        "inputs": {
+                                            "from": "@variables('scimNullUpdateResults')",
+                                            "where": "@not(equals(item()?['passed'], true))"
+                                        }
+                                    },
+                                    "Filter_Passed_Null_Verifications": {
+                                        "runAfter": {
+                                            "ForEach_Verify_Null_Attributes": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "Query",
+                                        "inputs": {
+                                            "from": "@variables('scimNullUpdateResults')",
+                                            "where": "@equals(item()?['passed'], true)"
+                                        }
+                                    },
+                                    "Compose_SCIM_Null_Update_Summary": {
+                                        "runAfter": {
+                                            "Filter_Failed_Null_Verifications": [
+                                                "Succeeded"
+                                            ],
+                                            "Filter_Passed_Null_Verifications": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "Compose",
+                                        "inputs": {
+                                            "testName": "SCIM_Null_Update_Test",
+                                            "timestamp": "@utcNow()",
+                                            "scimPatchStatusCode": "@outputs('SCIM_Patch_Null_Update')['statusCode']",
+                                            "totalAttributesVerified": "@length(variables('scimNullUpdateResults'))",
+                                            "passedCount": "@length(body('Filter_Passed_Null_Verifications'))",
+                                            "failedCount": "@length(body('Filter_Failed_Null_Verifications'))",
+                                            "overallResult": "@if(and(not(empty(outputs('Compose_SCIM_Null_User_Id'))), or(equals(outputs('SCIM_Patch_Null_Update')['statusCode'], 200), equals(outputs('SCIM_Patch_Null_Update')['statusCode'], 204)), equals(length(body('Filter_Failed_Null_Verifications')), 0)), 'PASSED', 'FAILED')"
+                                        }
+                                    },
+                                    "SCIM_Delete_Null_Test_User": {
+                                        "runAfter": {
+                                            "Compose_SCIM_Null_Update_Summary": [
+                                                "Succeeded",
+                                                "Failed"
+                                            ]
+                                        },
+                                        "type": "Http",
+                                        "inputs": {
+                                            "uri": "@{concat(parameters('scimEndpoint'), '/Users/', outputs('Compose_SCIM_Null_User_Id'))}",
+                                            "method": "DELETE",
+                                            "headers": {
+                                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                "Accept": "@{parameters('scimContentType')}"
+                                            }
+                                        }
+                                    },
+                                    "Filter_MultiValue_Targets": {
+                                        "type": "Query",
+                                        "inputs": {
+                                            "from": "@coalesce(triggerBody()?['initializationData']?['sourceToTargetLookup'], json('[]'))",
+                                            "where": "@contains(item()?['target'], '[')"
+                                        },
+                                        "runAfter": {
+                                            "ForEach_Build_Null_Create_Body": [
+                                                "Succeeded"
+                                            ]
+                                        }
+                                    },
+                                    "Select_MultiValue_Parents": {
+                                        "type": "Select",
+                                        "inputs": {
+                                            "from": "@body('Filter_MultiValue_Targets')",
+                                            "select": "@first(split(item()?['target'], '['))"
+                                        },
+                                        "runAfter": {
+                                            "Filter_MultiValue_Targets": [
+                                                "Succeeded"
+                                            ]
+                                        }
+                                    },
+                                    "Compose_Unique_Parents": {
+                                        "type": "Compose",
+                                        "inputs": "@union(body('Select_MultiValue_Parents'), json('[]'))",
+                                        "runAfter": {
+                                            "Select_MultiValue_Parents": [
+                                                "Succeeded"
+                                            ]
+                                        }
+                                    },
+                                    "ForEach_Convert_To_Arrays": {
+                                        "type": "Foreach",
+                                        "foreach": "@outputs('Compose_Unique_Parents')",
+                                        "actions": {
+                                            "Filter_Types_For_Parent": {
+                                                "type": "Query",
+                                                "inputs": {
+                                                    "from": "@body('Filter_MultiValue_Targets')",
+                                                    "where": "@equals(first(split(item()?['target'], '[')), items('ForEach_Convert_To_Arrays'))"
+                                                },
+                                                "runAfter": {}
+                                            },
+                                            "Select_Type_Values": {
+                                                "type": "Select",
+                                                "inputs": {
+                                                    "from": "@body('Filter_Types_For_Parent')",
+                                                    "select": "@first(skip(split(item()?['target'], '\"'), 1))"
+                                                },
+                                                "runAfter": {
+                                                    "Filter_Types_For_Parent": [
+                                                        "Succeeded"
+                                                    ]
+                                                }
+                                            },
+                                            "Compose_Unique_Types": {
+                                                "type": "Compose",
+                                                "inputs": "@union(body('Select_Type_Values'), json('[]'))",
+                                                "runAfter": {
+                                                    "Select_Type_Values": [
+                                                        "Succeeded"
+                                                    ]
+                                                }
+                                            },
+                                            "Select_Build_Array": {
+                                                "type": "Select",
+                                                "inputs": {
+                                                    "from": "@outputs('Compose_Unique_Types')",
+                                                    "select": "@coalesce(variables('scimNullCreateBody')?[items('ForEach_Convert_To_Arrays')]?[item()], json('{}'))"
+                                                },
+                                                "runAfter": {
+                                                    "Compose_Unique_Types": [
+                                                        "Succeeded"
+                                                    ]
+                                                }
+                                            },
+                                            "Set_Body_Array_Property": {
+                                                "type": "SetVariable",
+                                                "inputs": {
+                                                    "name": "scimNullCreateBody",
+                                                    "value": "@outputs('Compose_Updated_Body')"
+                                                },
+                                                "runAfter": {
+                                                    "Compose_Updated_Body": [
+                                                        "Succeeded"
+                                                    ]
+                                                }
+                                            },
+                                            "Compose_Updated_Body": {
+                                                "type": "Compose",
+                                                "inputs": "@setProperty(variables('scimNullCreateBody'), items('ForEach_Convert_To_Arrays'), body('Select_Build_Array'))",
+                                                "runAfter": {
+                                                    "Select_Build_Array": [
+                                                        "Succeeded"
+                                                    ]
+                                                }
+                                            }
+                                        },
+                                        "runAfter": {
+                                            "Compose_Unique_Parents": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "runtimeConfiguration": {
+                                            "concurrency": {
+                                                "repetitions": 1
+                                            }
+                                        }
+                                    }
+                                },
+                                "type": "Scope"
+                            },
+                            "Capture_SCIM_Null_Update_Failed_Action_Details": {
+                                "actions": {
+                                    "Get_Failed_SCIM_Null_Update_Actions": {
+                                        "type": "Compose",
+                                        "inputs": "@result('SCIM_Null_Update_Test_Actions')"
+                                    },
+                                    "Filter_Failed_SCIM_Null_Update_Actions": {
+                                        "runAfter": {
+                                            "Get_Failed_SCIM_Null_Update_Actions": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "Query",
+                                        "inputs": {
+                                            "from": "@outputs('Get_Failed_SCIM_Null_Update_Actions')",
+                                            "where": "@equals(item()?['status'], 'Failed')"
+                                        }
+                                    },
+                                    "Set_SCIM_Null_Update_Failed_Action_Name": {
+                                        "runAfter": {
+                                            "Filter_Failed_SCIM_Null_Update_Actions": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "SetVariable",
+                                        "inputs": {
+                                            "name": "SCIMNullUpdateFailedActionName",
+                                            "value": "@{if(greater(length(body('Filter_Failed_SCIM_Null_Update_Actions')), 0), first(body('Filter_Failed_SCIM_Null_Update_Actions'))?['name'], 'Unknown_Action')}"
+                                        }
+                                    },
+                                    "Set_SCIM_Null_Update_Status_Failed": {
+                                        "runAfter": {
+                                            "Set_SCIM_Null_Update_Failed_Action_Name": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "SetVariable",
+                                        "inputs": {
+                                            "name": "SCIMNullUpdateScopeExecutionStatus",
+                                            "value": "Failed"
+                                        }
+                                    }
+                                },
+                                "runAfter": {
+                                    "SCIM_Null_Update_Test_Actions": [
+                                        "Failed"
+                                    ]
+                                },
+                                "type": "Scope"
+                            },
+                            "Set_SCIM_Null_Update_Status_Success": {
+                                "runAfter": {
+                                    "SCIM_Null_Update_Test_Actions": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "SetVariable",
+                                "inputs": {
+                                    "name": "SCIMNullUpdateScopeExecutionStatus",
+                                    "value": "Succeeded"
+                                }
+                            },
+                            "Set_SCIMNullUpdate_Output_Variables": {
+                                "actions": {
+                                    "Set_SCIMNullUpdateTestOutputs": {
+                                        "type": "SetVariable",
+                                        "inputs": {
+                                            "name": "SCIMNullUpdateTestOutputs",
+                                            "value": {
+                                                "overallResult": "@if(equals(variables('SCIMNullUpdateScopeExecutionStatus'), 'Succeeded'), coalesce(outputs('Compose_SCIM_Null_Update_Summary')?['overallResult'], 'FAILED'), 'FAILED')",
+                                                "result": "@if(equals(variables('SCIMNullUpdateScopeExecutionStatus'), 'Succeeded'), if(equals(coalesce(outputs('Compose_SCIM_Null_Update_Summary')?['overallResult'], 'FAILED'), 'PASSED'), 'success', concat('SCIM null update verification failed. Passed: ', string(coalesce(outputs('Compose_SCIM_Null_Update_Summary')?['passedCount'], 0)), '/', string(coalesce(outputs('Compose_SCIM_Null_Update_Summary')?['totalAttributesVerified'], 0)), ' attributes')), concat('Failed Action: ', variables('SCIMNullUpdateFailedActionName')))",
+                                                "summary": "@if(equals(variables('SCIMNullUpdateScopeExecutionStatus'), 'Succeeded'), outputs('Compose_SCIM_Null_Update_Summary'), null)",
+                                                "failedAttributes": "@if(equals(variables('SCIMNullUpdateScopeExecutionStatus'), 'Succeeded'), body('Filter_Failed_Null_Verifications'), json('[]'))",
+                                                "errorDetails": "@if(and(equals(variables('SCIMNullUpdateScopeExecutionStatus'), 'Succeeded'), not(equals(coalesce(outputs('Compose_SCIM_Null_Update_Summary')?['overallResult'], 'FAILED'), 'PASSED'))), concat('Failed null verification on ', string(coalesce(outputs('Compose_SCIM_Null_Update_Summary')?['failedCount'], 0)), ' attributes. See action Compose_SCIM_Null_Update_Summary in the workflow run for full details.'), if(not(equals(variables('SCIMNullUpdateScopeExecutionStatus'), 'Succeeded')), concat('Scope execution failed at action: ', variables('SCIMNullUpdateFailedActionName')), null))"
+                                            }
+                                        }
+                                    }
+                                },
+                                "runAfter": {
+                                    "SCIM_Null_Update_Test_Actions": [
+                                        "Succeeded",
+                                        "Failed",
+                                        "TimedOut"
+                                    ],
+                                    "Capture_SCIM_Null_Update_Failed_Action_Details": [
+                                        "Succeeded",
+                                        "Skipped"
+                                    ],
+                                    "Set_SCIM_Null_Update_Status_Success": [
+                                        "Succeeded",
+                                        "Skipped"
+                                    ]
+                                },
+                                "type": "Scope"
+                            }
+                        },
+                        "else": {
+                            "actions": {}
+                        },
+                        "expression": {
+                            "or": [
+                                {
+                                    "equals": [
+                                        "@triggerBody()?['EnabledTests']",
+                                        "All"
+                                    ]
+                                },
+                                {
+                                    "equals": [
+                                        "@triggerBody()?['EnabledTests']",
+                                        "SCIMTests"
+                                    ]
+                                },
+                                {
+                                    "equals": [
+                                        "@triggerBody()?['EnabledTests']",
+                                        "SCIM_Null_Update_Test"
+                                    ]
+                                },
+                                {
+                                    "equals": [
+                                        "@triggerBody()?['EnabledTests']",
+                                        "Null_Update_User_Test"
+                                    ]
+                                }
+                            ]
+                        },
+                        "type": "If"
+                    },
+                    "Validate_Credentials_Test": {
+                        "runAfter": {},
+                        "actions": {
+                            "Acquire_OAuth2_Token": {
+                                "type": "Http",
+                                "inputs": {
+                                    "uri": "@{parameters('scimTokenEndpoint')}",
+                                    "method": "POST",
+                                    "headers": {
+                                        "Content-Type": "application/x-www-form-urlencoded"
+                                    },
+                                    "body": "@{concat('grant_type=client_credentials&client_id=', encodeUriComponent(parameters('scimClientId')), '&client_secret=', encodeUriComponent(parameters('scimClientSecret')), if(empty(coalesce(parameters('scimOAuthScope'), '')), '', concat('&scope=', encodeUriComponent(parameters('scimOAuthScope')))))}"
+                                }
+                            },
+                            "Check_Token_Acquired": {
+                                "runAfter": {
+                                    "Acquire_OAuth2_Token": [
+                                        "Succeeded",
+                                        "Failed",
+                                        "TimedOut"
+                                    ]
+                                },
+                                "type": "If",
+                                "expression": {
+                                    "and": [
+                                        {
+                                            "greaterOrEquals": [
+                                                "@coalesce(outputs('Acquire_OAuth2_Token')?['statusCode'], 0)",
+                                                200
+                                            ]
+                                        },
+                                        {
+                                            "less": [
+                                                "@coalesce(outputs('Acquire_OAuth2_Token')?['statusCode'], 0)",
+                                                300
+                                            ]
+                                        },
+                                        {
+                                            "not": {
+                                                "equals": [
+                                                    "@coalesce(body('Acquire_OAuth2_Token')?['access_token'], '')",
+                                                    ""
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                },
+                                "actions": {
+                                    "SCIM_Validate_With_OAuth_Token": {
+                                        "type": "Http",
+                                        "inputs": {
+                                            "uri": "@{concat(parameters('scimEndpoint'), '/Users?startIndex=1&count=1')}",
+                                            "method": "GET",
+                                            "headers": {
+                                                "Authorization": "@{concat('Bearer ', body('Acquire_OAuth2_Token')?['access_token'])}",
+                                                "Accept": "@{parameters('scimContentType')}"
+                                            }
+                                        }
+                                    },
+                                    "Compose_OAuth_Validation_Summary": {
+                                        "runAfter": {
+                                            "SCIM_Validate_With_OAuth_Token": [
+                                                "Succeeded",
+                                                "Failed",
+                                                "TimedOut"
+                                            ]
+                                        },
+                                        "type": "Compose",
+                                        "inputs": {
+                                            "testName": "Validate_Credentials_Test",
+                                            "timestamp": "@utcNow()",
+                                            "authMode": "OAuth2ClientCredentials",
+                                            "tokenEndpoint": "@parameters('scimTokenEndpoint')",
+                                            "tokenAcquisition": {
+                                                "statusCode": "@outputs('Acquire_OAuth2_Token')['statusCode']",
+                                                "hasAccessToken": true,
+                                                "passed": true
+                                            },
+                                            "scimEndpointValidation": {
+                                                "endpoint": "@concat(parameters('scimEndpoint'), '/Users?startIndex=1&count=1')",
+                                                "statusCode": "@coalesce(outputs('SCIM_Validate_With_OAuth_Token')?['statusCode'], 0)",
+                                                "passed": "@and(greaterOrEquals(coalesce(outputs('SCIM_Validate_With_OAuth_Token')?['statusCode'], 0), 200), less(coalesce(outputs('SCIM_Validate_With_OAuth_Token')?['statusCode'], 0), 300))"
+                                            },
+                                            "overallResult": "@if(and(greaterOrEquals(coalesce(outputs('SCIM_Validate_With_OAuth_Token')?['statusCode'], 0), 200), less(coalesce(outputs('SCIM_Validate_With_OAuth_Token')?['statusCode'], 0), 300)), 'PASSED', 'FAILED')"
+                                        }
+                                    }
+                                },
+                                "else": {
+                                    "actions": {
+                                        "Compose_OAuth_Validation_Summary_TokenFail": {
+                                            "type": "Compose",
+                                            "inputs": {
+                                                "testName": "Validate_Credentials_Test",
+                                                "timestamp": "@utcNow()",
+                                                "authMode": "OAuth2ClientCredentials",
+                                                "tokenEndpoint": "@parameters('scimTokenEndpoint')",
+                                                "tokenAcquisition": {
+                                                    "statusCode": "@coalesce(outputs('Acquire_OAuth2_Token')?['statusCode'], 0)",
+                                                    "hasAccessToken": "@not(equals(coalesce(body('Acquire_OAuth2_Token')?['access_token'], ''), ''))",
+                                                    "passed": false
+                                                },
+                                                "scimEndpointValidation": null,
+                                                "overallResult": "FAILED"
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "Set_ValidateCredentialsTestOutputs": {
+                                "runAfter": {
+                                    "Check_Token_Acquired": [
+                                        "Succeeded",
+                                        "Failed",
+                                        "TimedOut",
+                                        "Skipped"
+                                    ]
+                                },
+                                "type": "SetVariable",
+                                "inputs": {
+                                    "name": "ValidateCredentialsTestOutputs",
+                                    "value": {
+                                        "overallResult": "@coalesce(outputs('Compose_OAuth_Validation_Summary')?['overallResult'], outputs('Compose_OAuth_Validation_Summary_TokenFail')?['overallResult'], 'FAILED')",
+                                        "result": "@if(equals(coalesce(outputs('Compose_OAuth_Validation_Summary')?['overallResult'], outputs('Compose_OAuth_Validation_Summary_TokenFail')?['overallResult'], 'FAILED'), 'PASSED'), 'success', if(empty(coalesce(outputs('Compose_OAuth_Validation_Summary'), json('null'))), 'Token acquisition failed', 'SCIM endpoint validation failed'))",
+                                        "summary": "@coalesce(outputs('Compose_OAuth_Validation_Summary'), outputs('Compose_OAuth_Validation_Summary_TokenFail'))",
+                                        "detailedResults": [],
+                                        "errorDetails": {
+                                            "summary": "@if(equals(coalesce(outputs('Compose_OAuth_Validation_Summary')?['overallResult'], outputs('Compose_OAuth_Validation_Summary_TokenFail')?['overallResult'], 'FAILED'), 'PASSED'), null, if(empty(coalesce(outputs('Compose_OAuth_Validation_Summary'), json('null'))), concat('Token acquisition failed. Status: ', string(coalesce(outputs('Acquire_OAuth2_Token')?['statusCode'], 0))), concat('SCIM endpoint returned status: ', string(coalesce(outputs('SCIM_Validate_With_OAuth_Token')?['statusCode'], 0)))))"
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "else": {
+                            "actions": {}
+                        },
+                        "expression": {
+                            "or": [
+                                {
+                                    "equals": [
+                                        "@triggerBody()?['EnabledTests']",
+                                        "All"
+                                    ]
+                                },
+                                {
+                                    "equals": [
+                                        "@triggerBody()?['EnabledTests']",
+                                        "SCIMTests"
+                                    ]
+                                },
+                                {
+                                    "equals": [
+                                        "@triggerBody()?['EnabledTests']",
+                                        "Validate_Credentials_Test"
+                                    ]
+                                }
+                            ]
+                        },
+                        "type": "If"
+                    }
+                },
+                "runAfter": {
+                    "Response_Immediate": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Scope"
+            },
+            "Compose_Final_Results": {
+                "runAfter": {
+                    "SCIMTests_Scope": [
+                        "Succeeded",
+                        "Failed",
+                        "Skipped",
+                        "TimedOut"
+                    ]
+                },
+                "type": "Compose",
+                "inputs": {
+                    "SchemaDiscoverabilityTestOutputs": "@variables('SchemaDiscoverabilityTestOutputs')",
+                    "SCIMNullUpdateTestOutputs": "@variables('SCIMNullUpdateTestOutputs')",
+                    "ValidateCredentialsTestOutputs": "@variables('ValidateCredentialsTestOutputs')",
+                    "testSuiteName": "SCIMTests",
+                    "status": "@if(or(equals(variables('SchemaDiscoverabilityTestOutputs')['overallResult'], 'FAILED'), equals(variables('SCIMNullUpdateTestOutputs')['overallResult'], 'FAILED'), equals(variables('ValidateCredentialsTestOutputs')['overallResult'], 'FAILED')), 'Failed', 'Passed')",
+                    "workflowRunId": "@workflow().run.name"
+                }
+            }
+        },
+        "outputs": {}
+    },
+    "kind": "Stateful"
+}

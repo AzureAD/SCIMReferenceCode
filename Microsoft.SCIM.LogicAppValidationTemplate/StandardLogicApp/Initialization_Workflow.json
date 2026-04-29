@@ -1,0 +1,803 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "contentVersion": "1.0.0.0",
+        "triggers": {
+            "manual": {
+                "type": "Request",
+                "kind": "Http",
+                "inputs": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {}
+                    }
+                }
+            }
+        },
+        "actions": {
+            "Initialize_Processing_Variables": {
+                "runAfter": {},
+                "type": "InitializeVariable",
+                "inputs": {
+                    "variables": [
+                        {
+                            "name": "sourceToTargetLookup",
+                            "type": "Array",
+                            "value": []
+                        },
+                        {
+                            "name": "userBody",
+                            "type": "Object",
+                            "value": {
+                                "accountEnabled": true,
+                                "passwordProfile": {
+                                    "forceChangePasswordNextSignIn": true,
+                                    "password": "@{concat('Tmp!', substring(guid(),0,8), '@', substring(guid(),24,8))}"
+                                }
+                            }
+                        },
+                        {
+                            "name": "updateUserBody",
+                            "type": "Object",
+                            "value": {}
+                        },
+                        {
+                            "name": "ExcludedList",
+                            "type": "Array",
+                            "value": [
+                                "IsSoftDeleted",
+                                "accountEnabled",
+                                "passwordProfile",
+                                "manager",
+                                "mail",
+                                "userPrincipalName",
+                                "id"
+                            ]
+                        },
+                        {
+                            "name": "GraphArrayProperties",
+                            "type": "Array",
+                            "value": [
+                                "businessPhones",
+                                "otherMails",
+                                "proxyAddresses",
+                                "imAddresses"
+                            ]
+                        }
+                    ]
+                }
+            },
+            "Initialize_Tests": {
+                "actions": {
+                    "List_Existing_Jobs": {
+                        "runAfter": {},
+                        "type": "Http",
+                        "inputs": {
+                            "uri": "https://graph.microsoft.com/v1.0/servicePrincipals/@{parameters('servicePrincipalId')}/synchronization/jobs",
+                            "method": "GET",
+                            "authentication": {
+                                "type": "ManagedServiceIdentity",
+                                "audience": "https://graph.microsoft.com/"
+                            }
+                        }
+                    },
+                    "Compose_SyncJobId": {
+                        "runAfter": {
+                            "List_Existing_Jobs": [
+                                "Succeeded",
+                                "Skipped"
+                            ]
+                        },
+                        "type": "Compose",
+                        "inputs": "@{coalesce(first(body('List_Existing_Jobs')?['value'])?['id'])}"
+                    },
+                    "Get_Job_Details": {
+                        "runAfter": {
+                            "Compose_SyncJobId": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Http",
+                        "inputs": {
+                            "uri": "https://graph.microsoft.com/v1.0/servicePrincipals/@{parameters('servicePrincipalId')}/synchronization/jobs/@{outputs('Compose_SyncJobId')}",
+                            "method": "GET",
+                            "authentication": {
+                                "type": "ManagedServiceIdentity",
+                                "audience": "https://graph.microsoft.com/"
+                            }
+                        }
+                    },
+                    "Get_Schema": {
+                        "runAfter": {
+                            "Get_Job_Details": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Http",
+                        "inputs": {
+                            "uri": "https://graph.microsoft.com/v1.0/servicePrincipals/@{parameters('servicePrincipalId')}/synchronization/jobs/@{outputs('Compose_SyncJobId')}/schema",
+                            "method": "GET",
+                            "authentication": {
+                                "type": "ManagedServiceIdentity",
+                                "audience": "https://graph.microsoft.com/"
+                            }
+                        }
+                    },
+                    "Compose_Job_Settings_And_Templates": {
+                        "runAfter": {
+                            "Get_Schema": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Compose",
+                        "inputs": {
+                            "jobSettings": "@body('Get_Job_Details')",
+                            "schema": "@body('Get_Schema')"
+                        }
+                    },
+                    "Get_App_Roles": {
+                        "runAfter": {
+                            "Compose_Job_Settings_And_Templates": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Http",
+                        "inputs": {
+                            "uri": "https://graph.microsoft.com/v1.0/servicePrincipals/@{parameters('servicePrincipalId')}?$select=appRoles",
+                            "method": "GET",
+                            "authentication": {
+                                "type": "ManagedServiceIdentity",
+                                "audience": "https://graph.microsoft.com/"
+                            }
+                        }
+                    },
+                    "Filter_User_AppRole": {
+                        "runAfter": {
+                            "Get_App_Roles": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Query",
+                        "inputs": {
+                            "from": "@body('Get_App_Roles')?['appRoles']",
+                            "where": "@equals(toLower(item()?['displayName']), 'user')"
+                        }
+                    },
+                    "Generate_TestNames": {
+                        "actions": {
+                            "Generate_Test_UserNames": {
+                                "type": "Compose",
+                                "inputs": {
+                                    "createUser": "@{concat('lacreate', substring(guid(),0,8), '@', parameters('testUserDomain'))}",
+                                    "createUserMail": "@{concat('lacreate', substring(guid(),0,8), '@', parameters('testUserDomain'))}",
+                                    "updateUser": "@{concat('laupdate', substring(guid(),0,8), '@', parameters('testUserDomain'))}",
+                                    "disableUser": "@{concat('ladis', substring(guid(),0,8), '@', parameters('testUserDomain'))}",
+                                    "deleteUser": "@{concat('ladel', substring(guid(),0,8), '@', parameters('testUserDomain'))}",
+                                    "managerUser": "@{concat('lamgr', substring(guid(),0,8), '@', parameters('testUserDomain'))}",
+                                    "managerUserNew": "@{concat('lamgrnew', substring(guid(),0,8), '@', parameters('testUserDomain'))}",
+                                    "memberUser1": "@{concat('lamem1', substring(guid(),0,8), '@', parameters('testUserDomain'))}",
+                                    "memberUser2": "@{concat('lamem2', substring(guid(),0,8), '@', parameters('testUserDomain'))}",
+                                    "index": "@rand(0, sub(length(parameters('defaultUserProperties')), 1))",
+                                    "managerUserInitial": "@{concat('lamgrinit', substring(guid(),0,8), '@', parameters('testUserDomain'))}",
+                                    "createUserNickname": "@{concat('lacreate', substring(guid(),0,8))}",
+                                    "updateUserNickname": "@{concat('laupdate', substring(guid(),0,8))}",
+                                    "deleteUserNickname": "@{concat('ladel', substring(guid(),0,8))}",
+                                    "disableUserNickname": "@{concat('ladis', substring(guid(),0,8))}",
+                                    "managerUserNickname": "@{concat('lamgr', substring(guid(),0,8))}",
+                                    "managerUserNewNickname": "@{concat('lamgrnew', substring(guid(),0,8))}",
+                                    "managerUserInitialNickname": "@{concat('lamgrinit', substring(guid(),0,8))}"
+                                }
+                            },
+                            "Generate_Test_GroupNames": {
+                                "runAfter": {
+                                    "Generate_Test_UserNames": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "Compose",
+                                "inputs": {
+                                    "createGroup": "@{concat('LACreateGroup-(', substring(guid(),0,8), ')')}",
+                                    "updateGroup": "@{concat('LAUpdateGroup-', substring(guid(),0,8))}",
+                                    "deleteGroup": "@{concat('LADeleteGroup-', substring(guid(),0,8))}",
+                                    "memberGroup": "@{concat('LAMemberGroup-', substring(guid(),0,8))}",
+                                    "createGroupNickname": "@{concat('LACreateGroup', substring(guid(),0,8))}",
+                                    "updateGroupNickname": "@{concat('LAUpdateGroup', substring(guid(),0,8))}",
+                                    "deleteGroupNickname": "@{concat('LADeleteGroup', substring(guid(),0,8))}",
+                                    "memberGroupNickname": "@{concat('LAMemberGroup', substring(guid(),0,8))}"
+                                }
+                            }
+                        },
+                        "runAfter": {
+                            "Filter_User_AppRole": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Scope"
+                    }
+                },
+                "runAfter": {
+                    "Initialize_Processing_Variables": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Scope"
+            },
+            "Parse_Templates": {
+                "runAfter": {
+                    "Initialize_Tests": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "ParseJson",
+                "inputs": {
+                    "content": "@body('Get_Schema')",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "synchronizationRules": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {
+                                            "type": "string"
+                                        },
+                                        "objectMappings": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "sourceDirectoryName": {
+                                                        "type": "string"
+                                                    },
+                                                    "targetDirectoryName": {
+                                                        "type": "string"
+                                                    },
+                                                    "sourceObjectName": {
+                                                        "type": "string"
+                                                    },
+                                                    "targetObjectName": {
+                                                        "type": "string"
+                                                    },
+                                                    "attributeMappings": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "targetAttributeName": {
+                                                                    "type": "string"
+                                                                },
+                                                                "source": {
+                                                                    "type": "object",
+                                                                    "properties": {
+                                                                        "name": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "expression": {
+                                                                            "type": "string"
+                                                                        },
+                                                                        "type": {
+                                                                            "type": "string"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "Process_Template_Mappings": {
+                "runAfter": {
+                    "Parse_Templates": [
+                        "Succeeded"
+                    ]
+                },
+                "actions": {
+                    "Extract_Source_Directory": {
+                        "runAfter": {},
+                        "type": "Query",
+                        "inputs": {
+                            "from": "@body('Get_Schema')?['directories']",
+                            "where": "@equals(item()?['name'], 'Microsoft Entra ID')"
+                        }
+                    },
+                    "Extract_Target_Directory": {
+                        "runAfter": {},
+                        "type": "Query",
+                        "inputs": {
+                            "from": "@body('Get_Schema')?['directories']",
+                            "where": "@not(equals(item()?['name'], 'Microsoft Entra ID'))"
+                        }
+                    },
+                    "Filter_Target_Group_Object": {
+                        "runAfter": {
+                            "Extract_Target_Directory": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Query",
+                        "inputs": {
+                            "from": "@coalesce(first(body('Extract_Target_Directory'))?['objects'], json('[]'))",
+                            "where": "@equals(item()?['name'], 'urn:ietf:params:scim:schemas:core:2.0:Group')"
+                        }
+                    },
+                    "Select_Target_Group_Attribute_Names": {
+                        "runAfter": {
+                            "Filter_Group_ObjectMapping": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Select",
+                        "inputs": {
+                            "from": "@coalesce(first(body('Filter_Group_ObjectMapping'))?['attributeMappings'], json('[]'))",
+                            "select": "@item()?['targetAttributeName']"
+                        }
+                    },
+                    "Filter_User_Object": {
+                        "runAfter": {
+                            "Extract_Source_Directory": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Query",
+                        "inputs": {
+                            "from": "@first(body('Extract_Source_Directory'))?['objects']",
+                            "where": "@equals(item()?['name'], 'User')"
+                        }
+                    },
+                    "Select_All_User_Attributes": {
+                        "runAfter": {
+                            "Filter_User_Object": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Select",
+                        "inputs": {
+                            "from": "@first(body('Filter_User_Object'))?['attributes']",
+                            "select": {
+                                "name": "@item()?['name']",
+                                "type": "@item()?['type']",
+                                "multivalued": "@coalesce(item()?['multivalued'], false)"
+                            }
+                        }
+                    },
+                    "Compose_Primitive_Attributes": {
+                        "runAfter": {
+                            "Select_All_User_Attributes": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Query",
+                        "inputs": {
+                            "from": "@body('Select_All_User_Attributes')",
+                            "where": "@not(contains(item()?['name'], '.'))"
+                        }
+                    },
+                    "Compose_Complex_Attributes": {
+                        "runAfter": {
+                            "Select_All_User_Attributes": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Query",
+                        "inputs": {
+                            "from": "@body('Select_All_User_Attributes')",
+                            "where": "@contains(item()?['name'], '.')"
+                        }
+                    },
+                    "Compose_ArrayType_Attributes": {
+                        "runAfter": {
+                            "Select_All_User_Attributes": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Query",
+                        "inputs": {
+                            "from": "@body('Select_All_User_Attributes')",
+                            "where": "@equals(item()?['multivalued'], true)"
+                        }
+                    },
+                    "Select_Primitive_Attribute_Names": {
+                        "runAfter": {
+                            "Compose_Primitive_Attributes": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Select",
+                        "inputs": {
+                            "from": "@body('Compose_Primitive_Attributes')",
+                            "select": "@if(contains(parameters('attributeTransforms'), item()?['name']), parameters('attributeTransforms')[item()?['name']], item()?['name'])"
+                        }
+                    },
+                    "Select_Complex_Attribute_Names": {
+                        "runAfter": {
+                            "Compose_Complex_Attributes": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Select",
+                        "inputs": {
+                            "from": "@body('Compose_Complex_Attributes')",
+                            "select": "@if(contains(parameters('attributeTransforms'), first(split(item()?['name'], '.'))), parameters('attributeTransforms')[first(split(item()?['name'], '.'))], first(split(item()?['name'], '.')))"
+                        }
+                    },
+                    "Select_ArrayType_Attribute_Names": {
+                        "runAfter": {
+                            "Compose_ArrayType_Attributes": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Select",
+                        "inputs": {
+                            "from": "@body('Compose_ArrayType_Attributes')",
+                            "select": "@if(contains(parameters('attributeTransforms'), item()?['name']), parameters('attributeTransforms')[item()?['name']], item()?['name'])"
+                        }
+                    },
+                    "Filter_User_ObjectMapping": {
+                        "runAfter": {
+                            "Select_Primitive_Attribute_Names": [
+                                "Succeeded"
+                            ],
+                            "Select_Complex_Attribute_Names": [
+                                "Succeeded"
+                            ],
+                            "Compose_Dynamic_ArrayProperties": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Query",
+                        "inputs": {
+                            "from": "@coalesce(first(body('Parse_Templates')?['synchronizationRules'])?['objectMappings'], json('[]'))",
+                            "where": "@equals(item()?['targetObjectName'], 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User')"
+                        }
+                    },
+                    "Select_Target_Attribute_Names": {
+                        "runAfter": {
+                            "Filter_User_ObjectMapping": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Select",
+                        "inputs": {
+                            "from": "@coalesce(first(body('Filter_User_ObjectMapping'))?['attributeMappings'], json('[]'))",
+                            "select": "@item()?['targetAttributeName']"
+                        }
+                    },
+                    "ForEach_AttributeMappings": {
+                        "foreach": "@coalesce(first(body('Filter_User_ObjectMapping'))?['attributeMappings'], json('[]'))",
+                        "actions": {
+                            "If_TargetAttribute_Present": {
+                                "actions": {
+                                    "Filter_Source_Parameters": {
+                                        "runAfter": {},
+                                        "type": "Query",
+                                        "inputs": {
+                                            "from": "@coalesce(items('ForEach_AttributeMappings')?['source']?['parameters'], json('[]'))",
+                                            "where": "@equals(item()?['key'], 'source')"
+                                        }
+                                    },
+                                    "Select_Source_Attribute_Names": {
+                                        "runAfter": {
+                                            "Filter_Source_Parameters": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "Select",
+                                        "inputs": {
+                                            "from": "@body('Filter_Source_Parameters')",
+                                            "select": "@item()?['value']?['name']"
+                                        }
+                                    },
+                                    "Compose_SourceToTargetLookup_Entry": {
+                                        "runAfter": {
+                                            "Select_Source_Attribute_Names": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "Compose",
+                                        "inputs": {
+                                            "source": "@if(contains(parameters('attributeTransforms'), coalesce(if(equals(items('ForEach_AttributeMappings')?['source']?['type'], 'Attribute'), items('ForEach_AttributeMappings')?['source']?['name'], first(body('Select_Source_Attribute_Names'))), '')), parameters('attributeTransforms')[coalesce(if(equals(items('ForEach_AttributeMappings')?['source']?['type'], 'Attribute'), items('ForEach_AttributeMappings')?['source']?['name'], first(body('Select_Source_Attribute_Names'))), '')], coalesce(if(equals(items('ForEach_AttributeMappings')?['source']?['type'], 'Attribute'), items('ForEach_AttributeMappings')?['source']?['name'], first(body('Select_Source_Attribute_Names'))), ''))",
+                                            "target": "@items('ForEach_AttributeMappings')?['targetAttributeName']",
+                                            "type": "@coalesce(items('ForEach_AttributeMappings')?['source']?['type'], 'Unknown')",
+                                            "matchingPrecedence": "@coalesce(items('ForEach_AttributeMappings')?['matchingPrecedence'], 0)",
+                                            "flowType": "@coalesce(items('ForEach_AttributeMappings')?['flowType'], 'Always')"
+                                        }
+                                    },
+                                    "Condition_Source_Not_Exists": {
+                                        "runAfter": {
+                                            "Compose_SourceToTargetLookup_Entry": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "If",
+                                        "expression": {
+                                            "and": [
+                                                {
+                                                    "not": {
+                                                        "contains": [
+                                                            "@string(variables('sourceToTargetLookup'))",
+                                                            "@concat('\"source\":\"', outputs('Compose_SourceToTargetLookup_Entry')?['source'], '\"')"
+                                                        ]
+                                                    }
+                                                }
+                                            ]
+                                        },
+                                        "actions": {
+                                            "Append_SourceToTargetLookup": {
+                                                "type": "AppendToArrayVariable",
+                                                "inputs": {
+                                                    "name": "sourceToTargetLookup",
+                                                    "value": "@outputs('Compose_SourceToTargetLookup_Entry')"
+                                                }
+                                            }
+                                        },
+                                        "else": {
+                                            "actions": {}
+                                        }
+                                    }
+                                },
+                                "else": {
+                                    "actions": {}
+                                },
+                                "expression": {
+                                    "and": [
+                                        {
+                                            "not": {
+                                                "equals": [
+                                                    "@items('ForEach_AttributeMappings')?['targetAttributeName']",
+                                                    null
+                                                ]
+                                            }
+                                        },
+                                        {
+                                            "not": {
+                                                "equals": [
+                                                    "@items('ForEach_AttributeMappings')?['targetAttributeName']",
+                                                    ""
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                },
+                                "type": "If"
+                            }
+                        },
+                        "runAfter": {
+                            "Filter_User_ObjectMapping": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Foreach",
+                        "runtimeConfiguration": {
+                            "concurrency": {
+                                "repetitions": 1
+                            }
+                        }
+                    },
+                    "Select_Graph_Property_Names": {
+                        "runAfter": {
+                            "ForEach_AttributeMappings": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Select",
+                        "inputs": {
+                            "from": "@variables('sourceToTargetLookup')",
+                            "select": "@item()?['source']"
+                        }
+                    },
+                    "For_Each_Build_UserBody": {
+                        "foreach": "@body('Select_Graph_Property_Names')",
+                        "actions": {
+                            "Compose_New_UserBody": {
+                                "runAfter": {},
+                                "type": "Compose",
+                                "inputs": "@if(contains(variables('ExcludedList'), items('For_Each_Build_UserBody')), variables('userBody'), if(and(contains(items('For_Each_Build_UserBody'), '.'), contains(body('Select_Complex_Attribute_Names'), first(split(items('For_Each_Build_UserBody'), '.')))), setProperty(variables('userBody'), first(split(items('For_Each_Build_UserBody'), '.')), setProperty(coalesce(if(contains(variables('userBody'), first(split(items('For_Each_Build_UserBody'), '.'))), variables('userBody')[first(split(items('For_Each_Build_UserBody'), '.'))], null), json('{}')), last(split(items('For_Each_Build_UserBody'), '.')), coalesce(if(contains(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']], first(split(items('For_Each_Build_UserBody'), '.'))), if(not(equals(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][first(split(items('For_Each_Build_UserBody'), '.'))], null)), if(contains(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][first(split(items('For_Each_Build_UserBody'), '.'))], last(split(items('For_Each_Build_UserBody'), '.'))), if(not(empty(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][first(split(items('For_Each_Build_UserBody'), '.'))][last(split(items('For_Each_Build_UserBody'), '.'))])), parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][first(split(items('For_Each_Build_UserBody'), '.'))][last(split(items('For_Each_Build_UserBody'), '.'))], null), null), null), null), concat('Test', substring(guid(),0,6))))), if(contains(body('Select_Primitive_Attribute_Names'), items('For_Each_Build_UserBody')), if(contains(outputs('Compose_Dynamic_ArrayProperties'), items('For_Each_Build_UserBody')), setProperty(variables('userBody'), items('For_Each_Build_UserBody'), if(and(contains(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']], items('For_Each_Build_UserBody')), greater(length(coalesce(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][items('For_Each_Build_UserBody')], json('[]'))), 0)), parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][items('For_Each_Build_UserBody')], createArray(concat('Test', substring(guid(),0,6))))), setProperty(variables('userBody'), items('For_Each_Build_UserBody'), coalesce(if(contains(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']], items('For_Each_Build_UserBody')), if(not(empty(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][items('For_Each_Build_UserBody')])), parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][items('For_Each_Build_UserBody')], null), null), concat('Test', substring(guid(),0,6))))), variables('userBody'))))"
+                            },
+                            "Set_userBody": {
+                                "runAfter": {
+                                    "Compose_New_UserBody": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "SetVariable",
+                                "inputs": {
+                                    "name": "userBody",
+                                    "value": "@outputs('Compose_New_UserBody')"
+                                }
+                            },
+                            "Compose_New_UpdateUserBody": {
+                                "runAfter": {
+                                    "Set_userBody": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "Compose",
+                                "inputs": "@if(or(contains(variables('ExcludedList'), items('For_Each_Build_UserBody')), contains(body('Select_ObjectAddOnly_SourceNames'), items('For_Each_Build_UserBody'))), variables('updateUserBody'), if(and(contains(items('For_Each_Build_UserBody'), '.'), contains(body('Select_Complex_Attribute_Names'), first(split(items('For_Each_Build_UserBody'), '.')))), setProperty(variables('updateUserBody'), first(split(items('For_Each_Build_UserBody'), '.')), setProperty(coalesce(if(contains(variables('updateUserBody'), first(split(items('For_Each_Build_UserBody'), '.'))), variables('updateUserBody')[first(split(items('For_Each_Build_UserBody'), '.'))], null), json('{}')), last(split(items('For_Each_Build_UserBody'), '.')), coalesce(if(contains(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))], first(split(items('For_Each_Build_UserBody'), '.'))), if(not(equals(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][first(split(items('For_Each_Build_UserBody'), '.'))], null)), if(contains(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][first(split(items('For_Each_Build_UserBody'), '.'))], last(split(items('For_Each_Build_UserBody'), '.'))), if(not(empty(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][first(split(items('For_Each_Build_UserBody'), '.'))][last(split(items('For_Each_Build_UserBody'), '.'))])), parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][first(split(items('For_Each_Build_UserBody'), '.'))][last(split(items('For_Each_Build_UserBody'), '.'))], null), null), null), null), concat('Updated', substring(guid(),0,6))))), if(contains(body('Select_Primitive_Attribute_Names'), items('For_Each_Build_UserBody')), if(contains(outputs('Compose_Dynamic_ArrayProperties'), items('For_Each_Build_UserBody')), setProperty(variables('updateUserBody'), items('For_Each_Build_UserBody'), if(and(contains(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))], items('For_Each_Build_UserBody')), greater(length(coalesce(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][items('For_Each_Build_UserBody')], json('[]'))), 0)), parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][items('For_Each_Build_UserBody')], createArray(concat('Updated', substring(guid(),0,6))))), setProperty(variables('updateUserBody'), items('For_Each_Build_UserBody'), coalesce(if(contains(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))], items('For_Each_Build_UserBody')), if(not(empty(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][items('For_Each_Build_UserBody')])), parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][items('For_Each_Build_UserBody')], null), null), concat('Updated', substring(guid(),0,6))))), variables('updateUserBody'))))"
+                            },
+                            "Set_updateUserBody": {
+                                "runAfter": {
+                                    "Compose_New_UpdateUserBody": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "SetVariable",
+                                "inputs": {
+                                    "name": "updateUserBody",
+                                    "value": "@outputs('Compose_New_UpdateUserBody')"
+                                }
+                            }
+                        },
+                        "runAfter": {
+                            "Select_Graph_Property_Names": [
+                                "Succeeded"
+                            ],
+                            "Select_ObjectAddOnly_SourceNames": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Foreach",
+                        "runtimeConfiguration": {
+                            "concurrency": {
+                                "repetitions": 1
+                            }
+                        }
+                    },
+                    "Compose_Final_Dynamic_User_Body": {
+                        "runAfter": {
+                            "For_Each_Build_UserBody": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Compose",
+                        "inputs": "@union(variables('userBody'), if(contains(body('Select_Graph_Property_Names'), 'userPrincipalName'), json(concat('{\"userPrincipalName\":\"', outputs('Generate_Test_UserNames')['updateUser'], '\"}')), json('{}')), if(contains(body('Select_Graph_Property_Names'), 'mail'), json(concat('{\"mail\":\"', outputs('Generate_Test_UserNames')['updateUser'], '\"}')), json('{}')), if(not(contains(variables('userBody'), 'displayName')), json(concat('{\"displayName\":\"', outputs('Generate_Test_UserNames')['updateUser'], '\"}')), json('{}')), if(not(contains(variables('userBody'), 'mailNickname')), json(concat('{\"mailNickname\":\"', outputs('Generate_Test_UserNames')['updateUserNickname'], '\"}')), json('{}')))"
+                    },
+                    "Compose_Final_Dynamic_Update_User_Body": {
+                        "runAfter": {
+                            "Compose_Final_Dynamic_User_Body": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Compose",
+                        "inputs": "@union(variables('updateUserBody'), if(and(contains(body('Select_Graph_Property_Names'), 'userPrincipalName'), not(contains(body('Select_ObjectAddOnly_SourceNames'), 'userPrincipalName'))), json(concat('{\"userPrincipalName\":\"updated-', outputs('Generate_Test_UserNames')['updateUser'], '\"}')), json('{}')), if(and(contains(body('Select_Graph_Property_Names'), 'mail'), not(contains(body('Select_ObjectAddOnly_SourceNames'), 'mail'))), json(concat('{\"mail\":\"updated-', outputs('Generate_Test_UserNames')['updateUser'], '\"}')), json('{}')), if(and(not(contains(variables('updateUserBody'), 'displayName')), not(contains(body('Select_ObjectAddOnly_SourceNames'), 'displayName'))), json(concat('{\"displayName\":\"', outputs('Generate_Test_UserNames')['updateUser'], ' - Updated\"}')), json('{}')), if(and(contains(body('Select_Graph_Property_Names'), 'mailNickname'), not(contains(body('Select_ObjectAddOnly_SourceNames'), 'mailNickname'))), json(concat('{\"mailNickname\":\"updated', outputs('Generate_Test_UserNames')['updateUserNickname'], '\"}')), json('{}')))"
+                    },
+                    "Compose_Dynamic_ArrayProperties": {
+                        "runAfter": {
+                            "Select_ArrayType_Attribute_Names": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Compose",
+                        "inputs": "@union(variables('GraphArrayProperties'), body('Select_ArrayType_Attribute_Names'))"
+                    },
+                    "Filter_Group_ObjectMapping": {
+                        "runAfter": {},
+                        "type": "Query",
+                        "inputs": {
+                            "from": "@coalesce(first(body('Parse_Templates')?['synchronizationRules'])?['objectMappings'], json('[]'))",
+                            "where": "@and(contains(toLower(item()?['targetObjectName']), 'group'), equals(item()?['enabled'], true))"
+                        }
+                    },
+                    "Compose_IsGroupSupported": {
+                        "runAfter": {
+                            "Filter_Group_ObjectMapping": [
+                                "Succeeded"
+                            ],
+                            "Filter_Target_Group_Object": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Compose",
+                        "inputs": "@and(greater(length(body('Filter_Target_Group_Object')), 0), greater(length(body('Filter_Group_ObjectMapping')), 0))"
+                    },
+                    "Compose_IsManagerSupported": {
+                        "runAfter": {
+                            "Select_Target_Attribute_Names": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Compose",
+                        "inputs": "@contains(string(body('Select_Target_Attribute_Names')), 'manager')"
+                    },
+                    "Compose_IsUserDeleteSupported": {
+                        "runAfter": {
+                            "Filter_User_ObjectMapping": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Compose",
+                        "inputs": "@if(greater(length(body('Filter_User_ObjectMapping')), 0), contains(toLower(coalesce(string(first(body('Filter_User_ObjectMapping'))?['flowTypes']), '')), 'delete'), false)"
+                    },
+                    "Compose_IsGroupDeleteSupported": {
+                        "runAfter": {
+                            "Filter_Group_ObjectMapping": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Compose",
+                        "inputs": "@if(greater(length(body('Filter_Group_ObjectMapping')), 0), contains(toLower(coalesce(string(first(body('Filter_Group_ObjectMapping'))?['flowTypes']), '')), 'delete'), false)"
+                    },
+                    "Compose_UpdateTest_ExcludeList": {
+                        "runAfter": {
+                            "Select_ObjectAddOnly_SourceNames": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Compose",
+                        "inputs": "@union(body('Select_ObjectAddOnly_SourceNames'), createArray('id', 'accountEnabled', 'manager'))"
+                    },
+                    "Filter_ObjectAddOnly_FromLookup": {
+                        "runAfter": {
+                            "ForEach_AttributeMappings": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Query",
+                        "inputs": {
+                            "from": "@variables('sourceToTargetLookup')",
+                            "where": "@equals(item()?['flowType'], 'ObjectAddOnly')"
+                        }
+                    },
+                    "Select_ObjectAddOnly_SourceNames": {
+                        "runAfter": {
+                            "Filter_ObjectAddOnly_FromLookup": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Select",
+                        "inputs": {
+                            "from": "@body('Filter_ObjectAddOnly_FromLookup')",
+                            "select": "@item()?['source']"
+                        }
+                    }
+                },
+                "type": "Scope"
+            },
+            "Response_Initialization_Data": {
+                "runAfter": {
+                    "Process_Template_Mappings": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Response",
+                "kind": "Http",
+                "inputs": {
+                    "statusCode": 200,
+                    "body": {
+                        "syncJobId": "@outputs('Compose_SyncJobId')",
+                        "testUserNames": "@outputs('Generate_Test_UserNames')",
+                        "testGroupNames": "@outputs('Generate_Test_GroupNames')",
+                        "appRoles": "@body('Get_App_Roles')",
+                        "userAppRole": "@body('Filter_User_AppRole')",
+                        "schema": "@body('Get_Schema')",
+                        "sourceToTargetLookup": "@variables('sourceToTargetLookup')",
+                        "targetAttributes": "@body('Select_Target_Attribute_Names')",
+                        "targetGroupAttributes": "@body('Select_Target_Group_Attribute_Names')",
+                        "userBody": "@outputs('Compose_Final_Dynamic_User_Body')",
+                        "updateUserBody": "@outputs('Compose_Final_Dynamic_Update_User_Body')",
+                        "workflowRunId": "@workflow().run.name",
+                        "arrayProperties": "@outputs('Compose_Dynamic_ArrayProperties')",
+                        "isGroupSupported": "@outputs('Compose_IsGroupSupported')",
+                        "isManagerAttributeSupported": "@outputs('Compose_IsManagerSupported')",
+                        "isUserDeleteSupported": "@outputs('Compose_IsUserDeleteSupported')",
+                        "isGroupDeleteSupported": "@outputs('Compose_IsGroupDeleteSupported')",
+                        "updateTestExcludeList": "@outputs('Compose_UpdateTest_ExcludeList')"
+                    }
+                }
+            }
+        },
+        "outputs": {}
+    },
+    "kind": "Stateful"
+}

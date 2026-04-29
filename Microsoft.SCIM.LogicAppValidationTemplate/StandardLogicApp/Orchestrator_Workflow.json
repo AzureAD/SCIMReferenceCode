@@ -1,0 +1,621 @@
+{
+    "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "contentVersion": "1.0.0.0",
+        "triggers": {
+            "Manual_Recurrence": {
+                "recurrence": {
+                    "frequency": "Month",
+                    "interval": 1
+                },
+                "evaluatedRecurrence": {
+                    "frequency": "Month",
+                    "interval": 1
+                },
+                "type": "Recurrence"
+            }
+        },
+        "actions": {
+            "Compose_Debug_WorkflowObject": {
+                "runAfter": {},
+                "type": "Compose",
+                "inputs": {
+                    "workflowId": "@workflow().id",
+                    "workflowName": "@workflow().name",
+                    "workflowRunName": "@workflow().run.name",
+                    "workflowIdSplit": "@split(workflow().id, '/')",
+                    "workflowIdSplitLength": "@length(split(workflow().id, '/'))"
+                }
+            },
+            "Compose_WorkflowInfo": {
+                "runAfter": {
+                    "Compose_Debug_WorkflowObject": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Compose",
+                "inputs": {
+                    "subscriptionId": "@first(split(appsetting('WEBSITE_OWNER_NAME'), '+'))",
+                    "resourceGroup": "@appsetting('WEBSITE_RESOURCE_GROUP')",
+                    "logicAppName": "@appsetting('WEBSITE_SITE_NAME')",
+                    "location": "@appsetting('REGION_NAME')"
+                }
+            },
+            "Compose_ManagementApiBase": {
+                "runAfter": {
+                    "Compose_WorkflowInfo": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Compose",
+                "inputs": "@concat('https://management.azure.com/subscriptions/', outputs('Compose_WorkflowInfo')?['subscriptionId'], '/resourceGroups/', outputs('Compose_WorkflowInfo')?['resourceGroup'], '/providers/Microsoft.Web/sites/', outputs('Compose_WorkflowInfo')?['logicAppName'], '/hostruntime/runtime/webhooks/workflow/api/management/workflows/')"
+            },
+            "Call_Initialization_Workflow": {
+                "runAfter": {
+                    "Compose_ManagementApiBase": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Workflow",
+                "inputs": {
+                    "host": {
+                        "workflow": {
+                            "id": "Initialization_Workflow"
+                        }
+                    },
+                    "headers": {
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "servicePrincipalId": "@parameters('servicePrincipalId')",
+                        "scimEndpoint": "@parameters('scimEndpoint')",
+                        "scimBearerToken": "@parameters('scimBearerToken')",
+                        "scimContentType": "@parameters('scimContentType')",
+                        "testUserDomain": "@parameters('testUserDomain')",
+                        "defaultUserProperties": "@parameters('defaultUserProperties')",
+                        "defaultGroupProperties": "@parameters('defaultGroupProperties')",
+                        "attributeTransforms": "@parameters('attributeTransforms')"
+                    }
+                }
+            },
+            "Compose_Initialization_RunLink": {
+                "runAfter": {
+                    "Call_Initialization_Workflow": [
+                        "Succeeded",
+                        "Failed",
+                        "Skipped",
+                        "TimedOut"
+                    ]
+                },
+                "type": "Compose",
+                "inputs": "@if(equals(actions('Call_Initialization_Workflow')?['status'], 'Skipped'), 'SKIPPED - Workflow did not run', concat('https://portal.azure.com/#view/Microsoft_Azure_EMA/DesignerEditor.ReactView/id/%2Fsubscriptions%2F', outputs('Compose_WorkflowInfo')?['subscriptionId'], '%2FresourceGroups%2F', outputs('Compose_WorkflowInfo')?['resourceGroup'], '%2Fproviders%2FMicrosoft.Web%2Fsites%2F', outputs('Compose_WorkflowInfo')?['logicAppName'], '%2Fworkflows%2FInitialization_Workflow/location/', replace(outputs('Compose_WorkflowInfo')?['location'], ' ', '%20'), '/isReadOnly~/false/isMonitoringView~/true/runId/', coalesce(actions('Call_Initialization_Workflow')?['outputs']?['body']?['workflowRunId'], actions('Call_Initialization_Workflow')?['outputs']?['body']?['RunId'], 'UNKNOWN')))"
+            },
+            "Call_UserTests_Workflow": {
+                "runAfter": {
+                    "Call_Initialization_Workflow": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Workflow",
+                "inputs": {
+                    "host": {
+                        "workflow": {
+                            "id": "UserTests_Workflow"
+                        }
+                    },
+                    "headers": {
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "initializationData": "@body('Call_Initialization_Workflow')",
+                        "EnabledTests": "@parameters('EnabledTests')",
+                        "IsSoftDeleted": "@parameters('IsSoftDeleted')"
+                    }
+                }
+            },
+            "Call_GroupTests_Workflow": {
+                "runAfter": {
+                    "Call_Initialization_Workflow": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Workflow",
+                "inputs": {
+                    "host": {
+                        "workflow": {
+                            "id": "GroupTests_Workflow"
+                        }
+                    },
+                    "headers": {
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "initializationData": "@body('Call_Initialization_Workflow')",
+                        "EnabledTests": "@parameters('EnabledTests')"
+                    }
+                }
+            },
+            "Call_SCIMTests_Workflow": {
+                "runAfter": {
+                    "Call_Initialization_Workflow": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Workflow",
+                "inputs": {
+                    "host": {
+                        "workflow": {
+                            "id": "SCIMTests_Workflow"
+                        }
+                    },
+                    "headers": {
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "initializationData": "@body('Call_Initialization_Workflow')",
+                        "EnabledTests": "@parameters('EnabledTests')"
+                    }
+                }
+            },
+            "Compose_UserTests_RunLink": {
+                "runAfter": {
+                    "Call_UserTests_Workflow": [
+                        "Succeeded",
+                        "Failed",
+                        "Skipped",
+                        "TimedOut"
+                    ]
+                },
+                "type": "Compose",
+                "inputs": "@if(equals(actions('Call_UserTests_Workflow')?['status'], 'Skipped'), 'SKIPPED - Workflow did not run', concat('https://portal.azure.com/#view/Microsoft_Azure_EMA/DesignerEditor.ReactView/id/%2Fsubscriptions%2F', outputs('Compose_WorkflowInfo')?['subscriptionId'], '%2FresourceGroups%2F', outputs('Compose_WorkflowInfo')?['resourceGroup'], '%2Fproviders%2FMicrosoft.Web%2Fsites%2F', outputs('Compose_WorkflowInfo')?['logicAppName'], '%2Fworkflows%2FUserTests_Workflow/location/', replace(outputs('Compose_WorkflowInfo')?['location'], ' ', '%20'), '/isReadOnly~/false/isMonitoringView~/true/runId/', coalesce(actions('Call_UserTests_Workflow')?['outputs']?['body']?['workflowRunId'], actions('Call_UserTests_Workflow')?['outputs']?['body']?['RunId'], 'UNKNOWN')))"
+            },
+            "Compose_GroupTests_RunLink": {
+                "runAfter": {
+                    "Call_GroupTests_Workflow": [
+                        "Succeeded",
+                        "Failed",
+                        "Skipped",
+                        "TimedOut"
+                    ]
+                },
+                "type": "Compose",
+                "inputs": "@if(equals(actions('Call_GroupTests_Workflow')?['status'], 'Skipped'), 'SKIPPED - Workflow did not run', concat('https://portal.azure.com/#view/Microsoft_Azure_EMA/DesignerEditor.ReactView/id/%2Fsubscriptions%2F', outputs('Compose_WorkflowInfo')?['subscriptionId'], '%2FresourceGroups%2F', outputs('Compose_WorkflowInfo')?['resourceGroup'], '%2Fproviders%2FMicrosoft.Web%2Fsites%2F', outputs('Compose_WorkflowInfo')?['logicAppName'], '%2Fworkflows%2FGroupTests_Workflow/location/', replace(outputs('Compose_WorkflowInfo')?['location'], ' ', '%20'), '/isReadOnly~/false/isMonitoringView~/true/runId/', coalesce(actions('Call_GroupTests_Workflow')?['outputs']?['body']?['workflowRunId'], actions('Call_GroupTests_Workflow')?['outputs']?['body']?['RunId'], 'UNKNOWN')))"
+            },
+            "Compose_SCIMTests_RunLink": {
+                "runAfter": {
+                    "Call_SCIMTests_Workflow": [
+                        "Succeeded",
+                        "Failed",
+                        "Skipped",
+                        "TimedOut"
+                    ]
+                },
+                "type": "Compose",
+                "inputs": "@if(equals(actions('Call_SCIMTests_Workflow')?['status'], 'Skipped'), 'SKIPPED - Workflow did not run', concat('https://portal.azure.com/#view/Microsoft_Azure_EMA/DesignerEditor.ReactView/id/%2Fsubscriptions%2F', outputs('Compose_WorkflowInfo')?['subscriptionId'], '%2FresourceGroups%2F', outputs('Compose_WorkflowInfo')?['resourceGroup'], '%2Fproviders%2FMicrosoft.Web%2Fsites%2F', outputs('Compose_WorkflowInfo')?['logicAppName'], '%2Fworkflows%2FSCIMTests_Workflow/location/', replace(outputs('Compose_WorkflowInfo')?['location'], ' ', '%20'), '/isReadOnly~/false/isMonitoringView~/true/runId/', coalesce(actions('Call_SCIMTests_Workflow')?['outputs']?['body']?['workflowRunId'], actions('Call_SCIMTests_Workflow')?['outputs']?['body']?['RunId'], 'UNKNOWN')))"
+            },
+            "Until_Wait_UserTests_Complete": {
+                "runAfter": {
+                    "Compose_UserTests_RunLink": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Until",
+                "expression": "@or(not(equals(coalesce(body('Poll_UserTests_Status')?['properties']?['status'], 'Running'), 'Running')), not(equals(coalesce(outputs('Poll_UserTests_Status')?['statusCode'], 200), 200)))",
+                "limit": {
+                    "count": 48,
+                    "timeout": "PT4H"
+                },
+                "actions": {
+                    "Delay_UserTests_5min": {
+                        "runAfter": {},
+                        "type": "Wait",
+                        "inputs": {
+                            "interval": {
+                                "count": 5,
+                                "unit": "Minute"
+                            }
+                        }
+                    },
+                    "Poll_UserTests_Status": {
+                        "runAfter": {
+                            "Delay_UserTests_5min": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Http",
+                        "inputs": {
+                            "method": "GET",
+                            "uri": "@concat(outputs('Compose_ManagementApiBase'), 'UserTests_Workflow/runs/', coalesce(actions('Call_UserTests_Workflow')?['outputs']?['body']?['workflowRunId'], actions('Call_UserTests_Workflow')?['outputs']?['body']?['RunId'], 'UNKNOWN'), '?api-version=2024-04-01')",
+                            "authentication": {
+                                "type": "ManagedServiceIdentity",
+                                "audience": "https://management.azure.com/"
+                            }
+                        }
+                    }
+                }
+            },
+            "Until_Wait_GroupTests_Complete": {
+                "runAfter": {
+                    "Compose_GroupTests_RunLink": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Until",
+                "expression": "@or(not(equals(coalesce(body('Poll_GroupTests_Status')?['properties']?['status'], 'Running'), 'Running')), not(equals(coalesce(outputs('Poll_GroupTests_Status')?['statusCode'], 200), 200)))",
+                "limit": {
+                    "count": 48,
+                    "timeout": "PT4H"
+                },
+                "actions": {
+                    "Delay_GroupTests_5min": {
+                        "runAfter": {},
+                        "type": "Wait",
+                        "inputs": {
+                            "interval": {
+                                "count": 5,
+                                "unit": "Minute"
+                            }
+                        }
+                    },
+                    "Poll_GroupTests_Status": {
+                        "runAfter": {
+                            "Delay_GroupTests_5min": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Http",
+                        "inputs": {
+                            "method": "GET",
+                            "uri": "@concat(outputs('Compose_ManagementApiBase'), 'GroupTests_Workflow/runs/', coalesce(actions('Call_GroupTests_Workflow')?['outputs']?['body']?['workflowRunId'], actions('Call_GroupTests_Workflow')?['outputs']?['body']?['RunId'], 'UNKNOWN'), '?api-version=2024-04-01')",
+                            "authentication": {
+                                "type": "ManagedServiceIdentity",
+                                "audience": "https://management.azure.com/"
+                            }
+                        }
+                    }
+                }
+            },
+            "Until_Wait_SCIMTests_Complete": {
+                "runAfter": {
+                    "Compose_SCIMTests_RunLink": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Until",
+                "expression": "@or(not(equals(coalesce(body('Poll_SCIMTests_Status')?['properties']?['status'], 'Running'), 'Running')), not(equals(coalesce(outputs('Poll_SCIMTests_Status')?['statusCode'], 200), 200)))",
+                "limit": {
+                    "count": 48,
+                    "timeout": "PT4H"
+                },
+                "actions": {
+                    "Delay_SCIMTests_5min": {
+                        "runAfter": {},
+                        "type": "Wait",
+                        "inputs": {
+                            "interval": {
+                                "count": 5,
+                                "unit": "Minute"
+                            }
+                        }
+                    },
+                    "Poll_SCIMTests_Status": {
+                        "runAfter": {
+                            "Delay_SCIMTests_5min": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Http",
+                        "inputs": {
+                            "method": "GET",
+                            "uri": "@concat(outputs('Compose_ManagementApiBase'), 'SCIMTests_Workflow/runs/', coalesce(actions('Call_SCIMTests_Workflow')?['outputs']?['body']?['workflowRunId'], actions('Call_SCIMTests_Workflow')?['outputs']?['body']?['RunId'], 'UNKNOWN'), '?api-version=2024-04-01')",
+                            "authentication": {
+                                "type": "ManagedServiceIdentity",
+                                "audience": "https://management.azure.com/"
+                            }
+                        }
+                    }
+                }
+            },
+            "Get_UserTests_Output": {
+                "runAfter": {
+                    "Until_Wait_UserTests_Complete": [
+                        "Succeeded",
+                        "Failed",
+                        "TimedOut"
+                    ]
+                },
+                "type": "Http",
+                "inputs": {
+                    "method": "GET",
+                    "uri": "@concat(outputs('Compose_ManagementApiBase'), 'UserTests_Workflow/runs/', coalesce(actions('Call_UserTests_Workflow')?['outputs']?['body']?['workflowRunId'], actions('Call_UserTests_Workflow')?['outputs']?['body']?['RunId'], 'UNKNOWN'), '/actions/Compose_Final_Results?api-version=2024-04-01')",
+                    "authentication": {
+                        "type": "ManagedServiceIdentity",
+                        "audience": "https://management.azure.com/"
+                    }
+                }
+            },
+            "Get_UserTests_Output_Content": {
+                "runAfter": {
+                    "Get_UserTests_Output": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Http",
+                "inputs": {
+                    "method": "GET",
+                    "uri": "@body('Get_UserTests_Output')?['properties']?['outputsLink']?['uri']"
+                }
+            },
+            "Get_GroupTests_Output": {
+                "runAfter": {
+                    "Until_Wait_GroupTests_Complete": [
+                        "Succeeded",
+                        "Failed",
+                        "TimedOut"
+                    ]
+                },
+                "type": "Http",
+                "inputs": {
+                    "method": "GET",
+                    "uri": "@concat(outputs('Compose_ManagementApiBase'), 'GroupTests_Workflow/runs/', coalesce(actions('Call_GroupTests_Workflow')?['outputs']?['body']?['workflowRunId'], actions('Call_GroupTests_Workflow')?['outputs']?['body']?['RunId'], 'UNKNOWN'), '/actions/Compose_Final_Results?api-version=2024-04-01')",
+                    "authentication": {
+                        "type": "ManagedServiceIdentity",
+                        "audience": "https://management.azure.com/"
+                    }
+                }
+            },
+            "Get_GroupTests_Output_Content": {
+                "runAfter": {
+                    "Get_GroupTests_Output": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Http",
+                "inputs": {
+                    "method": "GET",
+                    "uri": "@body('Get_GroupTests_Output')?['properties']?['outputsLink']?['uri']"
+                }
+            },
+            "Get_SCIMTests_Output": {
+                "runAfter": {
+                    "Until_Wait_SCIMTests_Complete": [
+                        "Succeeded",
+                        "Failed",
+                        "TimedOut"
+                    ]
+                },
+                "type": "Http",
+                "inputs": {
+                    "method": "GET",
+                    "uri": "@concat(outputs('Compose_ManagementApiBase'), 'SCIMTests_Workflow/runs/', coalesce(actions('Call_SCIMTests_Workflow')?['outputs']?['body']?['workflowRunId'], actions('Call_SCIMTests_Workflow')?['outputs']?['body']?['RunId'], 'UNKNOWN'), '/actions/Compose_Final_Results?api-version=2024-04-01')",
+                    "authentication": {
+                        "type": "ManagedServiceIdentity",
+                        "audience": "https://management.azure.com/"
+                    }
+                }
+            },
+            "Get_SCIMTests_Output_Content": {
+                "runAfter": {
+                    "Get_SCIMTests_Output": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Http",
+                "inputs": {
+                    "method": "GET",
+                    "uri": "@body('Get_SCIMTests_Output')?['properties']?['outputsLink']?['uri']"
+                }
+            },
+            "Evaluate_Test_Results": {
+                "runAfter": {
+                    "Compose_Initialization_RunLink": [
+                        "Succeeded",
+                        "Failed",
+                        "Skipped",
+                        "TimedOut"
+                    ],
+                    "Get_UserTests_Output_Content": [
+                        "Succeeded",
+                        "Failed",
+                        "Skipped",
+                        "TimedOut"
+                    ],
+                    "Get_GroupTests_Output_Content": [
+                        "Succeeded",
+                        "Failed",
+                        "Skipped",
+                        "TimedOut"
+                    ],
+                    "Get_SCIMTests_Output_Content": [
+                        "Succeeded",
+                        "Failed",
+                        "Skipped",
+                        "TimedOut"
+                    ]
+                },
+                "type": "Compose",
+                "inputs": {
+                    "enabledTestsEvaluation": {
+                        "createUserTestEnabled": "@or(equals(parameters('EnabledTests'), 'All'), equals(parameters('EnabledTests'), 'UserTests'), equals(parameters('EnabledTests'), 'Create_User_Test'))",
+                        "createGroupTestEnabled": "@and(body('Call_Initialization_Workflow')?['isGroupSupported'], or(equals(parameters('EnabledTests'), 'All'), equals(parameters('EnabledTests'), 'GroupTests'), equals(parameters('EnabledTests'), 'Create_Group_Test')))",
+                        "updateUserTestEnabled": "@or(equals(parameters('EnabledTests'), 'All'), equals(parameters('EnabledTests'), 'UserTests'), equals(parameters('EnabledTests'), 'Update_User_Test'))",
+                        "disableUserTestEnabled": "@and(parameters('IsSoftDeleted'), or(equals(parameters('EnabledTests'), 'All'), equals(parameters('EnabledTests'), 'UserTests'), equals(parameters('EnabledTests'), 'Disable_User_Test')))",
+                        "deleteUserTestEnabled": "@and(coalesce(body('Call_Initialization_Workflow')?['isUserDeleteSupported'], true), or(equals(parameters('EnabledTests'), 'All'), equals(parameters('EnabledTests'), 'UserTests'), equals(parameters('EnabledTests'), 'Delete_User_Test')))",
+                        "managerTestEnabled": "@and(body('Call_Initialization_Workflow')?['isManagerAttributeSupported'], or(or(equals(parameters('EnabledTests'), 'All'), equals(parameters('EnabledTests'), 'UserTests')), equals(parameters('EnabledTests'), 'User_Update_Manager_Test')))",
+                        "updateGroupTestEnabled": "@and(body('Call_Initialization_Workflow')?['isGroupSupported'], or(equals(parameters('EnabledTests'), 'All'), equals(parameters('EnabledTests'), 'GroupTests'), equals(parameters('EnabledTests'), 'Update_Group_Test')))",
+                        "deleteGroupTestEnabled": "@and(body('Call_Initialization_Workflow')?['isGroupSupported'], coalesce(body('Call_Initialization_Workflow')?['isGroupDeleteSupported'], true), or(equals(parameters('EnabledTests'), 'All'), equals(parameters('EnabledTests'), 'GroupTests'), equals(parameters('EnabledTests'), 'Delete_Group_Test')))",
+                        "addMemberTestEnabled": "@and(body('Call_Initialization_Workflow')?['isGroupSupported'], or(or(equals(parameters('EnabledTests'), 'All'), equals(parameters('EnabledTests'), 'GroupTests')), equals(parameters('EnabledTests'), 'Group_Update_Add_Member_Test')))",
+                        "removeMemberTestEnabled": "@and(body('Call_Initialization_Workflow')?['isGroupSupported'], or(or(equals(parameters('EnabledTests'), 'All'), equals(parameters('EnabledTests'), 'GroupTests')), equals(parameters('EnabledTests'), 'Group_Update_Remove_Member_Test')))",
+                        "schemaDiscoverabilityTestEnabled": "@or(equals(parameters('EnabledTests'), 'All'), equals(parameters('EnabledTests'), 'SCIMTests'), equals(parameters('EnabledTests'), 'Schema_Discoverability_Test'))",
+                        "nullUpdateUserTestEnabled": "@or(equals(parameters('EnabledTests'), 'All'), equals(parameters('EnabledTests'), 'SCIMTests'), equals(parameters('EnabledTests'), 'SCIM_Null_Update_Test'), equals(parameters('EnabledTests'), 'Null_Update_User_Test'))",
+                        "validateCredentialsTestEnabled": "@or(equals(parameters('EnabledTests'), 'All'), equals(parameters('EnabledTests'), 'SCIMTests'), equals(parameters('EnabledTests'), 'Validate_Credentials_Test'))"
+                    },
+                    "testResults": {
+                        "createUserTestResult": "@coalesce(body('Get_UserTests_Output_Content')?['CreateUserTestOutputs']?['overallResult'], 'SKIPPED')",
+                        "updateUserTestResult": "@coalesce(body('Get_UserTests_Output_Content')?['UpdateUserTestOutputs']?['overallResult'], 'SKIPPED')",
+                        "disableUserTestResult": "@coalesce(body('Get_UserTests_Output_Content')?['DisableUserTestOutputs']?['overallResult'], 'SKIPPED')",
+                        "deleteUserTestResult": "@coalesce(body('Get_UserTests_Output_Content')?['DeleteUserTestOutputs']?['overallResult'], 'SKIPPED')",
+                        "managerTestResult": "@coalesce(body('Get_UserTests_Output_Content')?['ManagerTestOutputs']?['overallResult'], 'SKIPPED')",
+                        "createGroupTestResult": "@coalesce(body('Get_GroupTests_Output_Content')?['CreateGroupTestOutputs']?['overallResult'], 'SKIPPED')",
+                        "updateGroupTestResult": "@coalesce(body('Get_GroupTests_Output_Content')?['UpdateGroupTestOutputs']?['overallResult'], 'SKIPPED')",
+                        "deleteGroupTestResult": "@coalesce(body('Get_GroupTests_Output_Content')?['DeleteGroupTestOutputs']?['overallResult'], 'SKIPPED')",
+                        "addMemberTestResult": "@coalesce(body('Get_GroupTests_Output_Content')?['AddMemberTestOutputs']?['overallResult'], 'SKIPPED')",
+                        "removeMemberTestResult": "@coalesce(body('Get_GroupTests_Output_Content')?['RemoveMemberTestOutputs']?['overallResult'], 'SKIPPED')",
+                        "schemaDiscoverabilityTestResult": "@coalesce(body('Get_SCIMTests_Output_Content')?['SchemaDiscoverabilityTestOutputs']?['overallResult'], 'SKIPPED')",
+                        "nullUpdateUserTestResult": "@coalesce(body('Get_SCIMTests_Output_Content')?['SCIMNullUpdateTestOutputs']?['overallResult'], 'SKIPPED')",
+                        "validateCredentialsTestResult": "@coalesce(body('Get_SCIMTests_Output_Content')?['ValidateCredentialsTestOutputs']?['overallResult'], 'SKIPPED')"
+                    },
+                    "childWorkflowStatuses": {
+                        "initializationStatus": "@coalesce(actions('Call_Initialization_Workflow')?['status'], 'Unknown')",
+                        "userTestsStatus": "@coalesce(body('Poll_UserTests_Status')?['properties']?['status'], 'Unknown')",
+                        "groupTestsStatus": "@coalesce(body('Poll_GroupTests_Status')?['properties']?['status'], 'Unknown')",
+                        "scimTestsStatus": "@coalesce(body('Poll_SCIMTests_Status')?['properties']?['status'], 'Unknown')"
+                    },
+                    "childWorkflowRunLinks": {
+                        "Initialization_Workflow": "@outputs('Compose_Initialization_RunLink')",
+                        "UserTests_Workflow": "@outputs('Compose_UserTests_RunLink')",
+                        "GroupTests_Workflow": "@outputs('Compose_GroupTests_RunLink')",
+                        "SCIMTests_Workflow": "@outputs('Compose_SCIMTests_RunLink')"
+                    },
+                    "overallLogicAppResult": "@if(or(or(or(or(or(or(or(or(or(or(or(or(or(or(or(equals(coalesce(body('Get_UserTests_Output_Content')?['CreateUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), equals(coalesce(body('Get_UserTests_Output_Content')?['UpdateUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED')), equals(coalesce(body('Get_UserTests_Output_Content')?['DisableUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED')), equals(coalesce(body('Get_UserTests_Output_Content')?['DeleteUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED')), equals(coalesce(body('Get_UserTests_Output_Content')?['ManagerTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED')), equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMNullUpdateTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED')), equals(coalesce(body('Get_SCIMTests_Output_Content')?['ValidateCredentialsTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED')), equals(coalesce(body('Get_GroupTests_Output_Content')?['CreateGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED')), equals(coalesce(body('Get_GroupTests_Output_Content')?['UpdateGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED')), equals(coalesce(body('Get_GroupTests_Output_Content')?['DeleteGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED')), equals(coalesce(body('Get_GroupTests_Output_Content')?['AddMemberTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED')), equals(coalesce(body('Get_GroupTests_Output_Content')?['RemoveMemberTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED')), equals(coalesce(body('Get_SCIMTests_Output_Content')?['SchemaDiscoverabilityTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED')), equals(actions('Call_Initialization_Workflow')?['status'], 'Failed')), equals(coalesce(body('Poll_UserTests_Status')?['properties']?['status'], ''), 'Failed')), equals(coalesce(body('Poll_GroupTests_Status')?['properties']?['status'], ''), 'Failed')), 'Failed', if(equals(coalesce(body('Poll_SCIMTests_Status')?['properties']?['status'], ''), 'Failed'), 'Failed', 'Succeeded'))"
+                }
+            },
+            "Final_TestResults": {
+                "runAfter": {
+                    "Evaluate_Test_Results": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Compose",
+                "inputs": {
+                    "testResults": [
+                        {
+                            "testName": "Create_User_Test",
+                            "testResult": "@coalesce(body('Get_UserTests_Output_Content')?['CreateUserTestOutputs']?['result'], 'SKIPPED')",
+                            "provisioningErrorDetails": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['CreateUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_UserTests_Output_Content')?['CreateUserTestOutputs']?['errorDetails'], '')",
+                            "recommendationUrl": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['CreateUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
+                            "runLink": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['CreateUserTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', outputs('Compose_UserTests_RunLink'))",
+                            "message": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['CreateUserTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', 'Click the runLink and search for the action Compose_Final_Results for more info.')"
+                        },
+                        {
+                            "testName": "Update_User_Test",
+                            "testResult": "@coalesce(body('Get_UserTests_Output_Content')?['UpdateUserTestOutputs']?['result'], 'SKIPPED')",
+                            "provisioningErrorDetails": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['UpdateUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_UserTests_Output_Content')?['UpdateUserTestOutputs']?['errorDetails'], '')",
+                            "recommendationUrl": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['UpdateUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
+                            "runLink": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['UpdateUserTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', outputs('Compose_UserTests_RunLink'))",
+                            "message": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['UpdateUserTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', 'Click the runLink and search for the action Compose_Final_Results for more info.')"
+                        },
+                        {
+                            "testName": "Disable_User_Test",
+                            "testResult": "@coalesce(body('Get_UserTests_Output_Content')?['DisableUserTestOutputs']?['result'], if(not(parameters('IsSoftDeleted')), 'SKIPPED - IsSoftDeleted is false', 'SKIPPED'))",
+                            "provisioningErrorDetails": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['DisableUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_UserTests_Output_Content')?['DisableUserTestOutputs']?['errorDetails'], '')",
+                            "recommendationUrl": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['DisableUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
+                            "runLink": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['DisableUserTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', outputs('Compose_UserTests_RunLink'))",
+                            "message": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['DisableUserTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', 'Click the runLink and search for the action Compose_Final_Results for more info.')"
+                        },
+                        {
+                            "testName": "Delete_User_Test",
+                            "testResult": "@coalesce(body('Get_UserTests_Output_Content')?['DeleteUserTestOutputs']?['result'], if(not(coalesce(body('Call_Initialization_Workflow')?['isUserDeleteSupported'], true)), 'SKIPPED - Delete action not enabled on target object', 'SKIPPED'))",
+                            "provisioningErrorDetails": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['DeleteUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_UserTests_Output_Content')?['DeleteUserTestOutputs']?['errorDetails'], '')",
+                            "recommendationUrl": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['DeleteUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
+                            "runLink": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['DeleteUserTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', outputs('Compose_UserTests_RunLink'))",
+                            "message": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['DeleteUserTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', 'Click the runLink and search for the action Compose_Final_Results for more info.')"
+                        },
+                        {
+                            "testName": "User_Update_Manager_Test",
+                            "testResult": "@coalesce(body('Get_UserTests_Output_Content')?['ManagerTestOutputs']?['result'], if(not(body('Call_Initialization_Workflow')?['isManagerAttributeSupported']), 'SKIPPED - IsManagerAttributeSupported is false', 'SKIPPED'))",
+                            "provisioningErrorDetails": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['ManagerTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_UserTests_Output_Content')?['ManagerTestOutputs']?['errorDetails'], '')",
+                            "recommendationUrl": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['ManagerTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
+                            "runLink": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['ManagerTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', outputs('Compose_UserTests_RunLink'))",
+                            "message": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['ManagerTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', 'Click the runLink and search for the action Compose_Final_Results for more info.')"
+                        },
+                        {
+                            "testName": "Create_Group_Test",
+                            "testResult": "@coalesce(body('Get_GroupTests_Output_Content')?['CreateGroupTestOutputs']?['result'], if(not(body('Call_Initialization_Workflow')?['isGroupSupported']), 'SKIPPED - IsGroupSupported is false', 'SKIPPED'))",
+                            "provisioningErrorDetails": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['CreateGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_GroupTests_Output_Content')?['CreateGroupTestOutputs']?['errorDetails'], '')",
+                            "recommendationUrl": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['CreateGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
+                            "runLink": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['CreateGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', outputs('Compose_GroupTests_RunLink'))",
+                            "message": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['CreateGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', 'Click the runLink and search for the action Compose_Final_Results for more info.')"
+                        },
+                        {
+                            "testName": "Update_Group_Test",
+                            "testResult": "@coalesce(body('Get_GroupTests_Output_Content')?['UpdateGroupTestOutputs']?['result'], if(not(body('Call_Initialization_Workflow')?['isGroupSupported']), 'SKIPPED - IsGroupSupported is false', 'SKIPPED'))",
+                            "provisioningErrorDetails": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['UpdateGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_GroupTests_Output_Content')?['UpdateGroupTestOutputs']?['errorDetails'], '')",
+                            "recommendationUrl": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['UpdateGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
+                            "runLink": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['UpdateGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', outputs('Compose_GroupTests_RunLink'))",
+                            "message": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['UpdateGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', 'Click the runLink and search for the action Compose_Final_Results for more info.')"
+                        },
+                        {
+                            "testName": "Delete_Group_Test",
+                            "testResult": "@coalesce(body('Get_GroupTests_Output_Content')?['DeleteGroupTestOutputs']?['result'], if(not(body('Call_Initialization_Workflow')?['isGroupSupported']), 'SKIPPED - IsGroupSupported is false', if(not(coalesce(body('Call_Initialization_Workflow')?['isGroupDeleteSupported'], true)), 'SKIPPED - Delete action not enabled on target object', 'SKIPPED')))",
+                            "provisioningErrorDetails": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['DeleteGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_GroupTests_Output_Content')?['DeleteGroupTestOutputs']?['errorDetails'], '')",
+                            "recommendationUrl": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['DeleteGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
+                            "runLink": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['DeleteGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', outputs('Compose_GroupTests_RunLink'))",
+                            "message": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['DeleteGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', 'Click the runLink and search for the action Compose_Final_Results for more info.')"
+                        },
+                        {
+                            "testName": "Group_Update_Add_Member_Test",
+                            "testResult": "@coalesce(body('Get_GroupTests_Output_Content')?['AddMemberTestOutputs']?['result'], if(not(body('Call_Initialization_Workflow')?['isGroupSupported']), 'SKIPPED - IsGroupSupported is false', 'SKIPPED'))",
+                            "provisioningErrorDetails": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['AddMemberTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_GroupTests_Output_Content')?['AddMemberTestOutputs']?['errorDetails'], '')",
+                            "recommendationUrl": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['AddMemberTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
+                            "runLink": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['AddMemberTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', outputs('Compose_GroupTests_RunLink'))",
+                            "message": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['AddMemberTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', 'Click the runLink and search for the action Compose_Final_Results for more info.')"
+                        },
+                        {
+                            "testName": "Group_Update_Remove_Member_Test",
+                            "testResult": "@coalesce(body('Get_GroupTests_Output_Content')?['RemoveMemberTestOutputs']?['result'], if(not(body('Call_Initialization_Workflow')?['isGroupSupported']), 'SKIPPED - IsGroupSupported is false', 'SKIPPED'))",
+                            "provisioningErrorDetails": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['RemoveMemberTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_GroupTests_Output_Content')?['RemoveMemberTestOutputs']?['errorDetails'], '')",
+                            "recommendationUrl": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['RemoveMemberTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
+                            "runLink": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['RemoveMemberTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', outputs('Compose_GroupTests_RunLink'))",
+                            "message": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['RemoveMemberTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', 'Click the runLink and search for the action Compose_Final_Results for more info.')"
+                        },
+                        {
+                            "testName": "Schema_Discoverability_Test",
+                            "testResult": "@coalesce(body('Get_SCIMTests_Output_Content')?['SchemaDiscoverabilityTestOutputs']?['result'], 'SKIPPED')",
+                            "provisioningErrorDetails": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SchemaDiscoverabilityTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_SCIMTests_Output_Content')?['SchemaDiscoverabilityTestOutputs']?['errorDetails'], '')",
+                            "recommendationUrl": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SchemaDiscoverabilityTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
+                            "runLink": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SchemaDiscoverabilityTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', outputs('Compose_SCIMTests_RunLink'))",
+                            "message": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SchemaDiscoverabilityTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', 'Click the runLink and search for the action Compose_Final_Results for more info.')"
+                        },
+                        {
+                            "testName": "SCIM_Null_Update_Test",
+                            "testResult": "@coalesce(body('Get_SCIMTests_Output_Content')?['SCIMNullUpdateTestOutputs']?['result'], 'SKIPPED')",
+                            "provisioningErrorDetails": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMNullUpdateTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_SCIMTests_Output_Content')?['SCIMNullUpdateTestOutputs']?['errorDetails'], '')",
+                            "recommendationUrl": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMNullUpdateTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
+                            "runLink": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMNullUpdateTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', outputs('Compose_SCIMTests_RunLink'))",
+                            "message": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMNullUpdateTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', 'Click the runLink and search for the action Compose_Final_Results for more info.')"
+                        },
+                        {
+                            "testName": "Validate_Credentials_Test",
+                            "testResult": "@coalesce(body('Get_SCIMTests_Output_Content')?['ValidateCredentialsTestOutputs']?['result'], 'SKIPPED')",
+                            "provisioningErrorDetails": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['ValidateCredentialsTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_SCIMTests_Output_Content')?['ValidateCredentialsTestOutputs']?['errorDetails'], '')",
+                            "recommendationUrl": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['ValidateCredentialsTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
+                            "runLink": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['ValidateCredentialsTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', outputs('Compose_SCIMTests_RunLink'))",
+                            "message": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['ValidateCredentialsTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', 'Click the runLink and search for the action Compose_Final_Results for more info.')"
+                        }
+                    ],
+                    "childWorkflowRunLinks": {
+                        "Initialization_Workflow": "@outputs('Compose_Initialization_RunLink')",
+                        "UserTests_Workflow": "@outputs('Compose_UserTests_RunLink')",
+                        "GroupTests_Workflow": "@outputs('Compose_GroupTests_RunLink')",
+                        "SCIMTests_Workflow": "@outputs('Compose_SCIMTests_RunLink')"
+                    },
+                    "overallResult": "@outputs('Evaluate_Test_Results')?['overallLogicAppResult']"
+                }
+            },
+            "Terminate_With_Test_Status": {
+                "runAfter": {
+                    "Final_TestResults": [
+                        "Succeeded"
+                    ]
+                },
+                "type": "Terminate",
+                "inputs": {
+                    "runStatus": "@outputs('Evaluate_Test_Results')?['overallLogicAppResult']"
+                }
+            }
+        },
+        "outputs": {}
+    },
+    "kind": "Stateful"
+}
