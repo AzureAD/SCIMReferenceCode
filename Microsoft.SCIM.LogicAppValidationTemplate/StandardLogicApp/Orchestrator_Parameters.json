@@ -1,249 +1,299 @@
 {
-    "EnabledTests": {
-        "allowedValues": [
-            "All",
-            "UserTests",
-            "GroupTests",
-            "SCIMTests",
-            "Create_User_Test",
-            "Update_User_Test",
-            "Disable_User_Test",
-            "Delete_User_Test",
-            "User_Update_Manager_Test",
-            "Create_Group_Test",
-            "Update_Group_Test",
-            "Delete_Group_Test",
-            "Group_Update_Add_Member_Test",
-            "Group_Update_Remove_Member_Test",
-            "Schema_Discoverability_Test",
-            "SCIM_Null_Update_Test",
-            "Validate_Credentials_Test"
-        ],
-        "type": "String",
-        "value": "SCIMTests"
+  "EnabledTests": {
+    "allowedValues": [
+      "All",
+      "UserTests",
+      "GroupTests",
+      "SCIMTests",
+      "Create_User_Test",
+      "Update_User_Test",
+      "Disable_User_Test",
+      "Delete_User_Test",
+      "User_Update_Manager_Test",
+      "Create_Group_Test",
+      "Update_Group_Test",
+      "Delete_Group_Test",
+      "Group_Update_Add_Member_Test",
+      "Group_Update_Remove_Member_Test",
+      "Schema_Discoverability_Test",
+      "SCIM_Null_Update_Test",
+      "Validate_Credentials_Test",
+      "SCIM_User_Create_Test",
+      "SCIM_Group_Create_Test",
+      "SCIM_User_Update_Test",
+      "SCIM_Group_Update_Test",
+      "SCIM_User_Delete_Test",
+      "SCIM_Group_Delete_Test",
+      "SCIM_User_Pagination_Test",
+      "SCIM_Group_Pagination_Test",
+      "POD_User_Test",
+      "POD_Group_Test",
+      "Restore_User_Test"
+    ],
+    "type": "String",
+    "value": "All"
+  },
+  "IsSoftDeleted": {
+    "metadata": {
+      "description": "If true, user will be disabled (soft delete). If false, user will be deleted (hard delete)."
     },
-    "IsSoftDeleted": {
-        "metadata": {
-            "description": "If true, user will be disabled (soft delete). If false, user will be deleted (hard delete)."
-        },
-        "type": "Bool",
-        "value": true
+    "type": "Bool",
+    "value": true
+  },
+  "LogicAppVersion": {
+    "metadata": {
+      "description": "Version of the Logic App for tracking and deployment purposes"
     },
-    "LogicAppVersion": {
-        "metadata": {
-            "description": "Version of the Logic App for tracking and deployment purposes"
-        },
-        "type": "String",
-        "value": "4.0"
+    "type": "String",
+    "value": "4.0"
+  },
+  "attributeTransforms": {
+    "metadata": {
+      "description": "Mapping of source attribute names to MS Graph property names. Key is source attribute, value is Graph property name."
     },
-    "attributeTransforms": {
-        "metadata": {
-            "description": "Mapping of source attribute names to MS Graph property names. Key is source attribute, value is Graph property name."
-        },
-        "type": "Object",
-        "value": {
-            "IsSoftDeleted": "accountEnabled",
-            "facsimileTelephoneNumber": "faxNumber",
-            "mobile": "mobilePhone",
-            "objectId": "id",
-            "physicalDeliveryOfficeName": "officeLocation",
-            "telephoneNumber": "businessPhones"
-        }
-    },
-    "defaultGroupProperties": {
-        "metadata": {
-            "description": "Default group properties for Microsoft Graph Group creation"
-        },
-        "type": "Object",
-        "value": {
-            "allowExternalSenders": false,
-            "autoSubscribeNewMembers": false,
-            "classification": "",
-            "description": "Default test group for provisioning validation",
-            "groupTypes": [],
-            "hideFromAddressLists": false,
-            "hideFromOutlookClients": false,
-            "isAssignableToRole": false,
-            "isSubscribedByMail": false,
-            "mailEnabled": false,
-            "preferredDataLocation": "US",
-            "preferredLanguage": "en-US",
-            "securityEnabled": true,
-            "theme": "Blue",
-            "visibility": "Private"
-        }
-    },
-    "defaultUserProperties": {
-        "metadata": {
-            "description": "Combined default user properties for Microsoft Graph User creation"
-        },
-        "type": "Array",
-        "value": [
-            {
-                "businessPhones": [
-                    "+1-555-0100"
-                ],
-                "city": "Seattle",
-                "companyName": "Test Company",
-                "country": "US",
-                "department": "Research",
-                "displayName": "User1",
-                "employeeId": "E12345",
-                "employeeOrgData": {
-                    "costCenter": "12345",
-                    "division": "Engineering"
-                },
-                "employeeType": "Employee",
-                "faxNumber": "+1-555-0102",
-                "givenName": "User1 Given",
-                "hireDate": "2023-01-01T00:00:00Z",
-                "jobTitle": "Software Engineer",
-                "mailNickname": "testuser1",
-                "mobilePhone": "+1-555-0101",
-                "officeLocation": "Building A, Floor 3",
-                "otherMails": [
-                    "testuser1@example.com"
-                ],
-                "passwordProfile": {
-                    "forceChangePasswordNextSignIn": true,
-                    "password": "Pass@word123"
-                },
-                "postalCode": "98101",
-                "preferredLanguage": "en-US",
-                "state": "WA",
-                "streetAddress": "123 Test Street",
-                "surname": "User",
-                "usageLocation": "US",
-                "userType": "Member"
-            },
-            {
-                "businessPhones": [
-                    "+1-555-2001"
-                ],
-                "city": "Sanjose",
-                "companyName": "Test Company",
-                "country": "US",
-                "department": "Legal",
-                "displayName": "User2",
-                "employeeId": "E12345",
-                "employeeOrgData": {
-                    "costCenter": "12345",
-                    "division": "Legal"
-                },
-                "employeeType": "Employee",
-                "faxNumber": "+1-555-0102",
-                "givenName": "User2 Given",
-                "hireDate": "2023-01-01T00:00:00Z",
-                "jobTitle": "Software Dev Engineer",
-                "mailNickname": "testuser2",
-                "mobilePhone": "+1-555-0120",
-                "officeLocation": "Building A, Floor 3",
-                "otherMails": [
-                    "testUser2@example.com"
-                ],
-                "passwordProfile": {
-                    "forceChangePasswordNextSignIn": true,
-                    "password": "Pass@word123"
-                },
-                "postalCode": "98101",
-                "preferredLanguage": "en-US",
-                "state": "CA",
-                "streetAddress": "240 East 24th Ave",
-                "surname": "User",
-                "usageLocation": "US",
-                "userType": "Member"
-            },
-            {
-                "businessPhones": [
-                    "+1-555-2001"
-                ],
-                "city": "Delhi",
-                "companyName": "Test Company",
-                "country": "IN",
-                "department": "HumanResources",
-                "displayName": "User3",
-                "employeeId": "E12345",
-                "employeeOrgData": {
-                    "costCenter": "67463",
-                    "division": "Research"
-                },
-                "employeeType": "Employee",
-                "faxNumber": "+1-555-0102",
-                "givenName": "User3 Given",
-                "hireDate": "2023-01-01T00:00:00Z",
-                "jobTitle": "Research Scientist",
-                "mailNickname": "testuser3",
-                "mobilePhone": "+1-555-0120",
-                "officeLocation": "Building A, Floor 3",
-                "otherMails": [
-                    "testUser3@example.com"
-                ],
-                "passwordProfile": {
-                    "forceChangePasswordNextSignIn": true,
-                    "password": "Pass@word123"
-                },
-                "postalCode": "98101",
-                "preferredLanguage": "en-US",
-                "state": "DL",
-                "streetAddress": "240 East 24th Ave",
-                "surname": "User",
-                "usageLocation": "IN",
-                "userType": "Member"
-            }
-        ]
-    },
-    "scimBearerToken": {
-        "metadata": {
-            "description": "Bearer token for SCIM API authentication"
-        },
-        "type": "String",
-        "value": "changeme-scim"
-    },
-    "scimClientId": {
-        "metadata": {
-            "description": "OAuth2 Client ID for SCIM API authentication (used with OAuth2ClientCredentialsGrant)"
-        },
-        "type": "String",
-        "value": "scimserver-client"
-    },
-    "scimClientSecret": {
-        "metadata": {
-            "description": "OAuth2 Client Secret for SCIM API authentication (used with OAuth2ClientCredentialsGrant)"
-        },
-        "type": "String",
-        "value": "changeme-oauth"
-    },
-    "scimContentType": {
-        "metadata": {
-            "description": "Content-Type header for SCIM API calls"
-        },
-        "type": "String",
-        "value": "application/scim+json"
-    },
-    "scimEndpoint": {
-        "type": "String",
-        "value": "https://scimserver2.yellowsmoke-af7a3fff.eastus.azurecontainerapps.io/scim/endpoints/f4c95b63-db4c-4f0a-91b0-78fdf88007be"
-    },
-    "scimOAuthScope": {
-        "metadata": {
-            "description": "OAuth2 scope for token acquisition (optional)"
-        },
-        "type": "String",
-        "value": ""
-    },
-    "scimTokenEndpoint": {
-        "metadata": {
-            "description": "OAuth2 Token Exchange URI for acquiring bearer token via client credentials grant"
-        },
-        "type": "String",
-        "value": "https://scimserver2.yellowsmoke-af7a3fff.eastus.azurecontainerapps.io/scim/oauth/token"
-    },
-    "servicePrincipalId": {
-        "type": "String",
-        "value": "3197053d-46d9-4a22-b843-6a9d98ec267e"
-    },
-    "testUserDomain": {
-        "type": "String",
-        "value": "proviamtest07.onmicrosoft.com"
+    "type": "Object",
+    "value": {
+      "IsSoftDeleted": "accountEnabled",
+      "facsimileTelephoneNumber": "faxNumber",
+      "mobile": "mobilePhone",
+      "objectId": "id",
+      "physicalDeliveryOfficeName": "officeLocation",
+      "telephoneNumber": "businessPhones"
     }
+  },
+  "defaultGroupProperties": {
+    "metadata": {
+      "description": "Default group properties for Microsoft Graph Group creation"
+    },
+    "type": "Object",
+    "value": {
+      "allowExternalSenders": false,
+      "autoSubscribeNewMembers": false,
+      "classification": "",
+      "description": "Default test group for provisioning validation",
+      "groupTypes": [],
+      "hideFromAddressLists": false,
+      "hideFromOutlookClients": false,
+      "isAssignableToRole": false,
+      "isSubscribedByMail": false,
+      "mailEnabled": false,
+      "preferredDataLocation": "US",
+      "preferredLanguage": "en-US",
+      "securityEnabled": true,
+      "theme": "Blue",
+      "visibility": "Private"
+    }
+  },
+  "defaultUserProperties": {
+    "metadata": {
+      "description": "Combined default user properties for Microsoft Graph User creation"
+    },
+    "type": "Array",
+    "value": [
+      {
+        "businessPhones": [
+          "+1-555-0100"
+        ],
+        "city": "Seattle",
+        "companyName": "Test Company",
+        "country": "US",
+        "department": "Research",
+        "displayName": "User1",
+        "employeeId": "E12345",
+        "employeeOrgData": {
+          "costCenter": "12345",
+          "division": "Engineering"
+        },
+        "employeeType": "Employee",
+        "faxNumber": "+1-555-0102",
+        "givenName": "User1 Given",
+        "hireDate": "2023-01-01T00:00:00Z",
+        "jobTitle": "Software Engineer",
+        "mailNickname": "testuser1",
+        "mobilePhone": "+1-555-0101",
+        "officeLocation": "Building A, Floor 3",
+        "otherMails": [
+          "testuser1@example.com"
+        ],
+        "passwordProfile": {
+          "forceChangePasswordNextSignIn": true,
+          "password": "Pass@word123"
+        },
+        "postalCode": "98101",
+        "preferredLanguage": "en-US",
+        "state": "WA",
+        "streetAddress": "123 Test Street",
+        "surname": "User",
+        "usageLocation": "US",
+        "userType": "Member"
+      },
+      {
+        "businessPhones": [
+          "+1-555-2001"
+        ],
+        "city": "Sanjose",
+        "companyName": "Test Company",
+        "country": "US",
+        "department": "Legal",
+        "displayName": "User2",
+        "employeeId": "E12345",
+        "employeeOrgData": {
+          "costCenter": "12345",
+          "division": "Legal"
+        },
+        "employeeType": "Employee",
+        "faxNumber": "+1-555-0102",
+        "givenName": "User2 Given",
+        "hireDate": "2023-01-01T00:00:00Z",
+        "jobTitle": "Software Dev Engineer",
+        "mailNickname": "testuser2",
+        "mobilePhone": "+1-555-0120",
+        "officeLocation": "Building A, Floor 3",
+        "otherMails": [
+          "testUser2@example.com"
+        ],
+        "passwordProfile": {
+          "forceChangePasswordNextSignIn": true,
+          "password": "Pass@word123"
+        },
+        "postalCode": "98101",
+        "preferredLanguage": "en-US",
+        "state": "CA",
+        "streetAddress": "240 East 24th Ave",
+        "surname": "User",
+        "usageLocation": "US",
+        "userType": "Member"
+      },
+      {
+        "businessPhones": [
+          "+1-555-2001"
+        ],
+        "city": "Delhi",
+        "companyName": "Test Company",
+        "country": "IN",
+        "department": "HumanResources",
+        "displayName": "User3",
+        "employeeId": "E12345",
+        "employeeOrgData": {
+          "costCenter": "67463",
+          "division": "Research"
+        },
+        "employeeType": "Employee",
+        "faxNumber": "+1-555-0102",
+        "givenName": "User3 Given",
+        "hireDate": "2023-01-01T00:00:00Z",
+        "jobTitle": "Research Scientist",
+        "mailNickname": "testuser3",
+        "mobilePhone": "+1-555-0120",
+        "officeLocation": "Building A, Floor 3",
+        "otherMails": [
+          "testUser3@example.com"
+        ],
+        "passwordProfile": {
+          "forceChangePasswordNextSignIn": true,
+          "password": "Pass@word123"
+        },
+        "postalCode": "98101",
+        "preferredLanguage": "en-US",
+        "state": "DL",
+        "streetAddress": "240 East 24th Ave",
+        "surname": "User",
+        "usageLocation": "IN",
+        "userType": "Member"
+      }
+    ]
+  },
+  "scimBearerToken": {
+    "metadata": {
+      "description": "Bearer token for SCIM API authentication"
+    },
+    "type": "String",
+    "value": "changeme-scim"
+  },
+  "scimClientId": {
+    "metadata": {
+      "description": "OAuth2 Client ID for SCIM API authentication (used with OAuth2ClientCredentialsGrant)"
+    },
+    "type": "String",
+    "value": "scimserver-client"
+  },
+  "scimClientSecret": {
+    "metadata": {
+      "description": "OAuth2 Client Secret for SCIM API authentication (used with OAuth2ClientCredentialsGrant)"
+    },
+    "type": "String",
+    "value": "changeme-oauth"
+  },
+  "scimContentType": {
+    "metadata": {
+      "description": "Content-Type header for SCIM API calls"
+    },
+    "type": "String",
+    "value": "application/scim+json"
+  },
+  "scimEndpoint": {
+    "type": "String",
+    "value": "https://scimserver2.yellowsmoke-af7a3fff.eastus.azurecontainerapps.io/scim/endpoints/f4c95b63-db4c-4f0a-91b0-78fdf88007be"
+  },
+  "scimOAuthScope": {
+    "metadata": {
+      "description": "OAuth2 scope for token acquisition (optional)"
+    },
+    "type": "String",
+    "value": ""
+  },
+  "scimTokenEndpoint": {
+    "metadata": {
+      "description": "OAuth2 Token Exchange URI for acquiring bearer token via client credentials grant"
+    },
+    "type": "String",
+    "value": "https://scimserver2.yellowsmoke-af7a3fff.eastus.azurecontainerapps.io/scim/oauth/token"
+  },
+  "servicePrincipalId": {
+    "type": "String",
+    "value": "3197053d-46d9-4a22-b843-6a9d98ec267e"
+  },
+  "testUserDomain": {
+    "type": "String",
+    "value": "proviamtest07.onmicrosoft.com"
+  },
+  "scimTargetUserValues": {
+    "type": "Array",
+    "value": [
+      {
+        "title": "Test Engineer",
+        "nickName": "testuser",
+        "name.givenName": "TestFirst",
+        "name.familyName": "TestLast",
+        "name.formatted": "TestFirst TestLast",
+        "displayName": "SCIM Test User",
+        "locale": "en-US",
+        "preferredLanguage": "en-US",
+        "timezone": "America/Los_Angeles",
+        "userType": "Employee",
+        "addresses[type eq \"work\"].streetAddress": "1 Microsoft Way",
+        "addresses[type eq \"work\"].locality": "Redmond",
+        "addresses[type eq \"work\"].region": "WA",
+        "addresses[type eq \"work\"].postalCode": "98052",
+        "addresses[type eq \"work\"].country": "US"
+      },
+      {
+        "title": "Senior Engineer",
+        "nickName": "updateduser",
+        "name.givenName": "UpdatedFirst",
+        "name.familyName": "UpdatedLast",
+        "name.formatted": "UpdatedFirst UpdatedLast",
+        "displayName": "Updated SCIM User",
+        "locale": "en-GB",
+        "preferredLanguage": "en-GB",
+        "timezone": "Europe/London",
+        "userType": "Contractor",
+        "addresses[type eq \"work\"].streetAddress": "456 Update Ave",
+        "addresses[type eq \"work\"].locality": "London",
+        "addresses[type eq \"work\"].region": "England",
+        "addresses[type eq \"work\"].postalCode": "EC1A 1BB",
+        "addresses[type eq \"work\"].country": "GB"
+      }
+    ]
+  }
 }

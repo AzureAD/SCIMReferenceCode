@@ -63,6 +63,11 @@
                                 "proxyAddresses",
                                 "imAddresses"
                             ]
+                        },
+                        {
+                            "name": "scimDirectUserCreateBody",
+                            "type": "Object",
+                            "value": {}
                         }
                     ]
                 }
@@ -123,16 +128,35 @@
                             }
                         }
                     },
-                    "Compose_Job_Settings_And_Templates": {
+                    "Get_Connectivity_Parameters": {
                         "runAfter": {
                             "Get_Schema": [
-                                "Succeeded"
+                                "Succeeded",
+                                "Failed"
+                            ]
+                        },
+                        "type": "Http",
+                        "inputs": {
+                            "uri": "https://graph.microsoft.com/beta/servicePrincipals/@{parameters('servicePrincipalId')}/synchronization/connectivityParameters",
+                            "method": "GET",
+                            "authentication": {
+                                "type": "ManagedServiceIdentity",
+                                "audience": "https://graph.microsoft.com/"
+                            }
+                        }
+                    },
+                    "Compose_Job_Settings_And_Templates": {
+                        "runAfter": {
+                            "Get_Connectivity_Parameters": [
+                                "Succeeded",
+                                "Failed"
                             ]
                         },
                         "type": "Compose",
                         "inputs": {
                             "jobSettings": "@body('Get_Job_Details')",
-                            "schema": "@body('Get_Schema')"
+                            "schema": "@body('Get_Schema')",
+                            "connectivityParameters": "@coalesce(body('Get_Connectivity_Parameters'), null)"
                         }
                     },
                     "Get_App_Roles": {
@@ -185,7 +209,14 @@
                                     "disableUserNickname": "@{concat('ladis', substring(guid(),0,8))}",
                                     "managerUserNickname": "@{concat('lamgr', substring(guid(),0,8))}",
                                     "managerUserNewNickname": "@{concat('lamgrnew', substring(guid(),0,8))}",
-                                    "managerUserInitialNickname": "@{concat('lamgrinit', substring(guid(),0,8))}"
+                                    "managerUserInitialNickname": "@{concat('lamgrinit', substring(guid(),0,8))}",
+                                    "restoreUser": "@{concat('larestore', substring(guid(),0,8), '@', parameters('testUserDomain'))}",
+                                    "restoreUserMail": "@{concat('larestore', substring(guid(),0,8), '@', parameters('testUserDomain'))}",
+                                    "restoreUserNickname": "@{concat('larestore', substring(guid(),0,8))}",
+                                    "memberUser1Mail": "@{concat('lamem1', substring(guid(),0,8), '@', parameters('testUserDomain'))}",
+                                    "memberUser2Mail": "@{concat('lamem2', substring(guid(),0,8), '@', parameters('testUserDomain'))}",
+                                    "scimDirectUser": "@{concat('lascuser', substring(guid(),0,8), '@', parameters('testUserDomain'))}",
+                                    "scimDirectUserNickname": "@{concat('lascuser', substring(guid(),0,8))}"
                                 }
                             },
                             "Generate_Test_GroupNames": {
@@ -203,7 +234,9 @@
                                     "createGroupNickname": "@{concat('LACreateGroup', substring(guid(),0,8))}",
                                     "updateGroupNickname": "@{concat('LAUpdateGroup', substring(guid(),0,8))}",
                                     "deleteGroupNickname": "@{concat('LADeleteGroup', substring(guid(),0,8))}",
-                                    "memberGroupNickname": "@{concat('LAMemberGroup', substring(guid(),0,8))}"
+                                    "memberGroupNickname": "@{concat('LAMemberGroup', substring(guid(),0,8))}",
+                                    "scimDirectGroup": "@{concat('LASCDirectGroup-', substring(guid(),0,8))}",
+                                    "scimDirectGroupNickname": "@{concat('LASCDirectGroup', substring(guid(),0,8))}"
                                 }
                             }
                         },
@@ -329,8 +362,38 @@
                         "type": "Query",
                         "inputs": {
                             "from": "@coalesce(first(body('Extract_Target_Directory'))?['objects'], json('[]'))",
-                            "where": "@equals(item()?['name'], 'urn:ietf:params:scim:schemas:core:2.0:Group')"
+                            "where": "@contains(toLower(item()?['name']), 'group')"
                         }
+                    },
+                    "Filter_Target_User_Object": {
+                        "runAfter": {
+                            "Extract_Target_Directory": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Query",
+                        "inputs": {
+                            "from": "@coalesce(first(body('Extract_Target_Directory'))?['objects'], json('[]'))",
+                            "where": "@or(or(equals(item()?['name'], 'User'), equals(item()?['name'], 'urn:ietf:params:scim:schemas:core:2.0:User')), equals(item()?['name'], 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User'))"
+                        }
+                    },
+                    "Compose_Target_User_Attributes": {
+                        "runAfter": {
+                            "Filter_Target_User_Object": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Compose",
+                        "inputs": "@coalesce(first(body('Filter_Target_User_Object'))?['attributes'], json('[]'))"
+                    },
+                    "Compose_Target_Group_Attributes": {
+                        "runAfter": {
+                            "Filter_Target_Group_Object": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Compose",
+                        "inputs": "@coalesce(first(body('Filter_Target_Group_Object'))?['attributes'], json('[]'))"
                     },
                     "Select_Target_Group_Attribute_Names": {
                         "runAfter": {
@@ -499,9 +562,24 @@
                                             "select": "@item()?['value']?['name']"
                                         }
                                     },
+                                    "Filter_Target_Attribute_For_Lookup": {
+                                        "runAfter": {
+                                            "Select_Source_Attribute_Names": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "Query",
+                                        "inputs": {
+                                            "from": "@outputs('Compose_Target_User_Attributes')",
+                                            "where": "@equals(item()?['name'], items('ForEach_AttributeMappings')?['targetAttributeName'])"
+                                        }
+                                    },
                                     "Compose_SourceToTargetLookup_Entry": {
                                         "runAfter": {
                                             "Select_Source_Attribute_Names": [
+                                                "Succeeded"
+                                            ],
+                                            "Filter_Target_Attribute_For_Lookup": [
                                                 "Succeeded"
                                             ]
                                         },
@@ -511,7 +589,10 @@
                                             "target": "@items('ForEach_AttributeMappings')?['targetAttributeName']",
                                             "type": "@coalesce(items('ForEach_AttributeMappings')?['source']?['type'], 'Unknown')",
                                             "matchingPrecedence": "@coalesce(items('ForEach_AttributeMappings')?['matchingPrecedence'], 0)",
-                                            "flowType": "@coalesce(items('ForEach_AttributeMappings')?['flowType'], 'Always')"
+                                            "flowType": "@coalesce(items('ForEach_AttributeMappings')?['flowType'], 'Always')",
+                                            "function": "@if(equals(coalesce(items('ForEach_AttributeMappings')?['source']?['type'], ''), 'Function'), coalesce(items('ForEach_AttributeMappings')?['source']?['name'], ''), '')",
+                                            "functionParameters": "@if(equals(coalesce(items('ForEach_AttributeMappings')?['source']?['type'], ''), 'Function'), coalesce(items('ForEach_AttributeMappings')?['source']?['parameters'], json('[]')), json('[]'))",
+                                            "targetSchema": "@if(greater(length(body('Filter_Target_Attribute_For_Lookup')), 0), first(body('Filter_Target_Attribute_For_Lookup')), json('{}'))"
                                         }
                                     },
                                     "Condition_Source_Not_Exists": {
@@ -527,7 +608,7 @@
                                                     "not": {
                                                         "contains": [
                                                             "@string(variables('sourceToTargetLookup'))",
-                                                            "@concat('\"source\":\"', outputs('Compose_SourceToTargetLookup_Entry')?['source'], '\"')"
+                                                            "@concat('\"source\":\"', outputs('Compose_SourceToTargetLookup_Entry')?['source'], '\",\"target\":\"', outputs('Compose_SourceToTargetLookup_Entry')?['target'], '\"')"
                                                         ]
                                                     }
                                                 }
@@ -576,6 +657,9 @@
                         "runAfter": {
                             "Filter_User_ObjectMapping": [
                                 "Succeeded"
+                            ],
+                            "Compose_Target_User_Attributes": [
+                                "Succeeded"
                             ]
                         },
                         "type": "Foreach",
@@ -600,10 +684,61 @@
                     "For_Each_Build_UserBody": {
                         "foreach": "@body('Select_Graph_Property_Names')",
                         "actions": {
-                            "Compose_New_UserBody": {
+                            "Filter_Lookup_For_Source": {
                                 "runAfter": {},
+                                "type": "Query",
+                                "inputs": {
+                                    "from": "@variables('sourceToTargetLookup')",
+                                    "where": "@equals(item()?['source'], items('For_Each_Build_UserBody'))"
+                                }
+                            },
+                            "Filter_Lookup_For_Source_Direct": {
+                                "runAfter": {
+                                    "Filter_Lookup_For_Source": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "Query",
+                                "inputs": {
+                                    "from": "@body('Filter_Lookup_For_Source')",
+                                    "where": "@empty(coalesce(item()?['function'], ''))"
+                                }
+                            },
+                            "Compose_Preferred_Lookup_Row": {
+                                "runAfter": {
+                                    "Filter_Lookup_For_Source_Direct": [
+                                        "Succeeded"
+                                    ]
+                                },
                                 "type": "Compose",
-                                "inputs": "@if(contains(variables('ExcludedList'), items('For_Each_Build_UserBody')), variables('userBody'), if(and(contains(items('For_Each_Build_UserBody'), '.'), contains(body('Select_Complex_Attribute_Names'), first(split(items('For_Each_Build_UserBody'), '.')))), setProperty(variables('userBody'), first(split(items('For_Each_Build_UserBody'), '.')), setProperty(coalesce(if(contains(variables('userBody'), first(split(items('For_Each_Build_UserBody'), '.'))), variables('userBody')[first(split(items('For_Each_Build_UserBody'), '.'))], null), json('{}')), last(split(items('For_Each_Build_UserBody'), '.')), coalesce(if(contains(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']], first(split(items('For_Each_Build_UserBody'), '.'))), if(not(equals(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][first(split(items('For_Each_Build_UserBody'), '.'))], null)), if(contains(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][first(split(items('For_Each_Build_UserBody'), '.'))], last(split(items('For_Each_Build_UserBody'), '.'))), if(not(empty(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][first(split(items('For_Each_Build_UserBody'), '.'))][last(split(items('For_Each_Build_UserBody'), '.'))])), parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][first(split(items('For_Each_Build_UserBody'), '.'))][last(split(items('For_Each_Build_UserBody'), '.'))], null), null), null), null), concat('Test', substring(guid(),0,6))))), if(contains(body('Select_Primitive_Attribute_Names'), items('For_Each_Build_UserBody')), if(contains(outputs('Compose_Dynamic_ArrayProperties'), items('For_Each_Build_UserBody')), setProperty(variables('userBody'), items('For_Each_Build_UserBody'), if(and(contains(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']], items('For_Each_Build_UserBody')), greater(length(coalesce(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][items('For_Each_Build_UserBody')], json('[]'))), 0)), parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][items('For_Each_Build_UserBody')], createArray(concat('Test', substring(guid(),0,6))))), setProperty(variables('userBody'), items('For_Each_Build_UserBody'), coalesce(if(contains(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']], items('For_Each_Build_UserBody')), if(not(empty(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][items('For_Each_Build_UserBody')])), parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][items('For_Each_Build_UserBody')], null), null), concat('Test', substring(guid(),0,6))))), variables('userBody'))))"
+                                "inputs": "@if(greater(length(body('Filter_Lookup_For_Source_Direct')), 0), first(body('Filter_Lookup_For_Source_Direct')), if(greater(length(body('Filter_Lookup_For_Source')), 0), first(body('Filter_Lookup_For_Source')), json('{}')))"
+                            },
+                            "Compose_Default_Value_Per_Source": {
+                                "runAfter": {
+                                    "Compose_Preferred_Lookup_Row": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "Compose",
+                                "inputs": "@if(greater(length(body('Filter_Lookup_For_Source')), 0), if(equals(coalesce(outputs('Compose_Preferred_Lookup_Row')?['function'], ''), 'Not'), true, if(equals(coalesce(outputs('Compose_Preferred_Lookup_Row')?['function'], ''), 'SingleAppRoleAssignment'), coalesce(first(body('Filter_User_AppRole'))?['id'], concat('Test', substring(guid(),0,6))), if(equals(coalesce(outputs('Compose_Preferred_Lookup_Row')?['function'], ''), 'AppRoleAssignmentsComplex'), createArray(json(concat('{\"value\":\"', coalesce(first(body('Filter_User_AppRole'))?['id'], ''), '\",\"display\":\"', coalesce(first(body('Filter_User_AppRole'))?['displayName'], 'User'), '\",\"type\":\"User\"}'))), if(greater(length(coalesce(outputs('Compose_Preferred_Lookup_Row')?['targetSchema']?['canonicalValues'], json('[]'))), 0), first(coalesce(outputs('Compose_Preferred_Lookup_Row')?['targetSchema']?['canonicalValues'], json('[]'))), if(equals(toLower(coalesce(outputs('Compose_Preferred_Lookup_Row')?['targetSchema']?['type'], '')), 'boolean'), true, if(equals(toLower(coalesce(outputs('Compose_Preferred_Lookup_Row')?['targetSchema']?['type'], '')), 'datetime'), utcNow(), if(equals(toLower(coalesce(outputs('Compose_Preferred_Lookup_Row')?['targetSchema']?['type'], '')), 'integer'), 1, concat('Test', substring(guid(),0,6))))))))), concat('Test', substring(guid(),0,6)))"
+                            },
+                            "Compose_Default_Value_Per_Source_Update": {
+                                "runAfter": {
+                                    "Compose_Preferred_Lookup_Row": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "Compose",
+                                "inputs": "@if(greater(length(body('Filter_Lookup_For_Source')), 0), if(equals(coalesce(outputs('Compose_Preferred_Lookup_Row')?['function'], ''), 'Not'), true, if(equals(coalesce(outputs('Compose_Preferred_Lookup_Row')?['function'], ''), 'SingleAppRoleAssignment'), coalesce(first(body('Filter_User_AppRole'))?['id'], concat('Updated', substring(guid(),0,6))), if(equals(coalesce(outputs('Compose_Preferred_Lookup_Row')?['function'], ''), 'AppRoleAssignmentsComplex'), createArray(json(concat('{\"value\":\"', coalesce(first(body('Filter_User_AppRole'))?['id'], ''), '\",\"display\":\"', coalesce(first(body('Filter_User_AppRole'))?['displayName'], 'User'), '\",\"type\":\"User\"}'))), if(greater(length(coalesce(outputs('Compose_Preferred_Lookup_Row')?['targetSchema']?['canonicalValues'], json('[]'))), 0), first(coalesce(outputs('Compose_Preferred_Lookup_Row')?['targetSchema']?['canonicalValues'], json('[]'))), if(equals(toLower(coalesce(outputs('Compose_Preferred_Lookup_Row')?['targetSchema']?['type'], '')), 'boolean'), true, if(equals(toLower(coalesce(outputs('Compose_Preferred_Lookup_Row')?['targetSchema']?['type'], '')), 'datetime'), utcNow(), if(equals(toLower(coalesce(outputs('Compose_Preferred_Lookup_Row')?['targetSchema']?['type'], '')), 'integer'), 1, concat('Updated', substring(guid(),0,6))))))))), concat('Updated', substring(guid(),0,6)))"
+                            },
+                            "Compose_New_UserBody": {
+                                "runAfter": {
+                                    "Compose_Default_Value_Per_Source": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "Compose",
+                                "inputs": "@if(contains(variables('ExcludedList'), items('For_Each_Build_UserBody')), variables('userBody'), if(and(contains(items('For_Each_Build_UserBody'), '.'), contains(body('Select_Complex_Attribute_Names'), first(split(items('For_Each_Build_UserBody'), '.')))), setProperty(variables('userBody'), first(split(items('For_Each_Build_UserBody'), '.')), setProperty(coalesce(if(contains(variables('userBody'), first(split(items('For_Each_Build_UserBody'), '.'))), variables('userBody')[first(split(items('For_Each_Build_UserBody'), '.'))], null), json('{}')), last(split(items('For_Each_Build_UserBody'), '.')), coalesce(if(contains(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']], first(split(items('For_Each_Build_UserBody'), '.'))), if(not(equals(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][first(split(items('For_Each_Build_UserBody'), '.'))], null)), if(contains(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][first(split(items('For_Each_Build_UserBody'), '.'))], last(split(items('For_Each_Build_UserBody'), '.'))), if(not(empty(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][first(split(items('For_Each_Build_UserBody'), '.'))][last(split(items('For_Each_Build_UserBody'), '.'))])), parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][first(split(items('For_Each_Build_UserBody'), '.'))][last(split(items('For_Each_Build_UserBody'), '.'))], null), null), null), null), outputs('Compose_Default_Value_Per_Source')))), if(contains(body('Select_Primitive_Attribute_Names'), items('For_Each_Build_UserBody')), if(contains(outputs('Compose_Dynamic_ArrayProperties'), items('For_Each_Build_UserBody')), setProperty(variables('userBody'), items('For_Each_Build_UserBody'), if(and(contains(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']], items('For_Each_Build_UserBody')), greater(length(coalesce(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][items('For_Each_Build_UserBody')], json('[]'))), 0)), parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][items('For_Each_Build_UserBody')], createArray(outputs('Compose_Default_Value_Per_Source')))), setProperty(variables('userBody'), items('For_Each_Build_UserBody'), coalesce(if(contains(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']], items('For_Each_Build_UserBody')), if(not(empty(parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][items('For_Each_Build_UserBody')])), parameters('defaultUserProperties')[outputs('Generate_Test_UserNames')['index']][items('For_Each_Build_UserBody')], null), null), outputs('Compose_Default_Value_Per_Source')))), variables('userBody'))))"
                             },
                             "Set_userBody": {
                                 "runAfter": {
@@ -621,10 +756,13 @@
                                 "runAfter": {
                                     "Set_userBody": [
                                         "Succeeded"
+                                    ],
+                                    "Compose_Default_Value_Per_Source_Update": [
+                                        "Succeeded"
                                     ]
                                 },
                                 "type": "Compose",
-                                "inputs": "@if(or(contains(variables('ExcludedList'), items('For_Each_Build_UserBody')), contains(body('Select_ObjectAddOnly_SourceNames'), items('For_Each_Build_UserBody'))), variables('updateUserBody'), if(and(contains(items('For_Each_Build_UserBody'), '.'), contains(body('Select_Complex_Attribute_Names'), first(split(items('For_Each_Build_UserBody'), '.')))), setProperty(variables('updateUserBody'), first(split(items('For_Each_Build_UserBody'), '.')), setProperty(coalesce(if(contains(variables('updateUserBody'), first(split(items('For_Each_Build_UserBody'), '.'))), variables('updateUserBody')[first(split(items('For_Each_Build_UserBody'), '.'))], null), json('{}')), last(split(items('For_Each_Build_UserBody'), '.')), coalesce(if(contains(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))], first(split(items('For_Each_Build_UserBody'), '.'))), if(not(equals(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][first(split(items('For_Each_Build_UserBody'), '.'))], null)), if(contains(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][first(split(items('For_Each_Build_UserBody'), '.'))], last(split(items('For_Each_Build_UserBody'), '.'))), if(not(empty(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][first(split(items('For_Each_Build_UserBody'), '.'))][last(split(items('For_Each_Build_UserBody'), '.'))])), parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][first(split(items('For_Each_Build_UserBody'), '.'))][last(split(items('For_Each_Build_UserBody'), '.'))], null), null), null), null), concat('Updated', substring(guid(),0,6))))), if(contains(body('Select_Primitive_Attribute_Names'), items('For_Each_Build_UserBody')), if(contains(outputs('Compose_Dynamic_ArrayProperties'), items('For_Each_Build_UserBody')), setProperty(variables('updateUserBody'), items('For_Each_Build_UserBody'), if(and(contains(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))], items('For_Each_Build_UserBody')), greater(length(coalesce(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][items('For_Each_Build_UserBody')], json('[]'))), 0)), parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][items('For_Each_Build_UserBody')], createArray(concat('Updated', substring(guid(),0,6))))), setProperty(variables('updateUserBody'), items('For_Each_Build_UserBody'), coalesce(if(contains(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))], items('For_Each_Build_UserBody')), if(not(empty(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][items('For_Each_Build_UserBody')])), parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][items('For_Each_Build_UserBody')], null), null), concat('Updated', substring(guid(),0,6))))), variables('updateUserBody'))))"
+                                "inputs": "@if(or(contains(variables('ExcludedList'), items('For_Each_Build_UserBody')), contains(body('Select_ObjectAddOnly_SourceNames'), items('For_Each_Build_UserBody'))), variables('updateUserBody'), if(and(contains(items('For_Each_Build_UserBody'), '.'), contains(body('Select_Complex_Attribute_Names'), first(split(items('For_Each_Build_UserBody'), '.')))), setProperty(variables('updateUserBody'), first(split(items('For_Each_Build_UserBody'), '.')), setProperty(coalesce(if(contains(variables('updateUserBody'), first(split(items('For_Each_Build_UserBody'), '.'))), variables('updateUserBody')[first(split(items('For_Each_Build_UserBody'), '.'))], null), json('{}')), last(split(items('For_Each_Build_UserBody'), '.')), coalesce(if(contains(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))], first(split(items('For_Each_Build_UserBody'), '.'))), if(not(equals(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][first(split(items('For_Each_Build_UserBody'), '.'))], null)), if(contains(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][first(split(items('For_Each_Build_UserBody'), '.'))], last(split(items('For_Each_Build_UserBody'), '.'))), if(not(empty(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][first(split(items('For_Each_Build_UserBody'), '.'))][last(split(items('For_Each_Build_UserBody'), '.'))])), parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][first(split(items('For_Each_Build_UserBody'), '.'))][last(split(items('For_Each_Build_UserBody'), '.'))], null), null), null), null), outputs('Compose_Default_Value_Per_Source_Update')))), if(contains(body('Select_Primitive_Attribute_Names'), items('For_Each_Build_UserBody')), if(contains(outputs('Compose_Dynamic_ArrayProperties'), items('For_Each_Build_UserBody')), setProperty(variables('updateUserBody'), items('For_Each_Build_UserBody'), if(and(contains(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))], items('For_Each_Build_UserBody')), greater(length(coalesce(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][items('For_Each_Build_UserBody')], json('[]'))), 0)), parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][items('For_Each_Build_UserBody')], createArray(outputs('Compose_Default_Value_Per_Source_Update')))), setProperty(variables('updateUserBody'), items('For_Each_Build_UserBody'), coalesce(if(contains(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))], items('For_Each_Build_UserBody')), if(not(empty(parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][items('For_Each_Build_UserBody')])), parameters('defaultUserProperties')[mod(add(outputs('Generate_Test_UserNames')['index'], 1), length(parameters('defaultUserProperties')))][items('For_Each_Build_UserBody')], null), null), outputs('Compose_Default_Value_Per_Source_Update')))), variables('updateUserBody'))))"
                             },
                             "Set_updateUserBody": {
                                 "runAfter": {
@@ -710,6 +848,15 @@
                         "type": "Compose",
                         "inputs": "@contains(string(body('Select_Target_Attribute_Names')), 'manager')"
                     },
+                    "Compose_IsSoftDeleteSupported": {
+                        "runAfter": {
+                            "Select_Target_Attribute_Names": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Compose",
+                        "inputs": "@contains(string(body('Select_Target_Attribute_Names')), 'active')"
+                    },
                     "Compose_IsUserDeleteSupported": {
                         "runAfter": {
                             "Filter_User_ObjectMapping": [
@@ -735,7 +882,7 @@
                             ]
                         },
                         "type": "Compose",
-                        "inputs": "@union(body('Select_ObjectAddOnly_SourceNames'), createArray('id', 'accountEnabled', 'manager'))"
+                        "inputs": "@union(body('Select_ObjectAddOnly_SourceNames'), createArray('id', 'accountEnabled', 'manager', 'appRoleAssignments'))"
                     },
                     "Filter_ObjectAddOnly_FromLookup": {
                         "runAfter": {
@@ -764,9 +911,247 @@
                 },
                 "type": "Scope"
             },
-            "Response_Initialization_Data": {
+            "Build_SCIM_User_Body": {
                 "runAfter": {
                     "Process_Template_Mappings": [
+                        "Succeeded"
+                    ]
+                },
+                "actions": {
+                    "Compose_SCIM_User_Extension_URNs": {
+                        "runAfter": {},
+                        "type": "Query",
+                        "inputs": {
+                            "from": "@outputs('Compose_Target_User_Attributes')",
+                            "where": "@startsWith(coalesce(item()?['name'], ''), 'urn:')"
+                        }
+                    },
+                    "Select_SCIM_User_Extension_Namespaces": {
+                        "runAfter": {
+                            "Compose_SCIM_User_Extension_URNs": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Select",
+                        "inputs": {
+                            "from": "@body('Compose_SCIM_User_Extension_URNs')",
+                            "select": "@join(take(split(item()?['name'], ':'), sub(length(split(item()?['name'], ':')), 1)), ':')"
+                        }
+                    },
+                    "Compose_SCIM_User_Schemas": {
+                        "runAfter": {
+                            "Select_SCIM_User_Extension_Namespaces": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Compose",
+                        "inputs": "@union(createArray('urn:ietf:params:scim:schemas:core:2.0:User'), union(body('Select_SCIM_User_Extension_Namespaces'), json('[]')))"
+                    },
+                    "Set_SCIM_Base_Body": {
+                        "runAfter": {
+                            "Compose_SCIM_User_Schemas": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "SetVariable",
+                        "inputs": {
+                            "name": "scimDirectUserCreateBody",
+                            "value": {
+                                "schemas": "@outputs('Compose_SCIM_User_Schemas')",
+                                "userName": "placeholder@test.com",
+                                "active": true
+                            }
+                        }
+                    },
+                    "ForEach_Build_SCIM_Body": {
+                        "foreach": "@outputs('Compose_Target_User_Attributes')",
+                        "actions": {
+                            "Filter_SCIM_Lookup_For_Target": {
+                                "type": "Query",
+                                "inputs": {
+                                    "from": "@variables('sourceToTargetLookup')",
+                                    "where": "@equals(coalesce(item()?['target'], ''), coalesce(items('ForEach_Build_SCIM_Body')?['name'], ''))"
+                                },
+                                "runAfter": {}
+                            },
+                            "Compose_SCIM_Lookup_Source_Value": {
+                                "runAfter": {
+                                    "Filter_SCIM_Lookup_For_Target": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "Compose",
+                                "inputs": "@if(empty(body('Filter_SCIM_Lookup_For_Target')), '', if(contains(coalesce(first(body('Filter_SCIM_Lookup_For_Target'))?['source'], ''), '.'), string(coalesce(variables('userBody')?[first(split(first(body('Filter_SCIM_Lookup_For_Target'))?['source'], '.'))]?[last(split(first(body('Filter_SCIM_Lookup_For_Target'))?['source'], '.'))], '')), if(equals(string(coalesce(variables('userBody')?[first(body('Filter_SCIM_Lookup_For_Target'))?['source']], '')), ''), '', if(startsWith(string(variables('userBody')?[first(body('Filter_SCIM_Lookup_For_Target'))?['source']]), '['), string(first(coalesce(variables('userBody')?[first(body('Filter_SCIM_Lookup_For_Target'))?['source']], json('[]')))), string(variables('userBody')?[first(body('Filter_SCIM_Lookup_For_Target'))?['source']])))))"
+                            },
+                            "Compose_TargetTestValue": {
+                                "runAfter": {
+                                    "Compose_SCIM_Lookup_Source_Value": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "Compose",
+                                "inputs": "@if(greater(length(coalesce(triggerBody()?['scimTargetUserValues'], json('[]'))), 0), if(contains(triggerBody()?['scimTargetUserValues'][mod(outputs('Generate_Test_UserNames')['index'], length(triggerBody()?['scimTargetUserValues']))], items('ForEach_Build_SCIM_Body')?['name']), string(triggerBody()?['scimTargetUserValues'][mod(outputs('Generate_Test_UserNames')['index'], length(triggerBody()?['scimTargetUserValues']))][items('ForEach_Build_SCIM_Body')?['name']]), ''), '')"
+                            },
+                            "Compose_SCIM_Source_Value": {
+                                "runAfter": {
+                                    "Compose_TargetTestValue": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "Compose",
+                                "inputs": "@if(equals(toLower(coalesce(items('ForEach_Build_SCIM_Body')?['type'], 'string')), 'boolean'), true, if(not(empty(outputs('Compose_TargetTestValue'))), outputs('Compose_TargetTestValue'), if(not(empty(outputs('Compose_SCIM_Lookup_Source_Value'))), outputs('Compose_SCIM_Lookup_Source_Value'), if(equals(items('ForEach_Build_SCIM_Body')?['name'], 'displayName'), 'SCIM Test User', if(contains(toLower(items('ForEach_Build_SCIM_Body')?['name']), 'emails['), concat('lasctest', substring(guid(),0,8), '@', coalesce(parameters('testUserDomain'), 'test.com')), if(contains(toLower(items('ForEach_Build_SCIM_Body')?['name']), 'phonenumbers['), concat('+1-555-', substring(replace(guid(),'-',''),0,4)), if(endsWith(toLower(items('ForEach_Build_SCIM_Body')?['name']), '.country'), 'US', if(endsWith(toLower(items('ForEach_Build_SCIM_Body')?['name']), '.postalcode'), substring(replace(guid(),'-',''),0,5), if(endsWith(toLower(items('ForEach_Build_SCIM_Body')?['name']), '.region'), 'WA', if(endsWith(toLower(items('ForEach_Build_SCIM_Body')?['name']), '.locality'), 'Redmond', if(endsWith(toLower(items('ForEach_Build_SCIM_Body')?['name']), '.streetaddress'), '1 Microsoft Way', if(endsWith(toLower(items('ForEach_Build_SCIM_Body')?['name']), '.formatted'), 'Test Test', if(endsWith(toLower(items('ForEach_Build_SCIM_Body')?['name']), '.givenname'), 'Test', if(endsWith(toLower(items('ForEach_Build_SCIM_Body')?['name']), '.familyname'), 'User', if(endsWith(toLower(items('ForEach_Build_SCIM_Body')?['name']), 'locale'), 'en-US', if(endsWith(toLower(items('ForEach_Build_SCIM_Body')?['name']), 'preferredlanguage'), 'en-US', if(endsWith(toLower(items('ForEach_Build_SCIM_Body')?['name']), 'timezone'), 'America/Los_Angeles', if(endsWith(toLower(items('ForEach_Build_SCIM_Body')?['name']), 'usertype'), 'Employee', if(endsWith(toLower(items('ForEach_Build_SCIM_Body')?['name']), 'title'), 'Test Engineer', if(endsWith(toLower(items('ForEach_Build_SCIM_Body')?['name']), 'nickname'), 'testuser', if(endsWith(toLower(items('ForEach_Build_SCIM_Body')?['name']), ':employeenumber'), substring(replace(guid(),'-',''),0,6), if(contains(toLower(items('ForEach_Build_SCIM_Body')?['name']), 'ims['), concat('imuser-', substring(guid(),0,6)), if(contains(toLower(items('ForEach_Build_SCIM_Body')?['name']), 'roles['), if(endsWith(toLower(items('ForEach_Build_SCIM_Body')?['name']), '.value'), 'TestRole', if(endsWith(toLower(items('ForEach_Build_SCIM_Body')?['name']), '.type'), 'primary', 'Test Role')), concat('Test-', last(split(last(split(last(split(items('ForEach_Build_SCIM_Body')?['name'], ':')), '.')), '[')), '-', substring(guid(), 0, 6)))))))))))))))))))))))))"
+                            },
+                            "Compose_SCIM_New_Body": {
+                                "runAfter": {
+                                    "Compose_SCIM_Source_Value": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "Compose",
+                                "inputs": "@if(or(or(or(or(equals(items('ForEach_Build_SCIM_Body')?['name'], 'id'), equals(toLower(coalesce(items('ForEach_Build_SCIM_Body')?['type'], 'string')), 'reference')), equals(items('ForEach_Build_SCIM_Body')?['name'], 'externalId')), or(equals(items('ForEach_Build_SCIM_Body')?['name'], 'userName'), equals(items('ForEach_Build_SCIM_Body')?['name'], 'active'))), equals(items('ForEach_Build_SCIM_Body')?['name'], 'roles')), variables('scimDirectUserCreateBody'), if(startsWith(items('ForEach_Build_SCIM_Body')?['name'], 'urn:'), union(variables('scimDirectUserCreateBody'), json(concat('{\"', join(take(split(items('ForEach_Build_SCIM_Body')?['name'], ':'), sub(length(split(items('ForEach_Build_SCIM_Body')?['name'], ':')), 1)), ':'), '\":', string(setProperty(coalesce(variables('scimDirectUserCreateBody')?[join(take(split(items('ForEach_Build_SCIM_Body')?['name'], ':'), sub(length(split(items('ForEach_Build_SCIM_Body')?['name'], ':')), 1)), ':')], json('{}')), last(split(items('ForEach_Build_SCIM_Body')?['name'], ':')), outputs('Compose_SCIM_Source_Value'))), '}'))), if(contains(items('ForEach_Build_SCIM_Body')?['name'], '['), setProperty(variables('scimDirectUserCreateBody'), first(split(items('ForEach_Build_SCIM_Body')?['name'], '[')), setProperty(coalesce(variables('scimDirectUserCreateBody')?[first(split(items('ForEach_Build_SCIM_Body')?['name'], '['))], json('{}')), first(skip(split(items('ForEach_Build_SCIM_Body')?['name'], '\"'), 1)), setProperty(coalesce(variables('scimDirectUserCreateBody')?[first(split(items('ForEach_Build_SCIM_Body')?['name'], '['))]?[first(skip(split(items('ForEach_Build_SCIM_Body')?['name'], '\"'), 1))], json(concat('{\"type\":\"', first(skip(split(items('ForEach_Build_SCIM_Body')?['name'], '\"'), 1)), '\",\"primary\":', if(not(contains(string(coalesce(variables('scimDirectUserCreateBody')?[first(split(items('ForEach_Build_SCIM_Body')?['name'], '['))], json('{}'))), '\"primary\":true')), 'true', 'false'), '}'))), last(split(items('ForEach_Build_SCIM_Body')?['name'], '.')), outputs('Compose_SCIM_Source_Value')))), if(contains(items('ForEach_Build_SCIM_Body')?['name'], '.'), setProperty(variables('scimDirectUserCreateBody'), first(split(items('ForEach_Build_SCIM_Body')?['name'], '.')), setProperty(coalesce(variables('scimDirectUserCreateBody')?[first(split(items('ForEach_Build_SCIM_Body')?['name'], '.'))], json('{}')), last(split(items('ForEach_Build_SCIM_Body')?['name'], '.')), outputs('Compose_SCIM_Source_Value'))), setProperty(variables('scimDirectUserCreateBody'), items('ForEach_Build_SCIM_Body')?['name'], outputs('Compose_SCIM_Source_Value'))))))"
+                            },
+                            "Set_SCIM_Body_Property": {
+                                "runAfter": {
+                                    "Compose_SCIM_New_Body": [
+                                        "Succeeded"
+                                    ]
+                                },
+                                "type": "SetVariable",
+                                "inputs": {
+                                    "name": "scimDirectUserCreateBody",
+                                    "value": "@outputs('Compose_SCIM_New_Body')"
+                                }
+                            }
+                        },
+                        "runAfter": {
+                            "Set_SCIM_Base_Body": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Foreach",
+                        "runtimeConfiguration": {
+                            "concurrency": {
+                                "repetitions": 1
+                            }
+                        }
+                    },
+                    "Filter_SCIM_MultiValue_Targets": {
+                        "type": "Query",
+                        "inputs": {
+                            "from": "@outputs('Compose_Target_User_Attributes')",
+                            "where": "@contains(coalesce(item()?['name'], ''), '[')"
+                        },
+                        "runAfter": {
+                            "ForEach_Build_SCIM_Body": [
+                                "Succeeded"
+                            ]
+                        }
+                    },
+                    "Select_SCIM_MultiValue_Parents": {
+                        "type": "Select",
+                        "inputs": {
+                            "from": "@body('Filter_SCIM_MultiValue_Targets')",
+                            "select": "@first(split(item()?['name'], '['))"
+                        },
+                        "runAfter": {
+                            "Filter_SCIM_MultiValue_Targets": [
+                                "Succeeded"
+                            ]
+                        }
+                    },
+                    "Compose_SCIM_Unique_Parents": {
+                        "type": "Compose",
+                        "inputs": "@union(body('Select_SCIM_MultiValue_Parents'), json('[]'))",
+                        "runAfter": {
+                            "Select_SCIM_MultiValue_Parents": [
+                                "Succeeded"
+                            ]
+                        }
+                    },
+                    "ForEach_SCIM_Convert_To_Arrays": {
+                        "type": "Foreach",
+                        "foreach": "@outputs('Compose_SCIM_Unique_Parents')",
+                        "actions": {
+                            "Filter_SCIM_Types_For_Parent": {
+                                "type": "Query",
+                                "inputs": {
+                                    "from": "@body('Filter_SCIM_MultiValue_Targets')",
+                                    "where": "@equals(first(split(item()?['name'], '[')), items('ForEach_SCIM_Convert_To_Arrays'))"
+                                },
+                                "runAfter": {}
+                            },
+                            "Select_SCIM_Type_Values": {
+                                "type": "Select",
+                                "inputs": {
+                                    "from": "@body('Filter_SCIM_Types_For_Parent')",
+                                    "select": "@first(skip(split(item()?['name'], '\"'), 1))"
+                                },
+                                "runAfter": {
+                                    "Filter_SCIM_Types_For_Parent": [
+                                        "Succeeded"
+                                    ]
+                                }
+                            },
+                            "Compose_SCIM_Unique_Types": {
+                                "type": "Compose",
+                                "inputs": "@union(body('Select_SCIM_Type_Values'), json('[]'))",
+                                "runAfter": {
+                                    "Select_SCIM_Type_Values": [
+                                        "Succeeded"
+                                    ]
+                                }
+                            },
+                            "Select_SCIM_Build_Array": {
+                                "type": "Select",
+                                "inputs": {
+                                    "from": "@outputs('Compose_SCIM_Unique_Types')",
+                                    "select": "@coalesce(variables('scimDirectUserCreateBody')?[items('ForEach_SCIM_Convert_To_Arrays')]?[item()], json('{}'))"
+                                },
+                                "runAfter": {
+                                    "Compose_SCIM_Unique_Types": [
+                                        "Succeeded"
+                                    ]
+                                }
+                            },
+                            "Compose_SCIM_Updated_Body": {
+                                "type": "Compose",
+                                "inputs": "@setProperty(variables('scimDirectUserCreateBody'), items('ForEach_SCIM_Convert_To_Arrays'), body('Select_SCIM_Build_Array'))",
+                                "runAfter": {
+                                    "Select_SCIM_Build_Array": [
+                                        "Succeeded"
+                                    ]
+                                }
+                            },
+                            "Set_SCIM_Body_Array_Property": {
+                                "type": "SetVariable",
+                                "inputs": {
+                                    "name": "scimDirectUserCreateBody",
+                                    "value": "@outputs('Compose_SCIM_Updated_Body')"
+                                },
+                                "runAfter": {
+                                    "Compose_SCIM_Updated_Body": [
+                                        "Succeeded"
+                                    ]
+                                }
+                            }
+                        },
+                        "runAfter": {
+                            "Compose_SCIM_Unique_Parents": [
+                                "Succeeded"
+                            ]
+                        },
+                        "runtimeConfiguration": {
+                            "concurrency": {
+                                "repetitions": 1
+                            }
+                        }
+                    }
+                },
+                "type": "Scope"
+            },
+            "Response_Initialization_Data": {
+                "runAfter": {
+                    "Build_SCIM_User_Body": [
                         "Succeeded"
                     ]
                 },
@@ -782,17 +1167,28 @@
                         "userAppRole": "@body('Filter_User_AppRole')",
                         "schema": "@body('Get_Schema')",
                         "sourceToTargetLookup": "@variables('sourceToTargetLookup')",
-                        "targetAttributes": "@body('Select_Target_Attribute_Names')",
-                        "targetGroupAttributes": "@body('Select_Target_Group_Attribute_Names')",
+                        "mappedUserTargetAttributes": "@body('Select_Target_Attribute_Names')",
+                        "mappedGroupTargetAttributes": "@body('Select_Target_Group_Attribute_Names')",
+                        "targetDirectoryUserAttributes": "@outputs('Compose_Target_User_Attributes')",
+                        "targetDirectoryGroupAttributes": "@outputs('Compose_Target_Group_Attributes')",
+                        "targetUserSchemaName": "@coalesce(first(body('Filter_Target_User_Object'))?['name'], 'urn:ietf:params:scim:schemas:core:2.0:User')",
+                        "targetGroupSchemaName": "@coalesce(first(body('Filter_Target_Group_Object'))?['name'], 'urn:ietf:params:scim:schemas:core:2.0:Group')",
                         "userBody": "@outputs('Compose_Final_Dynamic_User_Body')",
                         "updateUserBody": "@outputs('Compose_Final_Dynamic_Update_User_Body')",
                         "workflowRunId": "@workflow().run.name",
                         "arrayProperties": "@outputs('Compose_Dynamic_ArrayProperties')",
                         "isGroupSupported": "@outputs('Compose_IsGroupSupported')",
                         "isManagerAttributeSupported": "@outputs('Compose_IsManagerSupported')",
+                        "isSoftDeleteSupported": "@outputs('Compose_IsSoftDeleteSupported')",
                         "isUserDeleteSupported": "@outputs('Compose_IsUserDeleteSupported')",
                         "isGroupDeleteSupported": "@outputs('Compose_IsGroupDeleteSupported')",
-                        "updateTestExcludeList": "@outputs('Compose_UpdateTest_ExcludeList')"
+                        "updateTestExcludeList": "@outputs('Compose_UpdateTest_ExcludeList')",
+                        "scimUserBody": "@variables('scimDirectUserCreateBody')",
+                        "scimGroupBody": {
+                            "schemas": "@createArray('urn:ietf:params:scim:schemas:core:2.0:Group')",
+                            "displayName": "placeholder-group",
+                            "externalId": "placeholder-extid"
+                        }
                     }
                 }
             }

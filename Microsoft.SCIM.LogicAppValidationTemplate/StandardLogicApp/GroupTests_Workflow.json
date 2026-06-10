@@ -216,6 +216,56 @@
                     ]
                 }
             },
+            "Initialize_PODGroupTestOutputs": {
+                "runAfter": {
+                    "Initialize_All_Group_Test_Variables": ["Succeeded"]
+                },
+                "type": "InitializeVariable",
+                "inputs": {
+                    "variables": [
+                        {
+                            "name": "PODGroupTestOutputs",
+                            "type": "Object",
+                            "value": {
+                                "overallResult": "SKIPPED",
+                                "result": "SKIPPED",
+                                "errorDetails": {}
+                            }
+                        }
+                    ]
+                }
+            },
+            "Initialize_RestoreGroupTestVariables": {
+                "runAfter": {
+                    "Initialize_PODGroupTestOutputs": ["Succeeded"]
+                },
+                "type": "InitializeVariable",
+                "inputs": {
+                    "variables": [
+                        {
+                            "name": "restoreEntraGroupId",
+                            "type": "string",
+                            "value": ""
+                        },
+                        {
+                            "name": "restoreGroupAppRoleAssignmentId",
+                            "type": "string",
+                            "value": ""
+                        },
+                        {
+                            "name": "RestoreGroupTestOutputs",
+                            "type": "Object",
+                            "value": {
+                                "overallResult": "SKIPPED",
+                                "result": "SKIPPED",
+                                "summary": null,
+                                "detailedResults": [],
+                                "errorDetails": { "summary": null }
+                            }
+                        }
+                    ]
+                }
+            },
             "GroupTests_Scope": {
                 "actions": {
                     "Create_Group_Test": {
@@ -1732,7 +1782,7 @@
                                                     "provisioningLogsCount": "@length(coalesce(body('Delete_Group_Verify_Delete_Provisioning_Logs')?['value'], json('[]')))",
                                                     "hasProvisioningLogs": "@greater(length(coalesce(body('Delete_Group_Verify_Delete_Provisioning_Logs')?['value'], json('[]'))), 0)",
                                                     "provisioningStatus": "@if(greater(length(coalesce(body('Delete_Group_Verify_Delete_Provisioning_Logs')?['value'], json('[]'))), 0), coalesce(first(body('Delete_Group_Verify_Delete_Provisioning_Logs')?['value'])?['provisioningStatusInfo']?['status'], 'UNKNOWN'), 'NO_LOGS_FOUND')",
-                                                    "provisioningResult": "@if(equals(variables('DeleteGroupScopeExecutionStatus'), 'Succeeded'), if(greater(length(coalesce(body('Delete_Group_Verify_Delete_Provisioning_Logs')?['value'], json('[]'))), 0), if(equals(toLower(coalesce(first(body('Delete_Group_Verify_Delete_Provisioning_Logs')?['value'])?['provisioningStatusInfo']?['status'], '')), 'success'), 'success', concat('Delete_Group_Verify_Delete_Provisioning_Logs: ', coalesce(first(body('Delete_Group_Verify_Delete_Provisioning_Logs')?['value'])?['provisioningStatusInfo']?['status'], 'UNKNOWN'))), 'Delete_Group_Verify_Delete_Provisioning_Logs: NO_LOGS_FOUND'), concat('Failed Action: ', variables('DeleteGroupFailedActionName')))",
+                                                    "provisioningResult": "@if(equals(variables('DeleteGroupScopeExecutionStatus'), 'Succeeded'), if(greater(length(coalesce(body('Delete_Group_Verify_Delete_Provisioning_Logs')?['value'], json('[]'))), 0), if(equals(toLower(coalesce(first(body('Delete_Group_Verify_Delete_Provisioning_Logs')?['value'])?['provisioningStatusInfo']?['status'], '')), 'success'), 'success', if(equals(toLower(coalesce(first(body('Delete_Group_Verify_Delete_Provisioning_Logs')?['value'])?['provisioningStatusInfo']?['status'], '')), 'skipped'), 'Delete provisioning was skipped by the engine. Group deprovisioning cannot be skipped - the connector objectMapping flowTypes must include Delete', concat('Delete provisioning log status: ', coalesce(first(body('Delete_Group_Verify_Delete_Provisioning_Logs')?['value'])?['provisioningStatusInfo']?['status'], 'UNKNOWN')))), 'Delete_Group_Verify_Delete_Provisioning_Logs: NO_LOGS_FOUND'), concat('Failed Action: ', variables('DeleteGroupFailedActionName')))",
                                                     "provisioningErrorDetails": "@if(equals(variables('DeleteGroupScopeExecutionStatus'), 'Succeeded'), if(and(greater(length(coalesce(body('Delete_Group_Verify_Delete_Provisioning_Logs')?['value'], json('[]'))), 0), equals(toLower(first(body('Delete_Group_Verify_Delete_Provisioning_Logs')?['value'])?['provisioningStatusInfo']?['status']), 'failure')), first(body('Delete_Group_Verify_Delete_Provisioning_Logs')?['value'])?['provisioningStatusInfo']?['errorInformation'], null), variables('DeleteGroupFailedActionResponse'))",
                                                     "overallResult": "@if(equals(variables('DeleteGroupScopeExecutionStatus'), 'Succeeded'), if(and(and(greater(length(coalesce(body('Delete_Group_Verify_Delete_Provisioning_Logs')?['value'], json('[]'))), 0), equals(toLower(coalesce(first(body('Delete_Group_Verify_Delete_Provisioning_Logs')?['value'])?['provisioningStatusInfo']?['status'], '')), 'success')), equals(length(coalesce(body('Delete_Step6_Check_Group_Exists_Final')?['Resources'], json('[]'))), 0)), 'PASSED', 'FAILED'), 'FAILED')",
                                                     "scimCheckResult": "@if(equals(variables('DeleteGroupScopeExecutionStatus'), 'Succeeded'), if(equals(length(coalesce(body('Delete_Step6_Check_Group_Exists_Final')?['Resources'], json('[]'))), 0), 'success', 'Delete_Step6_Check_Group_Exists_Final: Group still exists on SCIM server after deletion'), concat('Failed Action: ', variables('DeleteGroupFailedActionName')))",
@@ -1800,12 +1850,6 @@
                                 {
                                     "equals": [
                                         "@triggerBody()?['initializationData']?['isGroupSupported']",
-                                        true
-                                    ]
-                                },
-                                {
-                                    "equals": [
-                                        "@coalesce(triggerBody()?['initializationData']?['isGroupDeleteSupported'], true)",
                                         true
                                     ]
                                 },
@@ -2025,6 +2069,7 @@
                                                         "displayName": "@{triggerBody()?['initializationData']?['testUserNames']?['memberUser1']}",
                                                         "mailNickname": "@{replace(first(split(triggerBody()?['initializationData']?['testUserNames']?['memberUser1'],'@')),'.','')}",
                                                         "userPrincipalName": "@{triggerBody()?['initializationData']?['testUserNames']?['memberUser1']}",
+                                                        "mail": "@{triggerBody()?['initializationData']?['testUserNames']?['memberUser1Mail']}",
                                                         "givenName": "MemberUser1",
                                                         "surname": "Test",
                                                         "passwordProfile": {
@@ -2793,6 +2838,7 @@
                                                         "displayName": "@{triggerBody()?['initializationData']?['testUserNames']?['memberUser2']}",
                                                         "mailNickname": "@{replace(first(split(triggerBody()?['initializationData']?['testUserNames']?['memberUser2'],'@')),'.','')}",
                                                         "userPrincipalName": "@{triggerBody()?['initializationData']?['testUserNames']?['memberUser2']}",
+                                                        "mail": "@{triggerBody()?['initializationData']?['testUserNames']?['memberUser2Mail']}",
                                                         "givenName": "MemberUser2",
                                                         "surname": "Test",
                                                         "passwordProfile": {
@@ -3341,10 +3387,537 @@
                             ]
                         },
                         "type": "If"
+                    },
+                    "POD_Group_Test": {
+                        "actions": {
+                            "POD_Group_Test_Actions": {
+                                "type": "Scope",
+                                "actions": {
+                                    "POD_Create_Graph_Group": {
+                                        "type": "Http",
+                                        "inputs": {
+                                            "method": "POST",
+                                            "uri": "https://graph.microsoft.com/v1.0/groups",
+                                            "headers": { "Content-Type": "application/json" },
+                                            "body": {
+                                                "displayName": "@{concat('PODTestGroup_', substring(guid(), 0, 8))}",
+                                                "mailNickname": "@{concat('podgrp', substring(guid(), 0, 8))}",
+                                                "mailEnabled": false,
+                                                "securityEnabled": true,
+                                                "groupTypes": []
+                                            },
+                                            "authentication": {
+                                                "type": "ManagedServiceIdentity",
+                                                "audience": "https://graph.microsoft.com/"
+                                            }
+                                        }
+                                    },
+                                    "POD_Group_Delay_After_Create": {
+                                        "runAfter": { "POD_Create_Graph_Group": ["Succeeded"] },
+                                        "type": "Wait",
+                                        "inputs": { "interval": { "count": 30, "unit": "Second" } }
+                                    },
+                                    "POD_Group_Assign_AppRole": {
+                                        "runAfter": { "POD_Group_Delay_After_Create": ["Succeeded"] },
+                                        "type": "Http",
+                                        "inputs": {
+                                            "method": "POST",
+                                            "uri": "@{concat('https://graph.microsoft.com/v1.0/groups/', body('POD_Create_Graph_Group')?['id'], '/appRoleAssignments')}",
+                                            "headers": { "Content-Type": "application/json" },
+                                            "body": {
+                                                "principalId": "@{body('POD_Create_Graph_Group')?['id']}",
+                                                "resourceId": "@{parameters('servicePrincipalId')}",
+                                                "appRoleId": "@{coalesce(first(triggerBody()?['initializationData']?['userAppRole'])?['id'], first(triggerBody()?['initializationData']?['appRoles']?['appRoles'])?['id'])}"
+                                            },
+                                            "authentication": {
+                                                "type": "ManagedServiceIdentity",
+                                                "audience": "https://graph.microsoft.com/"
+                                            }
+                                        }
+                                    },
+                                    "POD_Group_Delay_After_AppRole": {
+                                        "runAfter": { "POD_Group_Assign_AppRole": ["Succeeded"] },
+                                        "type": "Wait",
+                                        "inputs": { "interval": { "count": 60, "unit": "Second" } }
+                                    },
+                                    "POD_Group_Get_Sync_Rules": {
+                                        "runAfter": { "POD_Group_Delay_After_AppRole": ["Succeeded"] },
+                                        "type": "Http",
+                                        "inputs": {
+                                            "method": "GET",
+                                            "uri": "@{concat('https://graph.microsoft.com/v1.0/servicePrincipals/', parameters('servicePrincipalId'), '/synchronization/jobs/', triggerBody()?['initializationData']?['syncJobId'], '/schema')}",
+                                            "headers": { "Accept": "application/json" },
+                                            "authentication": {
+                                                "type": "ManagedServiceIdentity",
+                                                "audience": "https://graph.microsoft.com/"
+                                            }
+                                        }
+                                    },
+                                    "POD_Group_Provision_On_Demand": {
+                                        "runAfter": { "POD_Group_Get_Sync_Rules": ["Succeeded"] },
+                                        "type": "Http",
+                                        "inputs": {
+                                            "method": "POST",
+                                            "uri": "@{concat('https://graph.microsoft.com/v1.0/servicePrincipals/', parameters('servicePrincipalId'), '/synchronization/jobs/', triggerBody()?['initializationData']?['syncJobId'], '/provisionOnDemand')}",
+                                            "headers": { "Content-Type": "application/json" },
+                                            "body": {
+                                                "parameters": [
+                                                    {
+                                                        "ruleId": "@{first(body('POD_Group_Get_Sync_Rules')?['synchronizationRules'])?['id']}",
+                                                        "subjects": [
+                                                            {
+                                                                "objectId": "@{body('POD_Create_Graph_Group')?['id']}",
+                                                                "objectTypeName": "Group"
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            },
+                                            "authentication": {
+                                                "type": "ManagedServiceIdentity",
+                                                "audience": "https://graph.microsoft.com/"
+                                            }
+                                        }
+                                    },
+                                    "POD_Group_Delay_After_Provision": {
+                                        "runAfter": { "POD_Group_Provision_On_Demand": ["Succeeded", "Failed"] },
+                                        "type": "Wait",
+                                        "inputs": { "interval": { "count": 2, "unit": "Minute" } }
+                                    },
+                                    "POD_SCIM_Get_Group": {
+                                        "runAfter": { "POD_Group_Delay_After_Provision": ["Succeeded"] },
+                                        "type": "Http",
+                                        "inputs": {
+                                            "method": "GET",
+                                            "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', body('POD_Create_Graph_Group')?['displayName'], '%22')}",
+                                            "headers": {
+                                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                "Accept": "@{parameters('scimContentType')}"
+                                            }
+                                        }
+                                    },
+                                    "POD_Group_Until_Provisioning_Logs": {
+                                        "runAfter": { "POD_SCIM_Get_Group": ["Succeeded", "Failed"] },
+                                        "type": "Until",
+                                        "expression": "@greater(length(coalesce(body('POD_Group_Verify_Provisioning_Logs')?['value'], json('[]'))), 0)",
+                                        "limit": { "count": 30, "timeout": "PT15M" },
+                                        "actions": {
+                                            "POD_Group_Verify_Provisioning_Logs": {
+                                                "type": "Http",
+                                                "inputs": {
+                                                    "method": "GET",
+                                                    "uri": "@{concat('https://graph.microsoft.com/v1.0/auditLogs/provisioning?$top=1&$orderby=activityDateTime%20desc&$filter=jobId%20eq%20%27', triggerBody()?['initializationData']?['syncJobId'], '%27%20and%20servicePrincipal/id%20eq%20%27', parameters('servicePrincipalId'), '%27%20and%20sourceIdentity/id%20eq%20%27', body('POD_Create_Graph_Group')?['id'], '%27%20and%20provisioningAction%20eq%20%27create%27')}",
+                                                    "headers": { "Accept": "application/json" },
+                                                    "authentication": {
+                                                        "type": "ManagedServiceIdentity",
+                                                        "audience": "https://graph.microsoft.com/"
+                                                    }
+                                                }
+                                            },
+                                            "POD_Group_Delay_Log_Poll": {
+                                                "runAfter": { "POD_Group_Verify_Provisioning_Logs": ["Succeeded", "Failed"] },
+                                                "type": "Wait",
+                                                "inputs": { "interval": { "count": 30, "unit": "Second" } }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "POD_Group_Analyze_Results": {
+                                "runAfter": { "POD_Group_Test_Actions": ["Succeeded", "Failed", "TimedOut"] },
+                                "type": "Compose",
+                                "inputs": {
+                                    "testName": "POD_Group_Test",
+                                    "timestamp": "@utcNow()",
+                                    "graphGroupId": "@coalesce(body('POD_Create_Graph_Group')?['id'], '')",
+                                    "graphGroupName": "@coalesce(body('POD_Create_Graph_Group')?['displayName'], '')",
+                                    "appRoleAssigned": "@equals(outputs('POD_Group_Assign_AppRole')?['statusCode'], 201)",
+                                    "podStatusCode": "@coalesce(outputs('POD_Group_Provision_On_Demand')?['statusCode'], 0)",
+                                    "podSucceeded": "@equals(outputs('POD_Group_Provision_On_Demand')?['statusCode'], 200)",
+                                    "scimGetStatusCode": "@coalesce(outputs('POD_SCIM_Get_Group')?['statusCode'], 0)",
+                                    "scimGroupFound": "@greater(length(coalesce(body('POD_SCIM_Get_Group')?['Resources'], json('[]'))), 0)",
+                                    "scimGroupId": "@coalesce(first(body('POD_SCIM_Get_Group')?['Resources'])?['id'], '')",
+                                    "provisioningLogFound": "@greater(length(coalesce(body('POD_Group_Verify_Provisioning_Logs')?['value'], json('[]'))), 0)",
+                                    "provisioningLogStatus": "@coalesce(first(body('POD_Group_Verify_Provisioning_Logs')?['value'])?['provisioningStatusInfo']?['status'], 'notFound')",
+                                    "overallResult": "@if(and(equals(outputs('POD_Group_Provision_On_Demand')?['statusCode'], 200), greater(length(coalesce(body('POD_SCIM_Get_Group')?['Resources'], json('[]'))), 0), greater(length(coalesce(body('POD_Group_Verify_Provisioning_Logs')?['value'], json('[]'))), 0)), 'PASSED', 'FAILED')"
+                                }
+                            },
+                            "Set_PODGroupTestOutputs": {
+                                "runAfter": { "POD_Group_Analyze_Results": ["Succeeded"] },
+                                "type": "SetVariable",
+                                "inputs": {
+                                    "name": "PODGroupTestOutputs",
+                                    "value": {
+                                        "overallResult": "@coalesce(outputs('POD_Group_Analyze_Results')?['overallResult'], 'FAILED')",
+                                        "result": "@if(equals(coalesce(outputs('POD_Group_Analyze_Results')?['overallResult'], 'FAILED'), 'PASSED'), 'success', if(equals(coalesce(outputs('POD_Group_Analyze_Results')?['appRoleAssigned'], false), false), 'FAILED - Action: POD_Group_Assign_AppRole - app role assignment failed', if(not(equals(coalesce(outputs('POD_Group_Analyze_Results')?['podStatusCode'], 0), 200)), concat('FAILED - Action: POD_Group_Provision_On_Demand - HTTP ', string(coalesce(outputs('POD_Group_Analyze_Results')?['podStatusCode'], 0))), if(equals(coalesce(outputs('POD_Group_Analyze_Results')?['scimGroupFound'], false), false), 'FAILED - Action: POD_SCIM_Get_Group - group not found on SCIM endpoint', 'FAILED - Action: POD_Group_Verify_Provisioning_Logs - provisioning log not found'))))",
+                                        "summary": "@outputs('POD_Group_Analyze_Results')",
+                                        "errorDetails": {
+                                            "podResponse": "@if(not(equals(outputs('POD_Group_Provision_On_Demand')?['statusCode'], 200)), string(coalesce(body('POD_Group_Provision_On_Demand'), 'no response')), null)"
+                                        }
+                                    }
+                                }
+                            },
+                            "POD_Group_Cleanup_SCIM_Delete": {
+                                "runAfter": { "Set_PODGroupTestOutputs": ["Succeeded", "Failed", "Skipped"] },
+                                "type": "Http",
+                                "inputs": {
+                                    "method": "DELETE",
+                                    "uri": "@{concat(parameters('scimEndpoint'), '/Groups/', coalesce(first(body('POD_SCIM_Get_Group')?['Resources'])?['id'], 'not-found'))}",
+                                    "headers": {
+                                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                        "Accept": "@{parameters('scimContentType')}"
+                                    }
+                                }
+                            },
+                            "POD_Group_Cleanup_Remove_AppRole": {
+                                "runAfter": { "POD_Group_Cleanup_SCIM_Delete": ["Succeeded", "Failed", "Skipped"] },
+                                "type": "Http",
+                                "inputs": {
+                                    "method": "DELETE",
+                                    "uri": "@{concat('https://graph.microsoft.com/v1.0/groups/', coalesce(body('POD_Create_Graph_Group')?['id'], 'not-found'), '/appRoleAssignments/', coalesce(body('POD_Group_Assign_AppRole')?['id'], 'not-found'))}",
+                                    "authentication": {
+                                        "type": "ManagedServiceIdentity",
+                                        "audience": "https://graph.microsoft.com/"
+                                    }
+                                }
+                            },
+                            "POD_Group_Cleanup_Graph_Delete": {
+                                "runAfter": { "POD_Group_Cleanup_Remove_AppRole": ["Succeeded", "Failed", "Skipped"] },
+                                "type": "Http",
+                                "inputs": {
+                                    "method": "DELETE",
+                                    "uri": "@{concat('https://graph.microsoft.com/v1.0/groups/', coalesce(body('POD_Create_Graph_Group')?['id'], 'not-found'))}",
+                                    "authentication": {
+                                        "type": "ManagedServiceIdentity",
+                                        "audience": "https://graph.microsoft.com/"
+                                    }
+                                }
+                            }
+                        },
+                        "runAfter": {},
+                        "expression": {
+                            "and": [
+                                {
+                                    "equals": [
+                                        "@triggerBody()?['initializationData']?['isGroupSupported']",
+                                        true
+                                    ]
+                                },
+                                {
+                                    "or": [
+                                        { "equals": ["@triggerBody()?['EnabledTests']", "All"] },
+                                        { "equals": ["@triggerBody()?['EnabledTests']", "GroupTests"] },
+                                        { "equals": ["@triggerBody()?['EnabledTests']", "POD_Group_Test"] }
+                                    ]
+                                }
+                            ]
+                        },
+                        "type": "If"
                     }
+,
+                    "Restore_Group_Test": {
+  "runAfter": {},
+  "actions": {
+    "RestoreGroupTest_Actions": {
+      "type": "Scope",
+      "actions": {
+        "RestoreGroupTest_Phase1_Create_And_Assign": {
+          "type": "Scope",
+          "actions": {
+            "RestoreGroupTest_Create_Entra_Group": {
+              "type": "Http",
+              "inputs": {
+                "method": "POST",
+                "uri": "https://graph.microsoft.com/v1.0/groups",
+                "headers": { "Content-Type": "application/json" },
+                "body": {
+                  "displayName": "@{coalesce(triggerBody()?['initializationData']?['testGroupNames']?['restoreGroup'], concat('RestoreGrp-', substring(guid(),0,8)))}",
+                  "mailEnabled": false,
+                  "mailNickname": "@{concat('restoregrp', substring(guid(),0,8))}",
+                  "securityEnabled": true,
+                  "groupTypes": []
+                },
+                "authentication": {
+                  "type": "ManagedServiceIdentity",
+                  "audience": "https://graph.microsoft.com/"
+                }
+              }
+            },
+            "RestoreGroupTest_Set_EntraGroupId": {
+              "runAfter": { "RestoreGroupTest_Create_Entra_Group": ["Succeeded"] },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "restoreEntraGroupId",
+                "value": "@{body('RestoreGroupTest_Create_Entra_Group')?['id']}"
+              }
+            },
+            "RestoreGroupTest_Delay_Before_AppRole": {
+              "runAfter": { "RestoreGroupTest_Set_EntraGroupId": ["Succeeded"] },
+              "type": "Wait",
+              "inputs": {
+                "interval": {
+                  "count": 30,
+                  "unit": "Second"
+                }
+              }
+            },
+            "RestoreGroupTest_Assign_AppRole": {
+              "runAfter": { "RestoreGroupTest_Delay_Before_AppRole": ["Succeeded"] },
+              "type": "Http",
+              "inputs": {
+                "method": "POST",
+                "uri": "@{concat('https://graph.microsoft.com/v1.0/groups/', variables('restoreEntraGroupId'), '/appRoleAssignments')}",
+                "headers": { "Content-Type": "application/json" },
+                "body": {
+                  "principalId": "@{variables('restoreEntraGroupId')}",
+                  "resourceId": "@{parameters('servicePrincipalId')}",
+                  "appRoleId": "@{coalesce(first(triggerBody()?['initializationData']?['userAppRole'])?['id'], first(triggerBody()?['initializationData']?['appRoles']?['appRoles'])?['id'])}"
+                },
+                "authentication": {
+                  "type": "ManagedServiceIdentity",
+                  "audience": "https://graph.microsoft.com/"
+                }
+              }
+            },
+            "RestoreGroupTest_Set_AppRoleAssignmentId": {
+              "runAfter": { "RestoreGroupTest_Assign_AppRole": ["Succeeded"] },
+              "type": "SetVariable",
+              "inputs": {
+                "name": "restoreGroupAppRoleAssignmentId",
+                "value": "@{body('RestoreGroupTest_Assign_AppRole')?['id']}"
+              }
+            },
+            "RestoreGroupTest_DoUntil_Verify_SCIM_Create": {
+              "runAfter": { "RestoreGroupTest_Set_AppRoleAssignmentId": ["Succeeded"] },
+              "type": "Until",
+              "expression": "@greater(length(coalesce(body('RestoreGroupTest_SCIM_Check_Created')?['Resources'], json('[]'))), 0)",
+              "limit": { "count": 200, "timeout": "PT50M" },
+              "actions": {
+                "RestoreGroupTest_SCIM_Check_Created": {
+                  "type": "Http",
+                  "inputs": {
+                    "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', encodeUriComponent(body('RestoreGroupTest_Create_Entra_Group')?['displayName']), '%22')}",
+                    "method": "GET",
+                    "headers": {
+                      "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                      "Accept": "@{parameters('scimContentType')}"
+                    }
+                  }
+                },
+                "RestoreGroupTest_Delay_Create_15s": {
+                  "runAfter": { "RestoreGroupTest_SCIM_Check_Created": ["Succeeded", "Failed"] },
+                  "type": "Wait",
+                  "inputs": { "interval": { "count": 15, "unit": "Second" } }
+                }
+              }
+            },
+            "RestoreGroupTest_Get_Create_Log": {
+              "runAfter": { "RestoreGroupTest_DoUntil_Verify_SCIM_Create": ["Succeeded", "Failed"] },
+              "type": "Http",
+              "inputs": {
+                "uri": "@{concat('https://graph.microsoft.com/v1.0/auditLogs/provisioning?$top=1&$orderby=activityDateTime%20desc&$filter=jobId%20eq%20%27', triggerBody()?['initializationData']?['syncJobId'], '%27%20and%20servicePrincipal/id%20eq%20%27', parameters('servicePrincipalId'), '%27%20and%20sourceIdentity/id%20eq%20%27', variables('restoreEntraGroupId'), '%27%20and%20provisioningAction%20eq%20%27Create%27')}",
+                "method": "GET",
+                "headers": { "Accept": "application/json" },
+                "authentication": {
+                  "type": "ManagedServiceIdentity",
+                  "audience": "https://graph.microsoft.com/"
+                }
+              }
+            }
+          }
+        },
+        "RestoreGroupTest_Phase2_Unassign": {
+          "runAfter": { "RestoreGroupTest_Phase1_Create_And_Assign": ["Succeeded"] },
+          "type": "Scope",
+          "actions": {
+            "RestoreGroupTest_Unassign_AppRole": {
+              "type": "Http",
+              "inputs": {
+                "method": "DELETE",
+                "uri": "@{concat('https://graph.microsoft.com/v1.0/groups/', variables('restoreEntraGroupId'), '/appRoleAssignments/', variables('restoreGroupAppRoleAssignmentId'))}",
+                "authentication": {
+                  "type": "ManagedServiceIdentity",
+                  "audience": "https://graph.microsoft.com/"
+                }
+              }
+            },
+            "RestoreGroupTest_DoUntil_Verify_SCIM_Gone": {
+              "runAfter": { "RestoreGroupTest_Unassign_AppRole": ["Succeeded"] },
+              "type": "Until",
+              "expression": "@equals(length(coalesce(body('RestoreGroupTest_SCIM_Check_Gone')?['Resources'], json('[\"placeholder\"]'))), 0)",
+              "limit": { "count": 200, "timeout": "PT50M" },
+              "actions": {
+                "RestoreGroupTest_SCIM_Check_Gone": {
+                  "type": "Http",
+                  "inputs": {
+                    "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', encodeUriComponent(body('RestoreGroupTest_Create_Entra_Group')?['displayName']), '%22')}",
+                    "method": "GET",
+                    "headers": {
+                      "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                      "Accept": "@{parameters('scimContentType')}"
+                    }
+                  }
+                },
+                "RestoreGroupTest_Delay_Gone_15s": {
+                  "runAfter": { "RestoreGroupTest_SCIM_Check_Gone": ["Succeeded", "Failed"] },
+                  "type": "Wait",
+                  "inputs": { "interval": { "count": 15, "unit": "Second" } }
+                }
+              }
+            },
+            "RestoreGroupTest_Get_Delete_Log": {
+              "runAfter": { "RestoreGroupTest_DoUntil_Verify_SCIM_Gone": ["Succeeded", "Failed"] },
+              "type": "Http",
+              "inputs": {
+                "uri": "@{concat('https://graph.microsoft.com/v1.0/auditLogs/provisioning?$top=1&$orderby=activityDateTime%20desc&$filter=jobId%20eq%20%27', triggerBody()?['initializationData']?['syncJobId'], '%27%20and%20servicePrincipal/id%20eq%20%27', parameters('servicePrincipalId'), '%27%20and%20sourceIdentity/id%20eq%20%27', variables('restoreEntraGroupId'), '%27%20and%20provisioningAction%20eq%20%27Delete%27')}",
+                "method": "GET",
+                "headers": { "Accept": "application/json" },
+                "authentication": {
+                  "type": "ManagedServiceIdentity",
+                  "audience": "https://graph.microsoft.com/"
+                }
+              }
+            }
+          }
+        },
+        "RestoreGroupTest_Phase3_Reassign": {
+          "runAfter": { "RestoreGroupTest_Phase2_Unassign": ["Succeeded"] },
+          "type": "Scope",
+          "actions": {
+            "RestoreGroupTest_Reassign_AppRole": {
+              "type": "Http",
+              "inputs": {
+                "method": "POST",
+                "uri": "@{concat('https://graph.microsoft.com/v1.0/groups/', variables('restoreEntraGroupId'), '/appRoleAssignments')}",
+                "headers": { "Content-Type": "application/json" },
+                "body": {
+                  "principalId": "@{variables('restoreEntraGroupId')}",
+                  "resourceId": "@{parameters('servicePrincipalId')}",
+                  "appRoleId": "@{coalesce(first(triggerBody()?['initializationData']?['userAppRole'])?['id'], first(triggerBody()?['initializationData']?['appRoles']?['appRoles'])?['id'])}"
+                },
+                "authentication": {
+                  "type": "ManagedServiceIdentity",
+                  "audience": "https://graph.microsoft.com/"
+                }
+              }
+            },
+            "RestoreGroupTest_DoUntil_Verify_SCIM_Restored": {
+              "runAfter": { "RestoreGroupTest_Reassign_AppRole": ["Succeeded"] },
+              "type": "Until",
+              "expression": "@greater(length(coalesce(body('RestoreGroupTest_SCIM_Check_Restored')?['Resources'], json('[]'))), 0)",
+              "limit": { "count": 200, "timeout": "PT50M" },
+              "actions": {
+                "RestoreGroupTest_SCIM_Check_Restored": {
+                  "type": "Http",
+                  "inputs": {
+                    "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', encodeUriComponent(body('RestoreGroupTest_Create_Entra_Group')?['displayName']), '%22')}",
+                    "method": "GET",
+                    "headers": {
+                      "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                      "Accept": "@{parameters('scimContentType')}"
+                    }
+                  }
+                },
+                "RestoreGroupTest_Delay_Restored_15s": {
+                  "runAfter": { "RestoreGroupTest_SCIM_Check_Restored": ["Succeeded", "Failed"] },
+                  "type": "Wait",
+                  "inputs": { "interval": { "count": 15, "unit": "Second" } }
+                }
+              }
+            },
+            "RestoreGroupTest_Get_Restore_Log": {
+              "runAfter": { "RestoreGroupTest_DoUntil_Verify_SCIM_Restored": ["Succeeded", "Failed"] },
+              "type": "Http",
+              "inputs": {
+                "uri": "@{concat('https://graph.microsoft.com/v1.0/auditLogs/provisioning?$top=1&$orderby=activityDateTime%20desc&$filter=jobId%20eq%20%27', triggerBody()?['initializationData']?['syncJobId'], '%27%20and%20servicePrincipal/id%20eq%20%27', parameters('servicePrincipalId'), '%27%20and%20sourceIdentity/id%20eq%20%27', variables('restoreEntraGroupId'), '%27%20and%20provisioningAction%20eq%20%27Create%27')}",
+                "method": "GET",
+                "headers": { "Accept": "application/json" },
+                "authentication": {
+                  "type": "ManagedServiceIdentity",
+                  "audience": "https://graph.microsoft.com/"
+                }
+              }
+            }
+          }
+        },
+        "RestoreGroupTest_Compose_Summary": {
+          "runAfter": {
+            "RestoreGroupTest_Phase3_Reassign": ["Succeeded", "Failed", "Skipped"]
+          },
+          "type": "Compose",
+          "inputs": {
+            "testName": "Restore_Group_Test",
+            "timestamp": "@utcNow()",
+            "entraGroupId": "@variables('restoreEntraGroupId')",
+            "phase1_createLogFound": "@greater(length(coalesce(body('RestoreGroupTest_Get_Create_Log')?['value'], json('[]'))), 0)",
+            "phase1_scimGroupFound": "@greater(length(coalesce(body('RestoreGroupTest_SCIM_Check_Created')?['Resources'], json('[]'))), 0)",
+            "phase2_deleteLogFound": "@greater(length(coalesce(body('RestoreGroupTest_Get_Delete_Log')?['value'], json('[]'))), 0)",
+            "phase2_scimGroupGone": "@equals(length(coalesce(body('RestoreGroupTest_SCIM_Check_Gone')?['Resources'], json('[]'))), 0)",
+            "phase3_restoreLogFound": "@greater(length(coalesce(body('RestoreGroupTest_Get_Restore_Log')?['value'], json('[]'))), 0)",
+            "phase3_scimGroupRestored": "@greater(length(coalesce(body('RestoreGroupTest_SCIM_Check_Restored')?['Resources'], json('[]'))), 0)",
+            "overallResult": "@if(and(and(and(greater(length(coalesce(body('RestoreGroupTest_SCIM_Check_Created')?['Resources'], json('[]'))), 0), equals(length(coalesce(body('RestoreGroupTest_SCIM_Check_Gone')?['Resources'], json('[]'))), 0)), greater(length(coalesce(body('RestoreGroupTest_SCIM_Check_Restored')?['Resources'], json('[]'))), 0)), greater(length(coalesce(body('RestoreGroupTest_Get_Restore_Log')?['value'], json('[]'))), 0)), 'PASSED', 'FAILED')"
+          }
+        }
+      }
+    },
+    "RestoreGroupTest_Set_Outputs": {
+      "runAfter": { "RestoreGroupTest_Actions": ["Succeeded", "Failed", "Skipped"] },
+      "type": "SetVariable",
+      "inputs": {
+        "name": "RestoreGroupTestOutputs",
+        "value": {
+          "overallResult": "@coalesce(outputs('RestoreGroupTest_Compose_Summary')?['overallResult'], 'FAILED')",
+          "result": "@if(equals(coalesce(outputs('RestoreGroupTest_Compose_Summary')?['overallResult'], 'FAILED'), 'PASSED'), 'success (UnassignReassign)', if(equals(coalesce(outputs('RestoreGroupTest_Compose_Summary')?['phase1_scimGroupFound'], false), false), 'FAILED - [Create Phase] Action: RestoreGroupTest_SCIM_Check_Created - group not found on SCIM endpoint after provisioning', if(equals(coalesce(outputs('RestoreGroupTest_Compose_Summary')?['phase2_scimGroupGone'], false), false), 'FAILED - [Unassign Phase] Action: RestoreGroupTest_SCIM_Check_Gone - group still present on SCIM endpoint after unassign', 'FAILED - [Reassign Phase] Action: RestoreGroupTest_SCIM_Check_Restored - group not restored on SCIM endpoint after reassign')))",
+          "summary": "@outputs('RestoreGroupTest_Compose_Summary')",
+          "detailedResults": [],
+          "errorDetails": {
+            "summary": "@if(equals(coalesce(outputs('RestoreGroupTest_Compose_Summary')?['overallResult'], 'FAILED'), 'PASSED'), null, string(outputs('RestoreGroupTest_Compose_Summary')))"
+          }
+        }
+      }
+    },
+    "RestoreGroupTest_Cleanup": {
+      "runAfter": { "RestoreGroupTest_Set_Outputs": ["Succeeded", "Failed", "Skipped"] },
+      "type": "Http",
+      "inputs": {
+        "method": "DELETE",
+        "uri": "@{concat('https://graph.microsoft.com/v1.0/groups/', variables('restoreEntraGroupId'))}",
+        "authentication": {
+          "type": "ManagedServiceIdentity",
+          "audience": "https://graph.microsoft.com/"
+        }
+      }
+    }
+  },
+  "else": { "actions": {} },
+  "expression": {
+    "and": [
+      {
+        "equals": [
+          "@triggerBody()?['initializationData']?['isGroupSupported']",
+          true
+        ]
+      },
+      {
+        "or": [
+          { "equals": ["@triggerBody()?['EnabledTests']", "All"] },
+          { "equals": ["@triggerBody()?['EnabledTests']", "GroupTests"] },
+          { "equals": ["@triggerBody()?['EnabledTests']", "Restore_Group_Test"] }
+        ]
+      }
+    ]
+  },
+  "type": "If"
+}
                 },
                 "runAfter": {
                     "Response_Immediate": [
+                        "Succeeded"
+                    ],
+                    "Initialize_PODGroupTestOutputs": [
+                        "Succeeded"
+                    ],
+                    "Initialize_RestoreGroupTestVariables": [
                         "Succeeded"
                     ]
                 },
@@ -3366,8 +3939,10 @@
                     "DeleteGroupTestOutputs": "@variables('DeleteGroupTestOutputs')",
                     "AddMemberTestOutputs": "@variables('AddMemberTestOutputs')",
                     "RemoveMemberTestOutputs": "@variables('RemoveMemberTestOutputs')",
+                    "PODGroupTestOutputs": "@variables('PODGroupTestOutputs')",
+                    "RestoreGroupTestOutputs": "@variables('RestoreGroupTestOutputs')",
                     "testSuiteName": "GroupTests",
-                    "status": "@if(or(or(or(or(equals(variables('CreateGroupTestOutputs')['overallResult'], 'FAILED'), equals(variables('UpdateGroupTestOutputs')['overallResult'], 'FAILED')), equals(variables('DeleteGroupTestOutputs')['overallResult'], 'FAILED')), equals(variables('AddMemberTestOutputs')['overallResult'], 'FAILED')), equals(variables('RemoveMemberTestOutputs')['overallResult'], 'FAILED')), 'Failed', 'Passed')",
+                    "status": "@if(or(or(or(or(or(equals(variables('CreateGroupTestOutputs')['overallResult'], 'FAILED'), equals(variables('UpdateGroupTestOutputs')['overallResult'], 'FAILED')), equals(variables('DeleteGroupTestOutputs')['overallResult'], 'FAILED')), equals(variables('AddMemberTestOutputs')['overallResult'], 'FAILED')), equals(variables('RemoveMemberTestOutputs')['overallResult'], 'FAILED')), equals(variables('PODGroupTestOutputs')['overallResult'], 'FAILED')), 'Failed', 'Passed')",
                     "workflowRunId": "@workflow().run.name"
                 }
             }
