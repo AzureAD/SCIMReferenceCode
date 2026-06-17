@@ -125,6 +125,7 @@ namespace Microsoft.SCIM
             this.filterOperator = other.filterOperator;
             this.Group = other.Group;
             this.Level = other.Level;
+            this.depth = other.depth;
             this.logicalOperator = other.logicalOperator;
             this.value = other.value;
             if (other.next != null)
@@ -161,7 +162,7 @@ namespace Microsoft.SCIM
             // Per-recursion: reject if we've exceeded the recursion-depth budget. The parser
             // recurses once per logical operator ('and'/'or'); this depth cap bounds worst-case
             // recursion even if the input length cap is bypassed by future callers.
-            if (depth > MaxRecursionDepth)
+            if (depth >= MaxRecursionDepth)
             {
                 throw new ArgumentException(
                     string.Format(

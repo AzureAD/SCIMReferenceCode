@@ -167,9 +167,9 @@ namespace Microsoft.SCIM
             }
 
             // Per-recursion: reject if we've exceeded the recursion-depth budget. The parser
-            // recurses once per '.' separator, and the worst-case depth is bounded by the input
-            // length cap; this depth cap is a redundant defense.
-            if (depth > MaxRecursionDepth)
+            // recurses once per bracket filter expression (valuePathExpression inside [...]);
+            // this depth cap bounds worst-case recursion even if the input length cap is bypassed.
+            if (depth >= MaxRecursionDepth)
             {
                 return false;
             }
