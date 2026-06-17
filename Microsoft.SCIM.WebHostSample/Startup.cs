@@ -75,6 +75,7 @@ namespace Microsoft.SCIM.WebHostSample
                 }
                 else
 #endif
+                // Release: always enforce production JWT validation (dev-mode block is stripped by preprocessor).
                 {
                     options.Authority = this.configuration["Token:TokenIssuer"];
                     options.Audience = this.configuration["Token:TokenAudience"];

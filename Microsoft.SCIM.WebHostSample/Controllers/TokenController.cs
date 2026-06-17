@@ -28,7 +28,7 @@ namespace Microsoft.SCIM.WebHostSample.Controllers
 
     // Controller for generating a bearer token for authorization during testing.
     // This is not meant to replace proper Oauth for authentication purposes.
-    [Obsolete("Sample only - remove this controller or replace with a properly authenticated OAuth token issuer before deploying to any non-sample environment.")]
+    [Obsolete("Sample only - remove this controller or replace with a properly authenticated OAuth token issuer before deploying to any non-sample environment.", error: true)]
     [Route("scim/token")]
     [ApiController]
     public class TokenController : ControllerBase
