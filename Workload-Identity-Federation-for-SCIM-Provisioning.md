@@ -1,6 +1,6 @@
 ﻿# Workload Identity Federation: A New Authentication Method for SCIM Provisioning
 
-**Date:** 22nd May 2026
+**Date:** 25th June 2026
 
 ---
 
@@ -62,6 +62,8 @@ This is a fundamental shift from the traditional model where admins had to:
 
 The administrator must perform **3 steps** to set up the integration for their app. The administrator must have at least the **Application Administrator** role on the customer's tenant.
 
+![Workload Identity Federation configuration flow](media/workload-identity-federation/wif-configuration-flow.png)
+
 ### Step 1: Configure ISV App and Workload Identity in Entra Portal
 
 In the Entra App Gallery, the administrator:
@@ -69,6 +71,16 @@ In the Entra App Gallery, the administrator:
 1. Creates an app for provisioning for that ISV and configures the Connectivity
 2. On the Connectivity Page, picks **"Workload Identity Federation"** as the auth method
 3. Clicks **"Select Workload Identity"** — customers can register a new Workload Identity App or reuse an existing one they have already used to set up with the ISV
+
+The Connectivity page exposes **Workload Identity Federation** as an authentication method alongside the existing authentication options.
+
+![Select Workload Identity Federation as the provisioning authentication method](media/workload-identity-federation/select-workload-identity-federation-auth-method.jpg)
+
+After selecting **Workload Identity Federation**, the administrator chooses **Select Workload Identity**. From there, they can either register a new workload identity app or select an existing workload identity that has already been configured with the ISV.
+
+| Register a new workload identity | Select an existing workload identity |
+|---|---|
+| ![Register a new workload identity in Entra](media/workload-identity-federation/register-new-workload-identity.jpg) | ![Select an existing workload identity in Entra](media/workload-identity-federation/select-existing-workload-identity.jpg) |
 
 After the access app is configured, the UX displays the following values to be **copied to the ISV Portal**:
 
@@ -78,6 +90,8 @@ After the access app is configured, the UX displays the following values to be *
 | **JWKS URL** | Entra's published JWKS endpoint |
 | **Subject (sub)** | `{WorkloadIdentity_object_id}` |
 | **Audience (aud)** | `api://{WorkloadIdentity_appid}/.default` |
+
+![Copy WIF claims and JWKS URL from Entra to the ISV portal](media/workload-identity-federation/copy-wif-claims-to-isv.png)
 
 ### Step 2: Set up SCIM Client with JWKS in ISV Portal
 
@@ -98,6 +112,8 @@ Back in the Entra App Gallery:
 1. Copy **Client ID**, **Token URL**, and **SCIM URL** from the ISV portal to the Connectivity Page
 2. Click **"Test Connection"** — this invokes the backend to perform all the token exchange steps and validate the integration
 3. **Save** the configuration — the app is now ready to configure provisioning
+
+![Complete Workload Identity Federation connectivity settings in Entra](media/workload-identity-federation/complete-entra-connectivity-settings.png)
 
 ---
 
@@ -402,4 +418,4 @@ If the JWKS endpoint is temporarily unavailable:
 | Microsoft Identity Platform OIDC Metadata | `https://login.microsoftonline.com/{tenantId}/v2.0/.well-known/openid-configuration`|
 ---
 
-*Last updated: May 22, 2026*
+*Last updated: June 25, 2026*
