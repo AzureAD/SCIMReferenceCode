@@ -23,13 +23,12 @@
       "SCIM_Group_Create_Test",
       "SCIM_User_Update_Test",
       "SCIM_Group_Update_Test",
-      "SCIM_User_Delete_Test",
-      "SCIM_Group_Delete_Test",
       "SCIM_User_Pagination_Test",
       "SCIM_Group_Pagination_Test",
       "POD_User_Test",
       "POD_Group_Test",
-      "Restore_User_Test"
+      "Restore_User_Test",
+      "Restore_Group_Test"
     ],
     "type": "String",
     "value": "All"
@@ -249,7 +248,7 @@
     },
     "type": "String",
     "value": "https://scimserver2.yellowsmoke-af7a3fff.eastus.azurecontainerapps.io/scim/oauth/token"
-  },
+      },
   "federatedEntraTenantId": {
         "metadata": {
             "description": "Entra tenant ID used to construct the token endpoint URL for federated identity token acquisition."
@@ -298,7 +297,7 @@
         },
         "type": "String",
         "value": "changeme-audience"
-    },
+  },
   "servicePrincipalId": {
     "type": "String",
     "value": "3197053d-46d9-4a22-b843-6a9d98ec267e"
