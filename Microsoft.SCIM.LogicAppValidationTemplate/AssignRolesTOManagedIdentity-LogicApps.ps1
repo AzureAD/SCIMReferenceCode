@@ -12,7 +12,7 @@ $roleId = az ad sp show --id $graphSpId --query "appRoles[?value=='$roleValue'].
 $body = @{ principalId=$miObjId; resourceId=$graphSpId; appRoleId=$roleId } | ConvertTo-Json
 az rest --method POST --uri "https://graph.microsoft.com/v1.0/servicePrincipals/$miObjId/appRoleAssignments" --headers "Content-Type=application/json" --body "$body"
 
-$roleValue="Synchronization.Read.All"
+$roleValue="Synchronization.ReadWrite.All"
 $roleId = az ad sp show --id $graphSpId --query "appRoles[?value=='$roleValue'].id" -o tsv
 $body = @{ principalId=$miObjId; resourceId=$graphSpId; appRoleId=$roleId } | ConvertTo-Json
 az rest --method POST --uri "https://graph.microsoft.com/v1.0/servicePrincipals/$miObjId/appRoleAssignments" --headers "Content-Type=application/json" --body "$body"

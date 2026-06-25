@@ -35,6 +35,14 @@ namespace Microsoft.SCIM
     // and the second pair of bracketed clauses are in a third group.
     internal sealed class FilterExpression : IFilterExpression
     {
+        // Defense-in-depth caps for the recursive FilterExpression parser. Without these caps an
+        // attacker can submit a filter string with thousands of clauses chained by 'and'/'or' and
+        // trigger a StackOverflowException, which is non-catchable in .NET and terminates the
+        // process. Real SCIM filters are <2KB and have <20 clauses; these caps leave generous
+        // headroom while bounding worst-case recursion depth.
+        private const int MaxFilterLengthChars = 16_384;
+        private const int MaxRecursionDepth = 32;
+
         private const char BracketClose = ')';
         private const char Escape = '\\';
         private const char Quote = '"';
@@ -99,6 +107,7 @@ namespace Microsoft.SCIM
         private ComparisonOperator filterOperator;
         private int groupValue;
         private int levelValue;
+        private int depth;
         private LogicalOperatorValue logicalOperator;
         private FilterExpression next;
         private ComparisonValue value;
@@ -116,6 +125,7 @@ namespace Microsoft.SCIM
             this.filterOperator = other.filterOperator;
             this.Group = other.Group;
             this.Level = other.Level;
+            this.depth = other.depth;
             this.logicalOperator = other.logicalOperator;
             this.value = other.value;
             if (other.next != null)
@@ -126,16 +136,48 @@ namespace Microsoft.SCIM
         }
 
         private FilterExpression(string text, int group, int level)
+            : this(text, group, level, depth: 0)
+        {
+        }
+
+        private FilterExpression(string text, int group, int level, int depth)
         {
             if (string.IsNullOrWhiteSpace(text))
             {
                 throw new ArgumentNullException(nameof(text));
             }
 
+            // Top-level only: reject overlong inputs before any parsing begins.
+            if (depth == 0 && text.Length > MaxFilterLengthChars)
+            {
+                throw new ArgumentException(
+                    string.Format(
+                        CultureInfo.InvariantCulture,
+                        "Filter expression length {0} exceeds maximum allowed length {1}.",
+                        text.Length,
+                        MaxFilterLengthChars),
+                    nameof(text));
+            }
+
+            // Per-recursion: reject if we've exceeded the recursion-depth budget. The parser
+            // recurses once per logical operator ('and'/'or'); this depth cap bounds worst-case
+            // recursion even if the input length cap is bypassed by future callers.
+            if (depth >= MaxRecursionDepth)
+            {
+                throw new ArgumentException(
+                    string.Format(
+                        CultureInfo.InvariantCulture,
+                        "Filter expression nesting exceeds maximum allowed depth {0}.",
+                        MaxRecursionDepth),
+                    nameof(text));
+            }
+
             this.Text = text.Trim();
 
             this.Level = level;
             this.Group = group;
+
+            this.depth = depth;
 
             MatchCollection matches = FilterExpression.Expression.Value.Matches(this.Text);
             foreach (Match match in matches)
@@ -627,7 +669,7 @@ namespace Microsoft.SCIM
                 nextExpressionLevel = this.Level;
                 nextExpressionGroup = this.Group;
             }
-            this.next = new FilterExpression(nextExpression, nextExpressionGroup, nextExpressionLevel);
+            this.next = new FilterExpression(nextExpression, nextExpressionGroup, nextExpressionLevel, this.depth + 1);
             this.next.Previous = this;
         }
 

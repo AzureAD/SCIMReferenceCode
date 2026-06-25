@@ -13,6 +13,14 @@ namespace Microsoft.SCIM
     {
         private const string ArgumentNamePathExpression = "pathExpression";
 
+        // Defense-in-depth caps for the recursive Path.TryParse parser. Without these caps an
+        // attacker can submit a path with thousands of dot-separated segments and trigger a
+        // StackOverflowException, which is non-catchable in .NET and terminates the process.
+        // Real SCIM paths are <200 chars and have <5 dot-separators; these caps leave generous
+        // headroom while bounding worst-case recursion depth.
+        private const int MaxPathLengthChars = 16_384;
+        private const int MaxRecursionDepth = 32;
+
         private const string ConstructNameSubAttributes = "subAttr";
         private const string ConstructNameValuePath = "valuePath";
         private const string PatternTemplate = @"(?<{0}>.*)\[(?<{1}>.*)\]";
@@ -140,11 +148,30 @@ namespace Microsoft.SCIM
 
         public static bool TryParse(string pathExpression, out IPath path)
         {
+            return TryParse(pathExpression, depth: 0, out path);
+        }
+
+        private static bool TryParse(string pathExpression, int depth, out IPath path)
+        {
             path = null;
 
             if (string.IsNullOrWhiteSpace(pathExpression))
             {
                 throw new ArgumentNullException(Path.ArgumentNamePathExpression);
+            }
+
+            // Top-level only: reject overlong inputs before any parsing begins.
+            if (depth == 0 && pathExpression.Length > MaxPathLengthChars)
+            {
+                return false;
+            }
+
+            // Per-recursion: reject if we've exceeded the recursion-depth budget. The parser
+            // recurses once per bracket filter expression (valuePathExpression inside [...]);
+            // this depth cap bounds worst-case recursion even if the input length cap is bypassed.
+            if (depth >= MaxRecursionDepth)
+            {
+                return false;
             }
 
             Path buffer = new Path(pathExpression);
@@ -164,7 +191,7 @@ namespace Microsoft.SCIM
 
                 expression = expression.Substring(0, seperatorIndex);
 
-                if (!Path.TryParse(valuePathExpression, out IPath valuePath))
+                if (!Path.TryParse(valuePathExpression, depth + 1, out IPath valuePath))
                 {
                     return false;
                 }

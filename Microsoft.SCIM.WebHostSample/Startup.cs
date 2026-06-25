@@ -50,6 +50,15 @@ namespace Microsoft.SCIM.WebHostSample
 
             void ConfigureJwtBearerOptons( JwtBearerOptions options)
             {
+                // The development branch below disables every JWT validation
+                // (issuer, audience, lifetime, signing-key) and is intended only
+                // for local end-to-end testing of the sample. Guarding it with
+                // #if DEBUG ensures that a Release build of this sample cannot
+                // accidentally ship the bypass to a production environment - the
+                // preprocessor strips the dev branch (and the surrounding 'if'),
+                // leaving only the production branch which enforces real
+                // Authority / Audience checks.
+#if DEBUG
                 if (this.environment.IsDevelopment())
                 {
                     options.TokenValidationParameters =
@@ -65,6 +74,8 @@ namespace Microsoft.SCIM.WebHostSample
                        };
                 }
                 else
+#endif
+                // Release: always enforce production JWT validation (dev-mode block is stripped by preprocessor).
                 {
                     options.Authority = this.configuration["Token:TokenIssuer"];
                     options.Audience = this.configuration["Token:TokenAudience"];

@@ -1,6 +1,21 @@
 //------------------------------------------------------------
 // Copyright (c) Microsoft Corporation.  All rights reserved.
 //------------------------------------------------------------
+//
+// ⚠️ DO NOT USE IN PRODUCTION ⚠️
+//
+// This controller exists solely to issue self-signed JWTs for the SCIM sample/
+// integration-test flow. It is anonymously reachable and uses a symmetric key
+// from configuration with no rotation, no revocation, and no authentication
+// of the requester. Combined with the dev-mode JWT validation in Startup.cs
+// (guarded by #if DEBUG), it allows any anonymous caller to mint a token that
+// the sample host will accept.
+//
+// Any consumer who copies this sample for a production SCIM endpoint MUST
+// either delete this controller entirely or replace it with a properly
+// authenticated, audience-scoped token issuer.
+//
+//------------------------------------------------------------
 
 namespace Microsoft.SCIM.WebHostSample.Controllers
 {
@@ -13,6 +28,7 @@ namespace Microsoft.SCIM.WebHostSample.Controllers
 
     // Controller for generating a bearer token for authorization during testing.
     // This is not meant to replace proper Oauth for authentication purposes.
+    [Obsolete("Sample only - remove this controller or replace with a properly authenticated OAuth token issuer before deploying to any non-sample environment.", error: true)]
     [Route("scim/token")]
     [ApiController]
     public class TokenController : ControllerBase

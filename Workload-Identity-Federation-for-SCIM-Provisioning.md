@@ -1,4 +1,4 @@
-﻿# Workload Identity Federation: A New Authentication Method for SCIM Provisioning
+# Workload Identity Federation: A New Authentication Method for SCIM Provisioning
 
 **Date:** 25th June 2026
 
@@ -86,9 +86,9 @@ After the access app is configured, the UX displays the following values to be *
 
 | Value | Format |
 |---|---|
-| **Issuer (iss)** | `https://sts.windows.net/<TenantID>/` |
-| **JWKS URL** | Entra's published JWKS endpoint |
-| **Subject (sub)** | `{WorkloadIdentity_object_id}` |
+| **Issuer (iss)** | `https://login.microsoftonline.com/<TenantID>/v2.0` |
+| **JWKS URL** | `https://login.microsoftonline.com/<TenantID>/discovery/v2.0/keys` |
+| **Subject (sub)** | `<Sync Fabric Workload Identity 1P app object ID>` |
 | **Audience (aud)** | `api://{WorkloadIdentity_appid}/.default` |
 
 ![Copy WIF claims and JWKS URL from Entra to the ISV portal](media/workload-identity-federation/copy-wif-claims-to-isv.png)
@@ -164,44 +164,44 @@ When Entra ID sends the JWT bearer assertion request, the **JWT assertion (clien
 | Claim | Description | Example Value |
 |---|---|---|
 | `aud` (Audience) | Workload Identity App ID | `api://b5ba7a93-4452-4522-aeb4-a2b5da870c16` |
-| `iss` (Issuer) | Customer Tenant eSTS endpoint | `https://sts.windows.net/ce5f061f-abe6-4e40-9615-301f87bcb7f0/` |
-| `sub` (Subject) | Workload Identity Object ID | `d2f8ee76-c549-45b8-a143-f5b640669704` |
+| `iss` (Issuer) | Customer tenant v2 issuer endpoint | `https://login.microsoftonline.com/ce5f061f-abe6-4e40-9615-301f87bcb7f0/v2.0` |
+| `sub` (Subject) | Sync Fabric Workload Identity 1P app object ID | `<Sync Fabric Workload Identity 1P app object ID>` |
 | `oid` (Object ID) | Workload Identity Object ID | `d2f8ee76-c549-45b8-a143-f5b640669704` |
 | `appid` | Workload Identity App ID | `b5ba7a93-4452-4522-aeb4-a2b5da870c16` |
 | `tid` (Tenant ID) | Customer Tenant ID | `ce5f061f-abe6-4e40-9615-301f87bcb7f0` |
 | `iat` (Issued At) | Token issue timestamp | `1772175916` |
 | `nbf` (Not Before) | Token not valid before | `1772175916` |
 | `exp` (Expiration) | Token expiry timestamp | `1772179816` |
-| `ver` | Token version | `1.0` |
+| `ver` | Token version | `2.0` |
 
 ### Example Token Payload
 
 ```json
 {
   "aud": "api://b5ba7a93-4452-4522-aeb4-a2b5da870c16",
-  "iss": "https://sts.windows.net/ce5f061f-abe6-4e40-9615-301f87bcb7f0/",
+  "iss": "https://login.microsoftonline.com/ce5f061f-abe6-4e40-9615-301f87bcb7f0/v2.0",
   "iat": 1772175916,
   "nbf": 1772175916,
   "exp": 1772179816,
   "appid": "b5ba7a93-4452-4522-aeb4-a2b5da870c16",
   "appidacr": "2",
-  "idp": "https://sts.windows.net/ce5f061f-abe6-4e40-9615-301f87bcb7f0/",
+  "idp": "https://login.microsoftonline.com/ce5f061f-abe6-4e40-9615-301f87bcb7f0/v2.0",
   "oid": "d2f8ee76-c549-45b8-a143-f5b640669704",
-  "sub": "d2f8ee76-c549-45b8-a143-f5b640669704",
+  "sub": "<Sync Fabric Workload Identity 1P app object ID>",
   "tid": "ce5f061f-abe6-4e40-9615-301f87bcb7f0",
-  "ver": "1.0"
+  "ver": "2.0"
 }
 ```
 
 > [!NOTE]
-> The `iss` and `sub` claims in the Entra-issued token identify the **customer's tenant** and the **Workload Identity app object**, respectively. The ISV validates these against the values provided during the 3-step configuration.
+> The `iss` and `sub` claims in the Entra-issued token identify the **customer's tenant** and the **Sync Fabric Workload Identity 1P app object**, respectively. The ISV validates these against the values provided during the 3-step configuration.
 
 ### Additional Context Provided
 
 - **OIDC Discovery Endpoint**: ISVs can fetch Microsoft's signing keys from:
-  `https://login.microsoftonline.com/{tenantId}/.well-known/openid-configuration`
+  `https://login.microsoftonline.com/{tenantId}/v2.0/.well-known/openid-configuration`
 - **JWKS URI**: Public keys for signature verification:
-  `https://login.microsoftonline.com/{tenantId}/discovery/keys`
+  `https://login.microsoftonline.com/{tenantId}/discovery/v2.0/keys`
 - **Tenant ID**: Identifies which customer tenant is provisioning users
 
 ---
@@ -223,7 +223,7 @@ ISVs must validate the Entra-issued JWT assertion using Microsoft's published JW
 The ISV portal must allow administrators to configure the expected claim values for each integration:
 
 - **`aud` (Audience)** — the audience value the ISV expects in incoming JWTs
-- **`sub` (Subject)** — the subject identifier for the Workload Identity
+- **`sub` (Subject)** — the subject identifier for the Sync Fabric Workload Identity 1P app
 - **JWKS URL** — the endpoint to fetch Microsoft's signing keys
 
 These values are provided by the Entra portal during Step 1 of the configuration flow and entered by the administrator in Step 2.
@@ -369,7 +369,7 @@ Authorization: Bearer sl.Adf8sHg7jKl3nM...
 
 2. **Audience Validation**: Always verify the `aud` claim matches your registered application. Reject tokens with unexpected audiences.
 
-3. **Issuer Validation**: Confirm the `iss` claim matches the expected Microsoft Entra ID issuer format: `https://sts.windows.net/{tenantId}/`
+3. **Issuer Validation**: Confirm the `iss` claim matches the expected Microsoft Entra ID v2 issuer format: `https://login.microsoftonline.com/{tenantId}/v2.0`
 
 4. **Token Expiry**: Always check `exp` and `nbf` claims. Reject expired or not-yet-valid tokens.
 

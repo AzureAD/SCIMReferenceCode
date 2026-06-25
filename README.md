@@ -73,6 +73,9 @@ The SCIM standard leaves authentication and authorization relatively open. You c
 > **[NOTE]**
 > These authorization methods provided by this repo are solely for testing. When integrating with Azure AD, review the authorization guidance provided [here](https://docs.microsoft.com/azure/active-directory/app-provisioning/use-scim-to-provision-users-and-groups#authorization-for-provisioning-connectors-in-the-application-gallery). 
 
+> **⚠️ [DO NOT USE IN PRODUCTION]**
+> The `TokenController` in `Microsoft.SCIM.WebHostSample` is an anonymously reachable JWT issuer intended only for local sample/integration-test flows. The dev-mode `TokenValidationParameters` in `Startup.cs.ConfigureJwtBearerOptons` disables every JWT validation check (issuer, audience, lifetime, signing key) and is guarded by `#if DEBUG` so Release builds physically cannot ship the bypass. **Before deploying any SCIM endpoint derived from this sample to a non-sample environment, delete `TokenController` and the dev-mode branch, and replace them with a properly authenticated, audience-scoped OAuth token issuer.**
+
 
 ## Contributing to the reference code
 

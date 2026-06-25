@@ -3,7 +3,9 @@
 namespace Microsoft.SCIM
 {
     using System;
+    using Microsoft.AspNetCore.Authorization;
 
+    [Authorize]
     public sealed class RootController : ControllerTemplate<Resource>
     {
         public RootController(IProvider provider, IMonitor monitor)
