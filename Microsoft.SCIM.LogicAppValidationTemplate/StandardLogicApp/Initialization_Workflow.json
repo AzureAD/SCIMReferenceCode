@@ -875,6 +875,23 @@
                         "type": "Compose",
                         "inputs": "@if(greater(length(body('Filter_Group_ObjectMapping')), 0), contains(toLower(coalesce(string(first(body('Filter_Group_ObjectMapping'))?['flowTypes']), '')), 'delete'), false)"
                     },
+                    "Compose_IsVerbosePatchSupported": {
+                        "runAfter": {
+                            "Filter_PatchBodyFormat_Setting": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Compose",
+                        "inputs": "@greater(length(body('Filter_PatchBodyFormat_Setting')), 0)"
+                    },
+                    "Filter_PatchBodyFormat_Setting": {
+                        "runAfter": {},
+                        "type": "Query",
+                        "inputs": {
+                            "from": "@coalesce(body('Get_Job_Details')?['synchronizationJobSettings'], json('[]'))",
+                            "where": "@equals(toLower(item()?['name']), 'patchbodyformat')"
+                        }
+                    },
                     "Compose_UpdateTest_ExcludeList": {
                         "runAfter": {
                             "Select_ObjectAddOnly_SourceNames": [
@@ -1188,7 +1205,8 @@
                             "schemas": "@createArray('urn:ietf:params:scim:schemas:core:2.0:Group')",
                             "displayName": "placeholder-group",
                             "externalId": "placeholder-extid"
-                        }
+                        },
+                        "isVerbosePatchSupported": "@outputs('Compose_IsVerbosePatchSupported')"
                     }
                 }
             }

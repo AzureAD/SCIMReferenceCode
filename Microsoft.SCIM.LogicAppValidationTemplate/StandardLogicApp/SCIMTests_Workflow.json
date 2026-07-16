@@ -138,7 +138,7 @@
                 "summary": null,
                 "detailedResults": [],
                 "errorDetails": {
-                    "summary": null
+                  "summary": null
                 }
               }
             },
@@ -1320,7 +1320,7 @@
                     "type": "Query",
                     "inputs": {
                       "from": "@coalesce(triggerBody()?['initializationData']?['sourceToTargetLookup'], json('[]'))",
-                      "where": "@and(equals(coalesce(item()?['matchingPrecedence'], 0), 0), not(equals(coalesce(item()?['source'], ''), 'manager')), not(equals(coalesce(item()?['target'], ''), 'userName')), not(equals(coalesce(item()?['target'], ''), 'active')), not(equals(coalesce(item()?['target'], ''), 'externalId')), not(equals(coalesce(item()?['target'], ''), 'roles')), if(startsWith(coalesce(item()?['target'], ''), 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:'), not(contains(string(body('Query_Required_Enterprise_Attrs')), concat('\"name\":\"', last(split(item()?['target'], ':')), '\"'))), not(contains(string(body('Query_Required_Core_Attrs')), concat('\"name\":\"', if(contains(coalesce(item()?['target'], ''), '['), first(split(item()?['target'], '[')), if(contains(coalesce(item()?['target'], ''), '.'), first(split(item()?['target'], '.')), coalesce(item()?['target'], ''))), '\"')))))"
+                      "where": "@and(equals(coalesce(item()?['matchingPrecedence'], 0), 0), not(contains(toLower(coalesce(item()?['targetSchema']?['type'], '')), 'reference')), not(equals(coalesce(item()?['target'], ''), 'userName')), not(equals(coalesce(item()?['target'], ''), 'active')), not(equals(coalesce(item()?['target'], ''), 'externalId')), not(equals(coalesce(item()?['target'], ''), 'roles')), if(startsWith(coalesce(item()?['target'], ''), 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:'), not(contains(string(body('Query_Required_Enterprise_Attrs')), concat('\"name\":\"', last(split(item()?['target'], ':')), '\"'))), not(contains(string(body('Query_Required_Core_Attrs')), concat('\"name\":\"', if(contains(coalesce(item()?['target'], ''), '['), first(split(item()?['target'], '[')), if(contains(coalesce(item()?['target'], ''), '.'), first(split(item()?['target'], '.')), coalesce(item()?['target'], ''))), '\"')))))"
                     }
                   },
                   "ForEach_Build_Null_Patch_Operations": {
@@ -1359,9 +1359,60 @@
                       }
                     }
                   },
-                  "Compose_SCIM_Null_Patch_Body": {
+                  "Select_Null_NonVerbose_KeyValues": {
                     "runAfter": {
                       "ForEach_Build_Null_Patch_Operations": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "Select",
+                    "inputs": {
+                      "from": "@body('Filter_Null_Update_Target_Attributes')",
+                      "select": "@concat('\"', replace(item()?['target'], '\"', '\\\"'), '\":\"\"')"
+                    }
+                  },
+                  "Filter_Null_MultiValued_Ops": {
+                    "runAfter": {
+                      "ForEach_Build_Null_Patch_Operations": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "Query",
+                    "inputs": {
+                      "from": "@variables('scimNullPatchOperations')",
+                      "where": "@contains(coalesce(item()?['path'], ''), '[')"
+                    }
+                  },
+                  "Filter_Null_Scalar_Attrs": {
+                    "runAfter": {
+                      "ForEach_Build_Null_Patch_Operations": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "Query",
+                    "inputs": {
+                      "from": "@body('Filter_Null_Update_Target_Attributes')",
+                      "where": "@not(contains(coalesce(item()?['target'], ''), '['))"
+                    }
+                  },
+                  "Select_Null_Batch_KeyValues": {
+                    "runAfter": {
+                      "Filter_Null_Scalar_Attrs": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "Select",
+                    "inputs": {
+                      "from": "@body('Filter_Null_Scalar_Attrs')",
+                      "select": "@concat('\"', replace(item()?['target'], '\"', '\\\"'), '\":\"\"')"
+                    }
+                  },
+                  "Compose_SCIM_Null_Patch_Body": {
+                    "runAfter": {
+                      "Select_Null_Batch_KeyValues": [
+                        "Succeeded"
+                      ],
+                      "Filter_Null_MultiValued_Ops": [
                         "Succeeded"
                       ]
                     },
@@ -1370,7 +1421,7 @@
                       "schemas": [
                         "urn:ietf:params:scim:api:messages:2.0:PatchOp"
                       ],
-                      "Operations": "@variables('scimNullPatchOperations')"
+                      "Operations": "@if(coalesce(triggerBody()?['initializationData']?['isVerbosePatchSupported'], true), variables('scimNullPatchOperations'), union(body('Filter_Null_MultiValued_Ops'), if(greater(length(body('Filter_Null_Scalar_Attrs')), 0), json(concat('[{\"op\":\"replace\",\"value\":{', join(body('Select_Null_Batch_KeyValues'), ','), '}}]')), json('[]'))))"
                     }
                   },
                   "SCIM_Patch_Null_Update": {
@@ -1497,9 +1548,60 @@
                       }
                     }
                   },
-                  "Compose_Null_Patch_Request_Phase2": {
+                  "Select_Null_Phase2_NonVerbose_KeyValues": {
                     "runAfter": {
                       "Select_Null_Patch_Ops_Phase2": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "Select",
+                    "inputs": {
+                      "from": "@body('Filter_Null_Update_Target_Attributes')",
+                      "select": "@concat('\"', replace(item()?['target'], '\"', '\\\"'), '\":null')"
+                    }
+                  },
+                  "Filter_Null_Phase2_MultiValued_Ops": {
+                    "runAfter": {
+                      "Select_Null_Patch_Ops_Phase2": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "Query",
+                    "inputs": {
+                      "from": "@body('Select_Null_Patch_Ops_Phase2')",
+                      "where": "@contains(coalesce(item()?['path'], ''), '[')"
+                    }
+                  },
+                  "Filter_Null_Phase2_Batch_Ops": {
+                    "runAfter": {
+                      "Select_Null_Patch_Ops_Phase2": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "Query",
+                    "inputs": {
+                      "from": "@body('Select_Null_Patch_Ops_Phase2')",
+                      "where": "@not(contains(coalesce(item()?['path'], ''), '['))"
+                    }
+                  },
+                  "Select_Null_Phase2_Batch_KV": {
+                    "runAfter": {
+                      "Filter_Null_Phase2_Batch_Ops": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "Select",
+                    "inputs": {
+                      "from": "@body('Filter_Null_Phase2_Batch_Ops')",
+                      "select": "@concat('\"', replace(item()?['path'], '\"', '\\\"'), '\":null')"
+                    }
+                  },
+                  "Compose_Null_Patch_Request_Phase2": {
+                    "runAfter": {
+                      "Select_Null_Phase2_Batch_KV": [
+                        "Succeeded"
+                      ],
+                      "Filter_Null_Phase2_MultiValued_Ops": [
                         "Succeeded"
                       ]
                     },
@@ -1508,7 +1610,7 @@
                       "schemas": [
                         "urn:ietf:params:scim:api:messages:2.0:PatchOp"
                       ],
-                      "Operations": "@body('Select_Null_Patch_Ops_Phase2')"
+                      "Operations": "@if(coalesce(triggerBody()?['initializationData']?['isVerbosePatchSupported'], true), body('Select_Null_Patch_Ops_Phase2'), union(body('Filter_Null_Phase2_MultiValued_Ops'), if(greater(length(body('Filter_Null_Phase2_Batch_Ops')), 0), json(concat('[{\"op\":\"replace\",\"value\":{', join(body('Select_Null_Phase2_Batch_KV'), ','), '}}]')), json('[]'))))"
                     }
                   },
                   "SCIM_Patch_Null_Update_Phase2": {
@@ -1619,23 +1721,6 @@
                       "passedCount": "@length(body('Filter_Passed_Null_Verifications'))",
                       "failedCount": "@length(body('Filter_Failed_Null_Verifications'))",
                       "overallResult": "@if(and(not(empty(outputs('Compose_SCIM_Null_User_Id'))), or(equals(outputs('SCIM_Patch_Null_Update')['statusCode'], 200), equals(outputs('SCIM_Patch_Null_Update')['statusCode'], 204)), equals(length(body('Filter_Failed_Null_Verifications')), 0), or(equals(outputs('SCIM_Patch_Null_Update_Phase2')['statusCode'], 200), equals(outputs('SCIM_Patch_Null_Update_Phase2')['statusCode'], 204)), equals(length(body('Filter_Failed_Null_Phase2_Verifications')), 0)), 'PASSED', 'FAILED')"
-                    }
-                  },
-                  "SCIM_Delete_Null_Test_User": {
-                    "runAfter": {
-                      "Compose_SCIM_Null_Update_Summary": [
-                        "Succeeded",
-                        "Failed"
-                      ]
-                    },
-                    "type": "Http",
-                    "inputs": {
-                      "uri": "@{concat(parameters('scimEndpoint'), '/Users/', outputs('Compose_SCIM_Null_User_Id'))}",
-                      "method": "DELETE",
-                      "headers": {
-                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
-                        "Accept": "@{parameters('scimContentType')}"
-                      }
                     }
                   },
                   "Filter_MultiValue_Targets": {
@@ -1846,6 +1931,44 @@
                   ]
                 },
                 "type": "Scope"
+              },
+              "SCIM_Null_Update_Cleanup": {
+                "runAfter": {
+                  "Set_SCIMNullUpdate_Output_Variables": [
+                    "Succeeded",
+                    "Failed",
+                    "Skipped"
+                  ]
+                },
+                "type": "If",
+                "expression": {
+                  "and": [
+                    {
+                      "not": {
+                        "equals": [
+                          "@coalesce(outputs('Compose_SCIM_Null_User_Id'), '')",
+                          ""
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "actions": {
+                  "SCIM_Delete_Null_Test_User": {
+                    "type": "Http",
+                    "inputs": {
+                      "uri": "@{concat(parameters('scimEndpoint'), '/Users/', outputs('Compose_SCIM_Null_User_Id'))}",
+                      "method": "DELETE",
+                      "headers": {
+                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                        "Accept": "@{parameters('scimContentType')}"
+                      }
+                    }
+                  }
+                },
+                "else": {
+                  "actions": {}
+                }
               }
             },
             "else": {
@@ -2178,33 +2301,23 @@
               "actions": {}
             },
             "expression": {
-              "and": [
+              "or": [
                 {
                   "equals": [
-                    "@coalesce(triggerBody()?['initializationData']?['isGroupSupported'], false)",
-                    true
+                    "@triggerBody()?['EnabledTests']",
+                    "All"
                   ]
                 },
                 {
-                  "or": [
-                    {
-                      "equals": [
-                        "@triggerBody()?['EnabledTests']",
-                        "All"
-                      ]
-                    },
-                    {
-                      "equals": [
-                        "@triggerBody()?['EnabledTests']",
-                        "SCIMTests"
-                      ]
-                    },
-                    {
-                      "equals": [
-                        "@triggerBody()?['EnabledTests']",
-                        "SCIM_Group_Create_Test"
-                      ]
-                    }
+                  "equals": [
+                    "@triggerBody()?['EnabledTests']",
+                    "SCIMTests"
+                  ]
+                },
+                {
+                  "equals": [
+                    "@triggerBody()?['EnabledTests']",
+                    "SCIM_Group_Create_Test"
                   ]
                 }
               ]
@@ -2285,15 +2398,66 @@
                     "inputs": {
                       "from": "@body('Filter_Update_Typed_Attributes')",
                       "select": {
-                        "op": "Replace",
+                        "op": "replace",
                         "path": "@coalesce(item()?['name'], '')",
                         "value": "@if(and(greater(length(coalesce(triggerBody()?['scimTargetUserValues'], json('[]'))), 1), contains(triggerBody()?['scimTargetUserValues'][1], coalesce(item()?['name'], ''))), triggerBody()?['scimTargetUserValues'][1][coalesce(item()?['name'], '')], if(equals(toLower(coalesce(item()?['type'], 'string')), 'integer'), rand(1, 99999), if(equals(toLower(coalesce(item()?['type'], 'string')), 'datetime'), utcNow(), concat('upd-', substring(guid(),0,8)))))"
                       }
                     }
                   },
-                  "Compose_Update_Patch_Body": {
+                  "Select_Update_NonVerbose_KeyValues": {
                     "runAfter": {
                       "Select_Update_Patch_Ops": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "Select",
+                    "inputs": {
+                      "from": "@body('Select_Update_Patch_Ops')",
+                      "select": "@concat('\"', replace(item()?['path'], '\"', '\\\"'), '\":', if(or(equals(item()?['value'], null), equals(string(item()?['value']), '')), 'null', if(isInt(item()?['value']), string(item()?['value']), concat('\"', replace(string(item()?['value']), '\"', '\\\"'), '\"'))))"
+                    }
+                  },
+                  "Filter_Update_MultiValued_Ops": {
+                    "runAfter": {
+                      "Select_Update_Patch_Ops": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "Query",
+                    "inputs": {
+                      "from": "@body('Select_Update_Patch_Ops')",
+                      "where": "@contains(coalesce(item()?['path'], ''), '[')"
+                    }
+                  },
+                  "Filter_Update_Batch_Ops": {
+                    "runAfter": {
+                      "Select_Update_Patch_Ops": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "Query",
+                    "inputs": {
+                      "from": "@body('Select_Update_Patch_Ops')",
+                      "where": "@not(contains(coalesce(item()?['path'], ''), '['))"
+                    }
+                  },
+                  "Select_Update_Batch_KeyValues": {
+                    "runAfter": {
+                      "Filter_Update_Batch_Ops": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "Select",
+                    "inputs": {
+                      "from": "@body('Filter_Update_Batch_Ops')",
+                      "select": "@concat('\"', replace(item()?['path'], '\"', '\\\"'), '\":', if(or(equals(item()?['value'], null), equals(string(item()?['value']), '')), 'null', if(isInt(item()?['value']), string(item()?['value']), concat('\"', replace(string(item()?['value']), '\"', '\\\"'), '\"'))))"
+                    }
+                  },
+                  "Compose_Update_Patch_Body": {
+                    "runAfter": {
+                      "Select_Update_Batch_KeyValues": [
+                        "Succeeded"
+                      ],
+                      "Filter_Update_MultiValued_Ops": [
                         "Succeeded"
                       ]
                     },
@@ -2302,7 +2466,7 @@
                       "schemas": [
                         "urn:ietf:params:scim:api:messages:2.0:PatchOp"
                       ],
-                      "Operations": "@body('Select_Update_Patch_Ops')"
+                      "Operations": "@if(coalesce(triggerBody()?['initializationData']?['isVerbosePatchSupported'], true), body('Select_Update_Patch_Ops'), union(body('Filter_Update_MultiValued_Ops'), if(greater(length(body('Filter_Update_Batch_Ops')), 0), json(concat('[{\"op\":\"replace\",\"value\":{', join(body('Select_Update_Batch_KeyValues'), ','), '}}]')), json('[]'))))"
                     }
                   },
                   "Check_Update_Has_Eligible_Attrs": {
@@ -2684,7 +2848,7 @@
                     "inputs": {
                       "from": "@body('Filter_GroupUpdate_Eligible')",
                       "select": {
-                        "op": "Replace",
+                        "op": "replace",
                         "path": "@coalesce(item()?['name'], '')",
                         "value": "@concat('upd-', substring(guid(),0,8))"
                       }
@@ -2798,33 +2962,23 @@
               "actions": {}
             },
             "expression": {
-              "and": [
+              "or": [
                 {
                   "equals": [
-                    "@coalesce(triggerBody()?['initializationData']?['isGroupSupported'], false)",
-                    true
+                    "@triggerBody()?['EnabledTests']",
+                    "All"
                   ]
                 },
                 {
-                  "or": [
-                    {
-                      "equals": [
-                        "@triggerBody()?['EnabledTests']",
-                        "All"
-                      ]
-                    },
-                    {
-                      "equals": [
-                        "@triggerBody()?['EnabledTests']",
-                        "SCIMTests"
-                      ]
-                    },
-                    {
-                      "equals": [
-                        "@triggerBody()?['EnabledTests']",
-                        "SCIM_Group_Update_Test"
-                      ]
-                    }
+                  "equals": [
+                    "@triggerBody()?['EnabledTests']",
+                    "SCIMTests"
+                  ]
+                },
+                {
+                  "equals": [
+                    "@triggerBody()?['EnabledTests']",
+                    "SCIM_Group_Update_Test"
                   ]
                 }
               ]
@@ -2845,7 +2999,7 @@
                   "body": "@{concat('grant_type=client_credentials&client_id=', encodeUriComponent(parameters('scimClientId')), '&client_secret=', encodeUriComponent(parameters('scimClientSecret')), if(empty(coalesce(parameters('scimOAuthScope'), '')), '', concat('&scope=', encodeUriComponent(parameters('scimOAuthScope')))))}"
                 }
               },
-              "Check_Token_Acquired": {
+              "Check_Token_Response": {
                 "runAfter": {
                   "Acquire_OAuth2_Token": [
                     "Succeeded",
@@ -2879,60 +3033,88 @@
                   ]
                 },
                 "actions": {
-                  "SCIM_Validate_With_OAuth_Token": {
-                    "type": "Http",
-                    "inputs": {
-                      "uri": "@{concat(parameters('scimEndpoint'), '/Users?startIndex=1&count=1')}",
-                      "method": "GET",
-                      "headers": {
-                        "Authorization": "@{concat('Bearer ', body('Acquire_OAuth2_Token')?['access_token'])}",
-                        "Accept": "@{parameters('scimContentType')}"
-                      }
-                    }
+                  "Compose_Token_Validity_Minutes": {
+                    "type": "Compose",
+                    "inputs": "@div(coalesce(body('Acquire_OAuth2_Token')?['expires_in'], 3600), 60)"
                   },
-                  "Compose_OAuth_Validation_Summary": {
+                  "Check_Token_Validity_Range": {
                     "runAfter": {
-                      "SCIM_Validate_With_OAuth_Token": [
-                        "Succeeded",
-                        "Failed",
-                        "TimedOut"
+                      "Compose_Token_Validity_Minutes": [
+                        "Succeeded"
                       ]
                     },
-                    "type": "Compose",
-                    "inputs": {
-                      "testName": "Validate_Credentials_Test",
-                      "timestamp": "@utcNow()",
-                      "authMode": "OAuth2ClientCredentials",
-                      "tokenEndpoint": "@parameters('scimTokenEndpoint')",
-                      "tokenAcquisition": {
-                        "statusCode": "@outputs('Acquire_OAuth2_Token')['statusCode']",
-                        "hasAccessToken": true,
-                        "passed": true
+                    "type": "If",
+                    "expression": {
+                      "and": [
+                        {
+                          "greaterOrEquals": [
+                            "@outputs('Compose_Token_Validity_Minutes')",
+                            60
+                          ]
+                        },
+                        {
+                          "lessOrEquals": [
+                            "@outputs('Compose_Token_Validity_Minutes')",
+                            360
+                          ]
+                        }
+                      ]
+                    },
+                    "actions": {
+                      "SCIM_Validate_Get_Users": {
+                        "type": "Http",
+                        "inputs": {
+                          "uri": "@{concat(parameters('scimEndpoint'), '/Users?startIndex=1&count=1')}",
+                          "method": "GET",
+                          "headers": {
+                            "Authorization": "@{concat('Bearer ', body('Acquire_OAuth2_Token')?['access_token'])}",
+                            "Accept": "@{parameters('scimContentType')}"
+                          }
+                        }
                       },
-                      "scimEndpointValidation": {
-                        "endpoint": "@concat(parameters('scimEndpoint'), '/Users?startIndex=1&count=1')",
-                        "statusCode": "@coalesce(outputs('SCIM_Validate_With_OAuth_Token')?['statusCode'], 0)",
-                        "passed": "@and(greaterOrEquals(coalesce(outputs('SCIM_Validate_With_OAuth_Token')?['statusCode'], 0), 200), less(coalesce(outputs('SCIM_Validate_With_OAuth_Token')?['statusCode'], 0), 300))"
-                      },
-                      "overallResult": "@if(and(greaterOrEquals(coalesce(outputs('SCIM_Validate_With_OAuth_Token')?['statusCode'], 0), 200), less(coalesce(outputs('SCIM_Validate_With_OAuth_Token')?['statusCode'], 0), 300)), 'PASSED', 'FAILED')"
+                      "Compose_SCIM_Validation_Result": {
+                        "runAfter": {
+                          "SCIM_Validate_Get_Users": [
+                            "Succeeded",
+                            "Failed",
+                            "TimedOut"
+                          ]
+                        },
+                        "type": "Compose",
+                        "inputs": {
+                          "passed": "@and(greaterOrEquals(coalesce(outputs('SCIM_Validate_Get_Users')?['statusCode'], 0), 200), less(coalesce(outputs('SCIM_Validate_Get_Users')?['statusCode'], 0), 300))",
+                          "statusCode": "@coalesce(outputs('SCIM_Validate_Get_Users')?['statusCode'], 0)",
+                          "endpoint": "@concat(parameters('scimEndpoint'), '/Users?startIndex=1&count=1')",
+                          "overallResult": "@if(and(greaterOrEquals(coalesce(outputs('SCIM_Validate_Get_Users')?['statusCode'], 0), 200), less(coalesce(outputs('SCIM_Validate_Get_Users')?['statusCode'], 0), 300)), 'PASSED', 'FAILED')"
+                        }
+                      }
+                    },
+                    "else": {
+                      "actions": {
+                        "Compose_Token_Validity_Failure": {
+                          "type": "Compose",
+                          "inputs": {
+                            "passed": false,
+                            "validityMinutes": "@outputs('Compose_Token_Validity_Minutes')",
+                            "expiresInSeconds": "@coalesce(body('Acquire_OAuth2_Token')?['expires_in'], 3600)",
+                            "reason": "@if(less(outputs('Compose_Token_Validity_Minutes'), 60), 'Token validity is less than 60 minutes. Minimum required: 60 minutes.', 'Token validity exceeds 360 minutes (6 hours). Maximum allowed: 360 minutes.')",
+                            "overallResult": "FAILED"
+                          }
+                        }
+                      }
                     }
                   }
                 },
                 "else": {
                   "actions": {
-                    "Compose_OAuth_Validation_Summary_TokenFail": {
+                    "Compose_Token_Acquisition_Failure": {
                       "type": "Compose",
                       "inputs": {
-                        "testName": "Validate_Credentials_Test",
-                        "timestamp": "@utcNow()",
-                        "authMode": "OAuth2ClientCredentials",
+                        "passed": false,
+                        "statusCode": "@coalesce(outputs('Acquire_OAuth2_Token')?['statusCode'], 0)",
+                        "hasAccessToken": "@not(equals(coalesce(body('Acquire_OAuth2_Token')?['access_token'], ''), ''))",
                         "tokenEndpoint": "@parameters('scimTokenEndpoint')",
-                        "tokenAcquisition": {
-                          "statusCode": "@coalesce(outputs('Acquire_OAuth2_Token')?['statusCode'], 0)",
-                          "hasAccessToken": "@not(equals(coalesce(body('Acquire_OAuth2_Token')?['access_token'], ''), ''))",
-                          "passed": false
-                        },
-                        "scimEndpointValidation": null,
+                        "reason": "@if(or(less(coalesce(outputs('Acquire_OAuth2_Token')?['statusCode'], 0), 200), greaterOrEquals(coalesce(outputs('Acquire_OAuth2_Token')?['statusCode'], 0), 300)), concat('Token endpoint returned HTTP ', string(coalesce(outputs('Acquire_OAuth2_Token')?['statusCode'], 0)), '. Expected 2xx.'), 'Token endpoint returned 2xx but response did not contain an access_token field.')",
                         "overallResult": "FAILED"
                       }
                     }
@@ -2941,7 +3123,7 @@
               },
               "Set_ValidateCredentialsTestOutputs": {
                 "runAfter": {
-                  "Check_Token_Acquired": [
+                  "Check_Token_Response": [
                     "Succeeded",
                     "Failed",
                     "TimedOut",
@@ -2952,12 +3134,26 @@
                 "inputs": {
                   "name": "ValidateCredentialsTestOutputs",
                   "value": {
-                    "overallResult": "@coalesce(outputs('Compose_OAuth_Validation_Summary')?['overallResult'], outputs('Compose_OAuth_Validation_Summary_TokenFail')?['overallResult'], 'FAILED')",
-                    "result": "@if(equals(coalesce(outputs('Compose_OAuth_Validation_Summary')?['overallResult'], outputs('Compose_OAuth_Validation_Summary_TokenFail')?['overallResult'], 'FAILED'), 'PASSED'), 'success', if(empty(coalesce(outputs('Compose_OAuth_Validation_Summary'), json('null'))), 'FAILED - Action: Acquire_OAuth2_Token - token acquisition failed', 'FAILED - Action: SCIM_Validate_With_OAuth_Token - SCIM endpoint validation failed'))",
-                    "summary": "@coalesce(outputs('Compose_OAuth_Validation_Summary'), outputs('Compose_OAuth_Validation_Summary_TokenFail'))",
-                    "detailedResults": [],
+                    "overallResult": "@coalesce(outputs('Compose_SCIM_Validation_Result')?['overallResult'], outputs('Compose_Token_Validity_Failure')?['overallResult'], outputs('Compose_Token_Acquisition_Failure')?['overallResult'], 'FAILED')",
+                    "result": "@if(equals(coalesce(outputs('Compose_SCIM_Validation_Result')?['overallResult'], outputs('Compose_Token_Validity_Failure')?['overallResult'], outputs('Compose_Token_Acquisition_Failure')?['overallResult'], 'FAILED'), 'PASSED'), 'success', concat('FAILED - Action: ', coalesce(if(equals(coalesce(outputs('Compose_SCIM_Validation_Result')?['passed'], true), false), 'SCIM_Validate_Get_Users', null), if(not(empty(coalesce(outputs('Compose_Token_Validity_Failure'), json('null')))), 'Check_Token_Validity_Range', null), 'Acquire_OAuth2_Token'), ' - ', coalesce(if(equals(coalesce(outputs('Compose_SCIM_Validation_Result')?['passed'], true), false), concat('SCIM /Users returned HTTP ', string(coalesce(outputs('SCIM_Validate_Get_Users')?['statusCode'], 0)), '. Expected 2xx.'), null), outputs('Compose_Token_Validity_Failure')?['reason'], outputs('Compose_Token_Acquisition_Failure')?['reason'], 'Unexpected failure')))",
+                    "summary": "@coalesce(outputs('Compose_SCIM_Validation_Result'), outputs('Compose_Token_Validity_Failure'), outputs('Compose_Token_Acquisition_Failure'))",
+                    "detailedResults": {
+                      "gate1_tokenAcquisition": {
+                        "passed": "@not(equals(coalesce(outputs('Compose_Token_Validity_Minutes'), outputs('Compose_Token_Acquisition_Failure'), null), null))",
+                        "statusCode": "@coalesce(outputs('Acquire_OAuth2_Token')?['statusCode'], 0)"
+                      },
+                      "gate2_tokenLifetime": {
+                        "passed": "@not(empty(coalesce(outputs('Compose_SCIM_Validation_Result'), outputs('Compose_Token_Validity_Failure'))))",
+                        "validityMinutes": "@coalesce(outputs('Compose_Token_Validity_Minutes'), null)"
+                      },
+                      "gate3_scimAccess": {
+                        "passed": "@coalesce(outputs('Compose_SCIM_Validation_Result')?['passed'], false)",
+                        "statusCode": "@coalesce(outputs('SCIM_Validate_Get_Users')?['statusCode'], null)"
+                      }
+                    },
                     "errorDetails": {
-                      "summary": "@if(equals(coalesce(outputs('Compose_OAuth_Validation_Summary')?['overallResult'], outputs('Compose_OAuth_Validation_Summary_TokenFail')?['overallResult'], 'FAILED'), 'PASSED'), null, if(empty(coalesce(outputs('Compose_OAuth_Validation_Summary'), json('null'))), concat('Token acquisition failed. Status: ', string(coalesce(outputs('Acquire_OAuth2_Token')?['statusCode'], 0))), concat('SCIM endpoint returned status: ', string(coalesce(outputs('SCIM_Validate_With_OAuth_Token')?['statusCode'], 0)))))"
+                      "failedAction": "@coalesce(if(equals(coalesce(outputs('Compose_SCIM_Validation_Result')?['passed'], true), false), 'SCIM_Validate_Get_Users', null), if(not(empty(coalesce(outputs('Compose_Token_Validity_Failure'), json('null')))), 'Check_Token_Validity_Range', null), if(not(empty(coalesce(outputs('Compose_Token_Acquisition_Failure'), json('null')))), 'Acquire_OAuth2_Token', null), null)",
+                      "reason": "@coalesce(if(equals(coalesce(outputs('Compose_SCIM_Validation_Result')?['passed'], true), false), concat('SCIM /Users returned HTTP ', string(coalesce(outputs('SCIM_Validate_Get_Users')?['statusCode'], 0)), '. Expected 2xx.'), null), outputs('Compose_Token_Validity_Failure')?['reason'], outputs('Compose_Token_Acquisition_Failure')?['reason'], null)"
                     }
                   }
                 }
@@ -2990,529 +3186,519 @@
             },
             "type": "If"
           },
-          "Federated_Identity_Test": {
+                    "Federated_Identity_Test": {
             "runAfter": {},
             "actions": {
-                "Acquire_Entra_Token": {
-                    "type": "Http",
-                    "inputs": {
-                        "uri": "@{concat('https://login.microsoftonline.com/', parameters('federatedEntraTenantId'), '/oauth2/v2.0/token')}",
-                        "method": "POST",
-                        "headers": {
-                            "Content-Type": "application/x-www-form-urlencoded"
-                        },
-                        "body": "@{concat('grant_type=client_credentials&client_id=', encodeUriComponent(parameters('federatedApplicationId')), '&client_secret=', encodeUriComponent(parameters('federatedApplicationClientSecret')), '&scope=', encodeUriComponent(concat('api://', parameters('federatedApplicationId'), '/.default')))}"
-                    }
+              "Acquire_Entra_Token": {
+                "type": "Http",
+                "inputs": {
+                  "uri": "@{concat('https://login.microsoftonline.com/', parameters('federatedEntraTenantId'), '/oauth2/v2.0/token')}",
+                  "method": "POST",
+                  "headers": {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                  },
+                  "body": "@{concat('grant_type=client_credentials&client_id=', encodeUriComponent(parameters('federatedApplicationId')), '&client_secret=', encodeUriComponent(parameters('federatedApplicationClientSecret')), '&scope=', encodeUriComponent(concat('api://', parameters('federatedApplicationId'), '/.default')))}"
+                }
+              },
+              "Check_Entra_Token_Acquired": {
+                "runAfter": {
+                  "Acquire_Entra_Token": ["Succeeded", "Failed", "TimedOut"]
                 },
-                "Check_Entra_Token_Acquired": {
-                    "runAfter": {
-                        "Acquire_Entra_Token": [
+                "type": "If",
+                "expression": {
+                  "and": [
+                    {
+                      "greaterOrEquals": [
+                        "@coalesce(outputs('Acquire_Entra_Token')?['statusCode'], 0)",
+                        200
+                      ]
+                    },
+                    {
+                      "less": [
+                        "@coalesce(outputs('Acquire_Entra_Token')?['statusCode'], 0)",
+                        300
+                      ]
+                    },
+                    {
+                      "not": {
+                        "equals": [
+                          "@coalesce(body('Acquire_Entra_Token')?['access_token'], '')",
+                          ""
+                        ]
+                      }
+                    }
+                  ]
+                },
+                "actions": {
+                  "Check_Is_Google_SA_Flow": {
+                    "type": "If",
+                    "expression": {
+                      "and": [
+                        {
+                          "contains": [
+                            "@parameters('federatedTokenEndpoint')",
+                            "googleapis.com"
+                          ]
+                        },
+                        {
+                          "contains": [
+                            "@parameters('federatedTokenEndpoint')",
+                            "serviceAccounts"
+                          ]
+                        }
+                      ]
+                    },
+                    "actions": {
+                      "Acquire_Google_STS_Token": {
+                        "type": "Http",
+                        "inputs": {
+                          "uri": "https://sts.googleapis.com/v1/token",
+                          "method": "POST",
+                          "headers": {
+                            "Content-Type": "application/json"
+                          },
+                          "body": {
+                            "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+                            "audience": "@{parameters('federatedAudience')}",
+                            "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
+                            "subject_token": "@{body('Acquire_Entra_Token')?['access_token']}",
+                            "subject_token_type": "urn:ietf:params:oauth:token-type:id_token",
+                            "scope": "https://www.googleapis.com/auth/cloud-platform"
+                          }
+                        }
+                      },
+                      "Check_Google_STS_Token": {
+                        "runAfter": {
+                          "Acquire_Google_STS_Token": [
                             "Succeeded",
                             "Failed",
                             "TimedOut"
-                        ]
-                    },
-                    "type": "If",
-                    "expression": {
-                        "and": [
+                          ]
+                        },
+                        "type": "If",
+                        "expression": {
+                          "and": [
                             {
-                                "greaterOrEquals": [
-                                    "@coalesce(outputs('Acquire_Entra_Token')?['statusCode'], 0)",
-                                    200
-                                ]
+                              "greaterOrEquals": [
+                                "@coalesce(outputs('Acquire_Google_STS_Token')?['statusCode'], 0)",
+                                200
+                              ]
                             },
                             {
-                                "less": [
-                                    "@coalesce(outputs('Acquire_Entra_Token')?['statusCode'], 0)",
-                                    300
-                                ]
+                              "less": [
+                                "@coalesce(outputs('Acquire_Google_STS_Token')?['statusCode'], 0)",
+                                300
+                              ]
                             },
                             {
-                                "not": {
-                                    "equals": [
-                                        "@coalesce(body('Acquire_Entra_Token')?['access_token'], '')",
-                                        ""
-                                    ]
-                                }
+                              "not": {
+                                "equals": [
+                                  "@coalesce(body('Acquire_Google_STS_Token')?['access_token'], '')",
+                                  ""
+                                ]
+                              }
                             }
-                        ]
-                    },
-                    "actions": {
-                        "Check_Is_Google_SA_Flow": {
+                          ]
+                        },
+                        "actions": {
+                          "Acquire_Google_SA_Token": {
+                            "type": "Http",
+                            "inputs": {
+                              "uri": "@{parameters('federatedTokenEndpoint')}",
+                              "method": "POST",
+                              "headers": {
+                                "Content-Type": "application/json",
+                                "Authorization": "@{concat('Bearer ', body('Acquire_Google_STS_Token')?['access_token'])}"
+                              },
+                              "body": {
+                                "scope": [
+                                  "https://www.googleapis.com/auth/cloud-platform"
+                                ]
+                              }
+                            }
+                          },
+                          "Check_Google_SA_Token": {
+                            "runAfter": {
+                              "Acquire_Google_SA_Token": [
+                                "Succeeded",
+                                "Failed",
+                                "TimedOut"
+                              ]
+                            },
                             "type": "If",
                             "expression": {
-                                "and": [
-                                    {
-                                        "contains": [
-                                            "@parameters('federatedTokenEndpoint')",
-                                            "googleapis.com"
-                                        ]
-                                    },
-                                    {
-                                        "contains": [
-                                            "@parameters('federatedTokenEndpoint')",
-                                            "serviceAccounts"
-                                        ]
-                                    }
-                                ]
+                              "and": [
+                                {
+                                  "greaterOrEquals": [
+                                    "@coalesce(outputs('Acquire_Google_SA_Token')?['statusCode'], 0)",
+                                    200
+                                  ]
+                                },
+                                {
+                                  "less": [
+                                    "@coalesce(outputs('Acquire_Google_SA_Token')?['statusCode'], 0)",
+                                    300
+                                  ]
+                                },
+                                {
+                                  "not": {
+                                    "equals": [
+                                      "@coalesce(body('Acquire_Google_SA_Token')?['accessToken'], '')",
+                                      ""
+                                    ]
+                                  }
+                                }
+                              ]
                             },
                             "actions": {
-                                "Acquire_Google_STS_Token": {
-                                    "type": "Http",
-                                    "inputs": {
-                                        "uri": "https://sts.googleapis.com/v1/token",
-                                        "method": "POST",
-                                        "headers": {
-                                            "Content-Type": "application/json"
-                                        },
-                                        "body": {
-                                            "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
-                                            "audience": "@{parameters('federatedAudience')}",
-                                            "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
-                                            "subject_token": "@{body('Acquire_Entra_Token')?['access_token']}",
-                                            "subject_token_type": "urn:ietf:params:oauth:token-type:id_token",
-                                            "scope": "https://www.googleapis.com/auth/cloud-platform"
-                                        }
-                                    }
-                                },
-                                "Check_Google_STS_Token": {
-                                    "runAfter": {
-                                        "Acquire_Google_STS_Token": [
-                                            "Succeeded",
-                                            "Failed",
-                                            "TimedOut"
-                                        ]
-                                    },
-                                    "type": "If",
-                                    "expression": {
-                                        "and": [
-                                            {
-                                                "greaterOrEquals": [
-                                                    "@coalesce(outputs('Acquire_Google_STS_Token')?['statusCode'], 0)",
-                                                    200
-                                                ]
-                                            },
-                                            {
-                                                "less": [
-                                                    "@coalesce(outputs('Acquire_Google_STS_Token')?['statusCode'], 0)",
-                                                    300
-                                                ]
-                                            },
-                                            {
-                                                "not": {
-                                                    "equals": [
-                                                        "@coalesce(body('Acquire_Google_STS_Token')?['access_token'], '')",
-                                                        ""
-                                                    ]
-                                                }
-                                            }
-                                        ]
-                                    },
-                                    "actions": {
-                                        "Acquire_Google_SA_Token": {
-                                            "type": "Http",
-                                            "inputs": {
-                                                "uri": "@{parameters('federatedTokenEndpoint')}",
-                                                "method": "POST",
-                                                "headers": {
-                                                    "Content-Type": "application/json",
-                                                    "Authorization": "@{concat('Bearer ', body('Acquire_Google_STS_Token')?['access_token'])}"
-                                                },
-                                                "body": {
-                                                    "scope": [
-                                                        "https://www.googleapis.com/auth/cloud-platform"
-                                                    ]
-                                                }
-                                            }
-                                        },
-                                        "Check_Google_SA_Token": {
-                                            "runAfter": {
-                                                "Acquire_Google_SA_Token": [
-                                                    "Succeeded",
-                                                    "Failed",
-                                                    "TimedOut"
-                                                ]
-                                            },
-                                            "type": "If",
-                                            "expression": {
-                                                "and": [
-                                                    {
-                                                        "greaterOrEquals": [
-                                                            "@coalesce(outputs('Acquire_Google_SA_Token')?['statusCode'], 0)",
-                                                            200
-                                                        ]
-                                                    },
-                                                    {
-                                                        "less": [
-                                                            "@coalesce(outputs('Acquire_Google_SA_Token')?['statusCode'], 0)",
-                                                            300
-                                                        ]
-                                                    },
-                                                    {
-                                                        "not": {
-                                                            "equals": [
-                                                                "@coalesce(body('Acquire_Google_SA_Token')?['accessToken'], '')",
-                                                                ""
-                                                            ]
-                                                        }
-                                                    }
-                                                ]
-                                            },
-                                            "actions": {
-                                                "Compose_Federated_Validation_Summary_GoogleSA": {
-                                                    "type": "Compose",
-                                                    "inputs": {
-                                                        "testName": "Federated_Identity_Test",
-                                                        "timestamp": "@utcNow()",
-                                                        "authMode": "FederatedIdentity_Google_SA",
-                                                        "entraTokenAcquisition": {
-                                                            "endpoint": "@concat('https://login.microsoftonline.com/', parameters('federatedEntraTenantId'), '/oauth2/v2.0/token')",
-                                                            "statusCode": "@outputs('Acquire_Entra_Token')['statusCode']",
-                                                            "passed": true
-                                                        },
-                                                        "googleStsTokenExchange": {
-                                                            "endpoint": "https://sts.googleapis.com/v1/token",
-                                                            "statusCode": "@outputs('Acquire_Google_STS_Token')['statusCode']",
-                                                            "passed": true
-                                                        },
-                                                        "googleSaImpersonation": {
-                                                            "endpoint": "@parameters('federatedTokenEndpoint')",
-                                                            "statusCode": "@outputs('Acquire_Google_SA_Token')['statusCode']",
-                                                            "passed": true
-                                                        },
-                                                        "overallResult": "PASSED"
-                                                    }
-                                                }
-                                            },
-                                            "else": {
-                                                "actions": {
-                                                    "Compose_Federated_Validation_Summary_GoogleSA_Fail": {
-                                                        "type": "Compose",
-                                                        "inputs": {
-                                                            "testName": "Federated_Identity_Test",
-                                                            "timestamp": "@utcNow()",
-                                                            "authMode": "FederatedIdentity_Google_SA",
-                                                            "entraTokenAcquisition": {
-                                                                "passed": true
-                                                            },
-                                                            "googleStsTokenExchange": {
-                                                                "passed": true
-                                                            },
-                                                            "googleSaImpersonation": {
-                                                                "endpoint": "@parameters('federatedTokenEndpoint')",
-                                                                "statusCode": "@coalesce(outputs('Acquire_Google_SA_Token')?['statusCode'], 0)",
-                                                                "hasAccessToken": "@not(equals(coalesce(body('Acquire_Google_SA_Token')?['accessToken'], ''), ''))",
-                                                                "passed": false
-                                                            },
-                                                            "overallResult": "FAILED"
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    },
-                                    "else": {
-                                        "actions": {
-                                            "Compose_Federated_Validation_Summary_GoogleSTS_Fail": {
-                                                "type": "Compose",
-                                                "inputs": {
-                                                    "testName": "Federated_Identity_Test",
-                                                    "timestamp": "@utcNow()",
-                                                    "authMode": "FederatedIdentity_Google_SA",
-                                                    "entraTokenAcquisition": {
-                                                        "passed": true
-                                                    },
-                                                    "googleStsTokenExchange": {
-                                                        "endpoint": "https://sts.googleapis.com/v1/token",
-                                                        "statusCode": "@coalesce(outputs('Acquire_Google_STS_Token')?['statusCode'], 0)",
-                                                        "hasAccessToken": "@not(equals(coalesce(body('Acquire_Google_STS_Token')?['access_token'], ''), ''))",
-                                                        "passed": false
-                                                    },
-                                                    "overallResult": "FAILED"
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            },
-                            "else": {
-                                "actions": {
-                                    "Check_Is_Google_STS_Flow": {
-                                        "type": "If",
-                                        "expression": {
-                                            "and": [
-                                                {
-                                                    "contains": [
-                                                        "@parameters('federatedTokenEndpoint')",
-                                                        "googleapis.com"
-                                                    ]
-                                                }
-                                            ]
-                                        },
-                                        "actions": {
-                                            "Acquire_Google_STS_Token_Only": {
-                                                "type": "Http",
-                                                "inputs": {
-                                                    "uri": "@{parameters('federatedTokenEndpoint')}",
-                                                    "method": "POST",
-                                                    "headers": {
-                                                        "Content-Type": "application/json"
-                                                    },
-                                                    "body": {
-                                                        "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
-                                                        "audience": "@{parameters('federatedAudience')}",
-                                                        "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
-                                                        "subject_token": "@{body('Acquire_Entra_Token')?['access_token']}",
-                                                        "subject_token_type": "urn:ietf:params:oauth:token-type:id_token",
-                                                        "scope": "https://www.googleapis.com/auth/cloud-platform"
-                                                    }
-                                                }
-                                            },
-                                            "Check_Google_STS_Only_Token": {
-                                                "runAfter": {
-                                                    "Acquire_Google_STS_Token_Only": [
-                                                        "Succeeded",
-                                                        "Failed",
-                                                        "TimedOut"
-                                                    ]
-                                                },
-                                                "type": "If",
-                                                "expression": {
-                                                    "and": [
-                                                        {
-                                                            "greaterOrEquals": [
-                                                                "@coalesce(outputs('Acquire_Google_STS_Token_Only')?['statusCode'], 0)",
-                                                                200
-                                                            ]
-                                                        },
-                                                        {
-                                                            "less": [
-                                                                "@coalesce(outputs('Acquire_Google_STS_Token_Only')?['statusCode'], 0)",
-                                                                300
-                                                            ]
-                                                        },
-                                                        {
-                                                            "not": {
-                                                                "equals": [
-                                                                    "@coalesce(body('Acquire_Google_STS_Token_Only')?['access_token'], '')",
-                                                                    ""
-                                                                ]
-                                                            }
-                                                        }
-                                                    ]
-                                                },
-                                                "actions": {
-                                                    "Compose_Federated_Validation_Summary_GoogleSTSOnly": {
-                                                        "type": "Compose",
-                                                        "inputs": {
-                                                            "testName": "Federated_Identity_Test",
-                                                            "timestamp": "@utcNow()",
-                                                            "authMode": "FederatedIdentity_Google_STS",
-                                                            "entraTokenAcquisition": {
-                                                                "endpoint": "@concat('https://login.microsoftonline.com/', parameters('federatedEntraTenantId'), '/oauth2/v2.0/token')",
-                                                                "statusCode": "@outputs('Acquire_Entra_Token')['statusCode']",
-                                                                "passed": true
-                                                            },
-                                                            "googleStsTokenExchange": {
-                                                                "endpoint": "@parameters('federatedTokenEndpoint')",
-                                                                "statusCode": "@outputs('Acquire_Google_STS_Token_Only')['statusCode']",
-                                                                "passed": true
-                                                            },
-                                                            "overallResult": "PASSED"
-                                                        }
-                                                    }
-                                                },
-                                                "else": {
-                                                    "actions": {
-                                                        "Compose_Federated_Validation_Summary_GoogleSTSOnly_Fail": {
-                                                            "type": "Compose",
-                                                            "inputs": {
-                                                                "testName": "Federated_Identity_Test",
-                                                                "timestamp": "@utcNow()",
-                                                                "authMode": "FederatedIdentity_Google_STS",
-                                                                "entraTokenAcquisition": {
-                                                                    "passed": true
-                                                                },
-                                                                "googleStsTokenExchange": {
-                                                                    "endpoint": "@parameters('federatedTokenEndpoint')",
-                                                                    "statusCode": "@coalesce(outputs('Acquire_Google_STS_Token_Only')?['statusCode'], 0)",
-                                                                    "hasAccessToken": "@not(equals(coalesce(body('Acquire_Google_STS_Token_Only')?['access_token'], ''), ''))",
-                                                                    "passed": false
-                                                                },
-                                                                "overallResult": "FAILED"
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        "else": {
-                                            "actions": {
-                                                "Acquire_Federated_Token": {
-                                                    "type": "Http",
-                                                    "inputs": {
-                                                        "uri": "@{parameters('federatedTokenEndpoint')}",
-                                                        "method": "POST",
-                                                        "headers": {
-                                                            "Content-Type": "application/x-www-form-urlencoded"
-                                                        },
-                                                        "body": "@{concat('grant_type=client_credentials&client_id=', encodeUriComponent(parameters('federatedClientId')), '&client_assertion=', encodeUriComponent(body('Acquire_Entra_Token')?['access_token']), '&client_assertion_type=', encodeUriComponent('urn:ietf:params:oauth:client-assertion-type:jwt-bearer'), '&baseAddress=', encodeUriComponent(parameters('federatedBaseAddress')))}"
-                                                    }
-                                                },
-                                                "Check_Federated_Token_Acquired": {
-                                                    "runAfter": {
-                                                        "Acquire_Federated_Token": [
-                                                            "Succeeded",
-                                                            "Failed",
-                                                            "TimedOut"
-                                                        ]
-                                                    },
-                                                    "type": "If",
-                                                    "expression": {
-                                                        "and": [
-                                                            {
-                                                                "greaterOrEquals": [
-                                                                    "@coalesce(outputs('Acquire_Federated_Token')?['statusCode'], 0)",
-                                                                    200
-                                                                ]
-                                                            },
-                                                            {
-                                                                "less": [
-                                                                    "@coalesce(outputs('Acquire_Federated_Token')?['statusCode'], 0)",
-                                                                    300
-                                                                ]
-                                                            },
-                                                            {
-                                                                "not": {
-                                                                    "equals": [
-                                                                        "@coalesce(body('Acquire_Federated_Token')?['access_token'], '')",
-                                                                        ""
-                                                                    ]
-                                                                }
-                                                            }
-                                                        ]
-                                                    },
-                                                    "actions": {
-                                                        "Compose_Federated_Validation_Summary": {
-                                                            "type": "Compose",
-                                                            "inputs": {
-                                                                "testName": "Federated_Identity_Test",
-                                                                "timestamp": "@utcNow()",
-                                                                "authMode": "FederatedIdentity",
-                                                                "entraTokenAcquisition": {
-                                                                    "endpoint": "@concat('https://login.microsoftonline.com/', parameters('federatedEntraTenantId'), '/oauth2/v2.0/token')",
-                                                                    "statusCode": "@outputs('Acquire_Entra_Token')['statusCode']",
-                                                                    "passed": true
-                                                                },
-                                                                "federatedTokenExchange": {
-                                                                    "endpoint": "@parameters('federatedTokenEndpoint')",
-                                                                    "statusCode": "@outputs('Acquire_Federated_Token')['statusCode']",
-                                                                    "passed": true
-                                                                },
-                                                                "overallResult": "PASSED"
-                                                            }
-                                                        }
-                                                    },
-                                                    "else": {
-                                                        "actions": {
-                                                            "Compose_Federated_Validation_Summary_TokenFail": {
-                                                                "type": "Compose",
-                                                                "inputs": {
-                                                                    "testName": "Federated_Identity_Test",
-                                                                    "timestamp": "@utcNow()",
-                                                                    "authMode": "FederatedIdentity",
-                                                                    "entraTokenAcquisition": {
-                                                                        "passed": true
-                                                                    },
-                                                                    "federatedTokenExchange": {
-                                                                        "endpoint": "@parameters('federatedTokenEndpoint')",
-                                                                        "statusCode": "@coalesce(outputs('Acquire_Federated_Token')?['statusCode'], 0)",
-                                                                        "hasAccessToken": "@not(equals(coalesce(body('Acquire_Federated_Token')?['access_token'], ''), ''))",
-                                                                        "passed": false
-                                                                    },
-                                                                    "overallResult": "FAILED"
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "else": {
-                        "actions": {
-                            "Compose_Federated_Validation_Summary_EntraFail": {
+                              "Compose_Federated_Validation_Summary_GoogleSA": {
                                 "type": "Compose",
                                 "inputs": {
+                                  "testName": "Federated_Identity_Test",
+                                  "timestamp": "@utcNow()",
+                                  "authMode": "FederatedIdentity_Google_SA",
+                                  "entraTokenAcquisition": {
+                                    "endpoint": "@concat('https://login.microsoftonline.com/', parameters('federatedEntraTenantId'), '/oauth2/v2.0/token')",
+                                    "statusCode": "@outputs('Acquire_Entra_Token')['statusCode']",
+                                    "passed": true
+                                  },
+                                  "googleStsTokenExchange": {
+                                    "endpoint": "https://sts.googleapis.com/v1/token",
+                                    "statusCode": "@outputs('Acquire_Google_STS_Token')['statusCode']",
+                                    "passed": true
+                                  },
+                                  "googleSaImpersonation": {
+                                    "endpoint": "@parameters('federatedTokenEndpoint')",
+                                    "statusCode": "@outputs('Acquire_Google_SA_Token')['statusCode']",
+                                    "passed": true
+                                  },
+                                  "overallResult": "PASSED"
+                                }
+                              }
+                            },
+                            "else": {
+                              "actions": {
+                                "Compose_Federated_Validation_Summary_GoogleSA_Fail": {
+                                  "type": "Compose",
+                                  "inputs": {
                                     "testName": "Federated_Identity_Test",
                                     "timestamp": "@utcNow()",
-                                    "authMode": "FederatedIdentity",
+                                    "authMode": "FederatedIdentity_Google_SA",
                                     "entraTokenAcquisition": {
-                                        "endpoint": "@concat('https://login.microsoftonline.com/', parameters('federatedEntraTenantId'), '/oauth2/v2.0/token')",
-                                        "statusCode": "@coalesce(outputs('Acquire_Entra_Token')?['statusCode'], 0)",
-                                        "hasAccessToken": "@not(equals(coalesce(body('Acquire_Entra_Token')?['access_token'], ''), ''))",
-                                        "passed": false
+                                      "passed": true
                                     },
-                                    "federatedTokenExchange": null,
-                                    "scimEndpointValidation": null,
+                                    "googleStsTokenExchange": {
+                                      "passed": true
+                                    },
+                                    "googleSaImpersonation": {
+                                      "endpoint": "@parameters('federatedTokenEndpoint')",
+                                      "statusCode": "@coalesce(outputs('Acquire_Google_SA_Token')?['statusCode'], 0)",
+                                      "hasAccessToken": "@not(equals(coalesce(body('Acquire_Google_SA_Token')?['accessToken'], ''), ''))",
+                                      "passed": false
+                                    },
                                     "overallResult": "FAILED"
+                                  }
                                 }
+                              }
                             }
+                          }
+                        },
+                        "else": {
+                          "actions": {
+                            "Compose_Federated_Validation_Summary_GoogleSTS_Fail": {
+                              "type": "Compose",
+                              "inputs": {
+                                "testName": "Federated_Identity_Test",
+                                "timestamp": "@utcNow()",
+                                "authMode": "FederatedIdentity_Google_SA",
+                                "entraTokenAcquisition": {
+                                  "passed": true
+                                },
+                                "googleStsTokenExchange": {
+                                  "endpoint": "https://sts.googleapis.com/v1/token",
+                                  "statusCode": "@coalesce(outputs('Acquire_Google_STS_Token')?['statusCode'], 0)",
+                                  "hasAccessToken": "@not(equals(coalesce(body('Acquire_Google_STS_Token')?['access_token'], ''), ''))",
+                                  "passed": false
+                                },
+                                "overallResult": "FAILED"
+                              }
+                            }
+                          }
                         }
-                    }
-                },
-                "Set_FederatedIdentityTestOutputs": {
-                    "runAfter": {
-                        "Check_Entra_Token_Acquired": [
-                            "Succeeded",
-                            "Failed",
-                            "TimedOut",
-                            "Skipped"
-                        ]
+                      }
                     },
-                    "type": "SetVariable",
-                    "inputs": {
-                        "name": "FederatedIdentityTestOutputs",
-                        "value": {
-                            "overallResult": "@coalesce(outputs('Compose_Federated_Validation_Summary')?['overallResult'], outputs('Compose_Federated_Validation_Summary_TokenFail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSA')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSA_Fail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSTS_Fail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSTSOnly')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSTSOnly_Fail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_EntraFail')?['overallResult'], 'FAILED')",
-                            "result": "@if(equals(coalesce(outputs('Compose_Federated_Validation_Summary')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSA')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSTSOnly')?['overallResult'], outputs('Compose_Federated_Validation_Summary_TokenFail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSA_Fail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSTS_Fail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSTSOnly_Fail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_EntraFail')?['overallResult'], 'FAILED'), 'PASSED'), 'success', if(not(empty(coalesce(outputs('Compose_Federated_Validation_Summary_EntraFail'), json('null')))), 'Entra token acquisition failed', 'Federated token exchange failed'))",
-                            "summary": "@coalesce(outputs('Compose_Federated_Validation_Summary'), outputs('Compose_Federated_Validation_Summary_TokenFail'), outputs('Compose_Federated_Validation_Summary_GoogleSA'), outputs('Compose_Federated_Validation_Summary_GoogleSA_Fail'), outputs('Compose_Federated_Validation_Summary_GoogleSTS_Fail'), outputs('Compose_Federated_Validation_Summary_GoogleSTSOnly'), outputs('Compose_Federated_Validation_Summary_GoogleSTSOnly_Fail'), outputs('Compose_Federated_Validation_Summary_EntraFail'))",
-                            "detailedResults": [],
-                            "errorDetails": {
-                                "summary": "@if(equals(coalesce(outputs('Compose_Federated_Validation_Summary')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSA')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSTSOnly')?['overallResult'], outputs('Compose_Federated_Validation_Summary_TokenFail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSA_Fail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSTS_Fail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSTSOnly_Fail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_EntraFail')?['overallResult'], 'FAILED'), 'PASSED'), null, if(not(empty(coalesce(outputs('Compose_Federated_Validation_Summary_EntraFail'), json('null')))), concat('Entra token acquisition failed. Status: ', string(coalesce(outputs('Acquire_Entra_Token')?['statusCode'], 0))), if(not(empty(coalesce(outputs('Compose_Federated_Validation_Summary_GoogleSTS_Fail'), json('null')))), concat('Google STS token exchange failed. Status: ', string(coalesce(outputs('Acquire_Google_STS_Token')?['statusCode'], 0))), if(not(empty(coalesce(outputs('Compose_Federated_Validation_Summary_GoogleSA_Fail'), json('null')))), concat('Google SA impersonation failed. Status: ', string(coalesce(outputs('Acquire_Google_SA_Token')?['statusCode'], 0))), if(not(empty(coalesce(outputs('Compose_Federated_Validation_Summary_GoogleSTSOnly_Fail'), json('null')))), concat('Google STS token exchange failed. Status: ', string(coalesce(outputs('Acquire_Google_STS_Token_Only')?['statusCode'], 0))), concat('Federated token exchange failed. Status: ', string(coalesce(outputs('Acquire_Federated_Token')?['statusCode'], 0))))))))"
+                    "else": {
+                      "actions": {
+                        "Check_Is_Google_STS_Flow": {
+                          "type": "If",
+                          "expression": {
+                            "and": [
+                              {
+                                "contains": [
+                                  "@parameters('federatedTokenEndpoint')",
+                                  "googleapis.com"
+                                ]
+                              }
+                            ]
+                          },
+                          "actions": {
+                            "Acquire_Google_STS_Token_Only": {
+                              "type": "Http",
+                              "inputs": {
+                                "uri": "@{parameters('federatedTokenEndpoint')}",
+                                "method": "POST",
+                                "headers": {
+                                  "Content-Type": "application/json"
+                                },
+                                "body": {
+                                  "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+                                  "audience": "@{parameters('federatedAudience')}",
+                                  "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
+                                  "subject_token": "@{body('Acquire_Entra_Token')?['access_token']}",
+                                  "subject_token_type": "urn:ietf:params:oauth:token-type:id_token",
+                                  "scope": "https://www.googleapis.com/auth/cloud-platform"
+                                }
+                              }
+                            },
+                            "Check_Google_STS_Only_Token": {
+                              "runAfter": {
+                                "Acquire_Google_STS_Token_Only": [
+                                  "Succeeded",
+                                  "Failed",
+                                  "TimedOut"
+                                ]
+                              },
+                              "type": "If",
+                              "expression": {
+                                "and": [
+                                  {
+                                    "greaterOrEquals": [
+                                      "@coalesce(outputs('Acquire_Google_STS_Token_Only')?['statusCode'], 0)",
+                                      200
+                                    ]
+                                  },
+                                  {
+                                    "less": [
+                                      "@coalesce(outputs('Acquire_Google_STS_Token_Only')?['statusCode'], 0)",
+                                      300
+                                    ]
+                                  },
+                                  {
+                                    "not": {
+                                      "equals": [
+                                        "@coalesce(body('Acquire_Google_STS_Token_Only')?['access_token'], '')",
+                                        ""
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              "actions": {
+                                "Compose_Federated_Validation_Summary_GoogleSTSOnly": {
+                                  "type": "Compose",
+                                  "inputs": {
+                                    "testName": "Federated_Identity_Test",
+                                    "timestamp": "@utcNow()",
+                                    "authMode": "FederatedIdentity_Google_STS",
+                                    "entraTokenAcquisition": {
+                                      "endpoint": "@concat('https://login.microsoftonline.com/', parameters('federatedEntraTenantId'), '/oauth2/v2.0/token')",
+                                      "statusCode": "@outputs('Acquire_Entra_Token')['statusCode']",
+                                      "passed": true
+                                    },
+                                    "googleStsTokenExchange": {
+                                      "endpoint": "@parameters('federatedTokenEndpoint')",
+                                      "statusCode": "@outputs('Acquire_Google_STS_Token_Only')['statusCode']",
+                                      "passed": true
+                                    },
+                                    "overallResult": "PASSED"
+                                  }
+                                }
+                              },
+                              "else": {
+                                "actions": {
+                                  "Compose_Federated_Validation_Summary_GoogleSTSOnly_Fail": {
+                                    "type": "Compose",
+                                    "inputs": {
+                                      "testName": "Federated_Identity_Test",
+                                      "timestamp": "@utcNow()",
+                                      "authMode": "FederatedIdentity_Google_STS",
+                                      "entraTokenAcquisition": {
+                                        "passed": true
+                                      },
+                                      "googleStsTokenExchange": {
+                                        "endpoint": "@parameters('federatedTokenEndpoint')",
+                                        "statusCode": "@coalesce(outputs('Acquire_Google_STS_Token_Only')?['statusCode'], 0)",
+                                        "hasAccessToken": "@not(equals(coalesce(body('Acquire_Google_STS_Token_Only')?['access_token'], ''), ''))",
+                                        "passed": false
+                                      },
+                                      "overallResult": "FAILED"
+                                    }
+                                  }
+                                }
+                              }
                             }
+                          },
+                          "else": {
+                            "actions": {
+                              "Acquire_Federated_Token": {
+                                "type": "Http",
+                                "inputs": {
+                                  "uri": "@{parameters('federatedTokenEndpoint')}",
+                                  "method": "POST",
+                                  "headers": {
+                                    "Content-Type": "application/x-www-form-urlencoded"
+                                  },
+                                  "body": "@{concat('grant_type=client_credentials&client_id=', encodeUriComponent(parameters('federatedClientId')), '&client_assertion=', encodeUriComponent(body('Acquire_Entra_Token')?['access_token']), '&client_assertion_type=', encodeUriComponent('urn:ietf:params:oauth:client-assertion-type:jwt-bearer'), '&baseAddress=', encodeUriComponent(parameters('federatedBaseAddress')))}"
+                                }
+                              },
+                              "Check_Federated_Token_Acquired": {
+                                "runAfter": {
+                                  "Acquire_Federated_Token": [
+                                    "Succeeded",
+                                    "Failed",
+                                    "TimedOut"
+                                  ]
+                                },
+                                "type": "If",
+                                "expression": {
+                                  "and": [
+                                    {
+                                      "greaterOrEquals": [
+                                        "@coalesce(outputs('Acquire_Federated_Token')?['statusCode'], 0)",
+                                        200
+                                      ]
+                                    },
+                                    {
+                                      "less": [
+                                        "@coalesce(outputs('Acquire_Federated_Token')?['statusCode'], 0)",
+                                        300
+                                      ]
+                                    },
+                                    {
+                                      "not": {
+                                        "equals": [
+                                          "@coalesce(body('Acquire_Federated_Token')?['access_token'], '')",
+                                          ""
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                },
+                                "actions": {
+                                  "Compose_Federated_Validation_Summary": {
+                                    "type": "Compose",
+                                    "inputs": {
+                                      "testName": "Federated_Identity_Test",
+                                      "timestamp": "@utcNow()",
+                                      "authMode": "FederatedIdentity",
+                                      "entraTokenAcquisition": {
+                                        "endpoint": "@concat('https://login.microsoftonline.com/', parameters('federatedEntraTenantId'), '/oauth2/v2.0/token')",
+                                        "statusCode": "@outputs('Acquire_Entra_Token')['statusCode']",
+                                        "passed": true
+                                      },
+                                      "federatedTokenExchange": {
+                                        "endpoint": "@parameters('federatedTokenEndpoint')",
+                                        "statusCode": "@outputs('Acquire_Federated_Token')['statusCode']",
+                                        "passed": true
+                                      },
+                                      "overallResult": "PASSED"
+                                    }
+                                  }
+                                },
+                                "else": {
+                                  "actions": {
+                                    "Compose_Federated_Validation_Summary_TokenFail": {
+                                      "type": "Compose",
+                                      "inputs": {
+                                        "testName": "Federated_Identity_Test",
+                                        "timestamp": "@utcNow()",
+                                        "authMode": "FederatedIdentity",
+                                        "entraTokenAcquisition": {
+                                          "passed": true
+                                        },
+                                        "federatedTokenExchange": {
+                                          "endpoint": "@parameters('federatedTokenEndpoint')",
+                                          "statusCode": "@coalesce(outputs('Acquire_Federated_Token')?['statusCode'], 0)",
+                                          "hasAccessToken": "@not(equals(coalesce(body('Acquire_Federated_Token')?['access_token'], ''), ''))",
+                                          "passed": false
+                                        },
+                                        "overallResult": "FAILED"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
                         }
+                      }
                     }
+                  }
+                },
+                "else": {
+                  "actions": {
+                    "Compose_Federated_Validation_Summary_EntraFail": {
+                      "type": "Compose",
+                      "inputs": {
+                        "testName": "Federated_Identity_Test",
+                        "timestamp": "@utcNow()",
+                        "authMode": "FederatedIdentity",
+                        "entraTokenAcquisition": {
+                          "endpoint": "@concat('https://login.microsoftonline.com/', parameters('federatedEntraTenantId'), '/oauth2/v2.0/token')",
+                          "statusCode": "@coalesce(outputs('Acquire_Entra_Token')?['statusCode'], 0)",
+                          "hasAccessToken": "@not(equals(coalesce(body('Acquire_Entra_Token')?['access_token'], ''), ''))",
+                          "passed": false
+                        },
+                        "federatedTokenExchange": null,
+                        "scimEndpointValidation": null,
+                        "overallResult": "FAILED"
+                      }
+                    }
+                  }
                 }
+              },
+              "Set_FederatedIdentityTestOutputs": {
+                "runAfter": {
+                  "Check_Entra_Token_Acquired": [
+                    "Succeeded",
+                    "Failed",
+                    "TimedOut",
+                    "Skipped"
+                  ]
+                },
+                "type": "SetVariable",
+                "inputs": {
+                  "name": "FederatedIdentityTestOutputs",
+                  "value": {
+                    "overallResult": "@coalesce(outputs('Compose_Federated_Validation_Summary')?['overallResult'], outputs('Compose_Federated_Validation_Summary_TokenFail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSA')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSA_Fail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSTS_Fail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSTSOnly')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSTSOnly_Fail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_EntraFail')?['overallResult'], 'FAILED')",
+                    "result": "@if(equals(coalesce(outputs('Compose_Federated_Validation_Summary')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSA')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSTSOnly')?['overallResult'], outputs('Compose_Federated_Validation_Summary_TokenFail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSA_Fail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSTS_Fail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSTSOnly_Fail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_EntraFail')?['overallResult'], 'FAILED'), 'PASSED'), 'success', if(not(empty(coalesce(outputs('Compose_Federated_Validation_Summary_EntraFail'), json('null')))), 'Entra token acquisition failed', 'Federated token exchange failed'))",
+                    "summary": "@coalesce(outputs('Compose_Federated_Validation_Summary'), outputs('Compose_Federated_Validation_Summary_TokenFail'), outputs('Compose_Federated_Validation_Summary_GoogleSA'), outputs('Compose_Federated_Validation_Summary_GoogleSA_Fail'), outputs('Compose_Federated_Validation_Summary_GoogleSTS_Fail'), outputs('Compose_Federated_Validation_Summary_GoogleSTSOnly'), outputs('Compose_Federated_Validation_Summary_GoogleSTSOnly_Fail'), outputs('Compose_Federated_Validation_Summary_EntraFail'))",
+                    "detailedResults": [],
+                    "errorDetails": {
+                      "summary": "@if(equals(coalesce(outputs('Compose_Federated_Validation_Summary')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSA')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSTSOnly')?['overallResult'], outputs('Compose_Federated_Validation_Summary_TokenFail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSA_Fail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSTS_Fail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_GoogleSTSOnly_Fail')?['overallResult'], outputs('Compose_Federated_Validation_Summary_EntraFail')?['overallResult'], 'FAILED'), 'PASSED'), null, if(not(empty(coalesce(outputs('Compose_Federated_Validation_Summary_EntraFail'), json('null')))), concat('Entra token acquisition failed. Status: ', string(coalesce(outputs('Acquire_Entra_Token')?['statusCode'], 0))), if(not(empty(coalesce(outputs('Compose_Federated_Validation_Summary_GoogleSTS_Fail'), json('null')))), concat('Google STS token exchange failed. Status: ', string(coalesce(outputs('Acquire_Google_STS_Token')?['statusCode'], 0))), if(not(empty(coalesce(outputs('Compose_Federated_Validation_Summary_GoogleSA_Fail'), json('null')))), concat('Google SA impersonation failed. Status: ', string(coalesce(outputs('Acquire_Google_SA_Token')?['statusCode'], 0))), if(not(empty(coalesce(outputs('Compose_Federated_Validation_Summary_GoogleSTSOnly_Fail'), json('null')))), concat('Google STS token exchange failed. Status: ', string(coalesce(outputs('Acquire_Google_STS_Token_Only')?['statusCode'], 0))), concat('Federated token exchange failed. Status: ', string(coalesce(outputs('Acquire_Federated_Token')?['statusCode'], 0))))))))"
+                    }
+                  }
+                }
+              }
             },
             "else": {
-                "actions": {}
+              "actions": {}
             },
             "expression": {
-                "or": [
-                    {
-                        "equals": [
-                            "@triggerBody()?['EnabledTests']",
-                            "All"
-                        ]
-                    },
-                    {
-                        "equals": [
-                            "@triggerBody()?['EnabledTests']",
-                            "SCIMTests"
-                        ]
-                    },
-                    {
-                        "equals": [
-                            "@triggerBody()?['EnabledTests']",
-                            "Federated_Identity_Test"
-                        ]
-                    }
-                ]
+              "or": [
+                {
+                  "equals": ["@triggerBody()?['EnabledTests']", "All"]
+                },
+                {
+                  "equals": ["@triggerBody()?['EnabledTests']", "SCIMTests"]
+                },
+                {
+                  "equals": [
+                    "@triggerBody()?['EnabledTests']",
+                    "Federated_Identity_Test"
+                  ]
+                }
+              ]
             },
             "type": "If"
           },
@@ -4087,33 +4273,23 @@
               "actions": {}
             },
             "expression": {
-              "and": [
+              "or": [
                 {
                   "equals": [
-                    "@coalesce(triggerBody()?['initializationData']?['isGroupSupported'], false)",
-                    true
+                    "@triggerBody()?['EnabledTests']",
+                    "All"
                   ]
                 },
                 {
-                  "or": [
-                    {
-                      "equals": [
-                        "@triggerBody()?['EnabledTests']",
-                        "All"
-                      ]
-                    },
-                    {
-                      "equals": [
-                        "@triggerBody()?['EnabledTests']",
-                        "SCIMTests"
-                      ]
-                    },
-                    {
-                      "equals": [
-                        "@triggerBody()?['EnabledTests']",
-                        "SCIM_Group_Pagination_Test"
-                      ]
-                    }
+                  "equals": [
+                    "@triggerBody()?['EnabledTests']",
+                    "SCIMTests"
+                  ]
+                },
+                {
+                  "equals": [
+                    "@triggerBody()?['EnabledTests']",
+                    "SCIM_Group_Pagination_Test"
                   ]
                 }
               ]
@@ -4130,12 +4306,7 @@
       },
       "Compose_Final_Results": {
         "runAfter": {
-          "SCIMTests_Scope": [
-            "Succeeded",
-            "Failed",
-            "Skipped",
-            "TimedOut"
-          ]
+          "SCIMTests_Scope": ["Succeeded", "Failed", "Skipped", "TimedOut"]
         },
         "type": "Compose",
         "inputs": {

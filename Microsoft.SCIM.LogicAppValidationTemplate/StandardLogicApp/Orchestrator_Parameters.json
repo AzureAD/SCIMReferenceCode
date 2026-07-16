@@ -23,23 +23,15 @@
       "SCIM_Group_Create_Test",
       "SCIM_User_Update_Test",
       "SCIM_Group_Update_Test",
-      "SCIM_User_Delete_Test",
-      "SCIM_Group_Delete_Test",
       "SCIM_User_Pagination_Test",
       "SCIM_Group_Pagination_Test",
       "POD_User_Test",
       "POD_Group_Test",
-      "Restore_User_Test"
+      "Restore_User_Test",
+      "Restore_Group_Test"
     ],
     "type": "String",
     "value": "All"
-  },
-  "IsSoftDeleted": {
-    "metadata": {
-      "description": "If true, user will be disabled (soft delete). If false, user will be deleted (hard delete)."
-    },
-    "type": "Bool",
-    "value": true
   },
   "LogicAppVersion": {
     "metadata": {
@@ -234,7 +226,7 @@
   },
   "scimEndpoint": {
     "type": "String",
-    "value": "https://scimserver2.yellowsmoke-af7a3fff.eastus.azurecontainerapps.io/scim/endpoints/f4c95b63-db4c-4f0a-91b0-78fdf88007be"
+    "value": "https://scimserver2.yellowsmoke-af7a3fff.eastus.azurecontainerapps.io/scim/endpoints/8f3c4c4a-7b5d-4e91-9a62-2d7f1b8e5c73"
   },
   "scimOAuthScope": {
     "metadata": {
@@ -251,61 +243,61 @@
     "value": "https://scimserver2.yellowsmoke-af7a3fff.eastus.azurecontainerapps.io/scim/oauth/token"
   },
   "federatedEntraTenantId": {
-        "metadata": {
-            "description": "Entra tenant ID used to construct the token endpoint URL for federated identity token acquisition."
-        },
-        "type": "String",
-        "value": "changeme-tenant-id"
+    "metadata": {
+      "description": "Entra tenant ID used to construct the token endpoint URL for federated identity token acquisition."
     },
-    "federatedApplicationId": {
-        "metadata": {
-            "description": "OAuth2 Application ID for the Entra app registration used in federated identity token acquisition."
-        },
-        "type": "String",
-        "value": "changeme-client-id"
+    "type": "String",
+    "value": "changeme-tenant-id"
+  },
+  "federatedApplicationId": {
+    "metadata": {
+      "description": "OAuth2 Application ID for the Entra app registration used in federated identity token acquisition."
     },
-    "federatedApplicationClientSecret": {
-        "metadata": {
-            "description": "OAuth2 Client Secret for the Entra app registration used in federated identity token acquisition."
-        },
-        "type": "String",
-        "value": "changeme-client-secret"
+    "type": "String",
+    "value": "changeme-client-id"
+  },
+  "federatedApplicationClientSecret": {
+    "metadata": {
+      "description": "OAuth2 Client Secret for the Entra app registration used in federated identity token acquisition."
     },
-    "federatedTokenEndpoint": {
-        "metadata": {
-            "description": "ISV token endpoint URL for federated identity token exchange."
-        },
-        "type": "String",
-        "value": "changeme-federated-endpoint"
+    "type": "String",
+    "value": "changeme-client-secret"
+  },
+  "federatedTokenEndpoint": {
+    "metadata": {
+      "description": "ISV token endpoint URL for federated identity token exchange."
     },
-    "federatedClientId": {
-        "metadata": {
-            "description": "ISV client ID used in federated identity token exchange."
-        },
-        "type": "String",
-        "value": "changeme-federated-app-id"
+    "type": "String",
+    "value": "changeme-federated-endpoint"
+  },
+  "federatedClientId": {
+    "metadata": {
+      "description": "ISV client ID used in federated identity token exchange."
     },
-    "federatedBaseAddress": {
-        "metadata": {
-            "description": "ISV base address sent in the federated identity token exchange request."
-        },
-        "type": "String",
-        "value": "changeme-base-address"
+    "type": "String",
+    "value": "changeme-federated-app-id"
+  },
+  "federatedBaseAddress": {
+    "metadata": {
+      "description": "ISV base address sent in the federated identity token exchange request."
     },
-    "federatedAudience": {
-        "metadata": {
-            "description": "Audience value for federated token exchange."
-        },
-        "type": "String",
-        "value": "changeme-audience"
+    "type": "String",
+    "value": "changeme-base-address"
+  },
+  "federatedAudience": {
+    "metadata": {
+      "description": "Audience value for federated token exchange."
     },
+    "type": "String",
+    "value": "changeme-audience"
+  },
   "servicePrincipalId": {
     "type": "String",
-    "value": "3197053d-46d9-4a22-b843-6a9d98ec267e"
+    "value": "ed1a4e07-8807-4362-8b9b-c8edc2b51747"
   },
   "testUserDomain": {
     "type": "String",
-    "value": "proviamtest07.onmicrosoft.com"
+    "value": "proviamla01.onmicrosoft.com"
   },
   "scimTargetUserValues": {
     "type": "Array",
