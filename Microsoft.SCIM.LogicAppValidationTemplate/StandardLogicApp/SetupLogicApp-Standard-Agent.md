@@ -933,15 +933,21 @@ will be skipped
 
                     "GroupTests",
 
+                    "SCIMTests",
+
                     "Create_User_Test",
 
                     "Update_User_Test",
 
                     "Delete_User_Test",
 
-                    "User_Disable_Test",
+                    "Disable_User_Test",
 
                     "User_Update_Manager_Test",
+
+                    "Restore_User_Test",
+
+                    "POD_User_Test",
 
                     "Create_Group_Test",
 
@@ -953,22 +959,40 @@ will be skipped
 
                     "Group_Update_Remove_Member_Test",
 
-“Schema_Discoverability_Test”,
+                    "POD_Group_Test",
 
-“SCIM_Null_Update_Test”,
+                    "Restore_Group_Test",
 
-“Validate_Credentials_Test”
+"Schema_Discoverability_Test",
+
+"SCIM_Null_Update_Test",
+
+"SCIM_User_Create_Test",
+
+"SCIM_Group_Create_Test",
+
+"SCIM_User_Update_Test",
+
+"SCIM_Group_Update_Test",
+
+"SCIM_Update_Manager_Test",
+
+"SCIM_User_Pagination_Test",
+
+"SCIM_Group_Pagination_Test",
+
+"Validate_Credentials_Test",
+
+"Federated_Identity_Test"
 
 <img src="./media/image59.png"
 style="width:4.4277in;height:2.54202in" />
 
-31. IsSoftDeleted can be ‘true’ or ‘false’. Set to true only if soft
-    deletion is supported and defined in your SCIM schema. This property
-    indicates that the user resource is marked for soft deletion—meaning
-    it is flagged for removal but not permanently deleted.
-    “Disable_User_Test’ and “Delete_User_Test” are dependent on the
-    correct value of this parameter. If ‘IsSoftDeleted’ is false, then
-    “Disable_User_Test” will be skipped.
+31. **IsSoftDeleted** — This parameter is automatically determined by the Logic App
+    based on whether the `active` attribute is present in the target directory
+    schema. You do not need to set this manually. The `Disable_User_Test` always
+    runs and tests soft-delete (PATCH `accountEnabled=false`). The `Delete_User_Test`
+    is optional — a failure produces a WARNING but does not fail the overall run.
 
 <img src="./media/image60.png"
 style="width:4.37561in;height:2.31282in" />
@@ -1045,18 +1069,29 @@ correct, no action is needed. The Logic App automatically detects these
 capabilities during initialization and skips tests that do not apply.
 
 \(1\) User_Update_Manager_Test: Skipped when the manager attribute is
-not mapped in the target directory schema. Only applies if your app
+not present in the target directory schema. Only applies if your app
 supports manager provisioning.
 
-\(2\) All Group tests (Create_Group_Test, Update_Group_Test,
-Delete_Group_Test, Group_Update_Add_Member_Test,
-Group_Update_Remove_Member_Test, POD_Group_Test, Restore_Group_Test) and
-SCIM Group tests (SCIM_Group_Create_Test, SCIM_Group_Update_Test,
-SCIM_Group_Pagination_Test): Skipped when the application does not
-support group provisioning.
+\(2\) SCIM_Update_Manager_Test: Skipped when the manager attribute is
+not present in the target directory schema. This test validates direct
+SCIM PATCH calls to set, change, and remove the manager attribute.
 
-\(3\) Disable_User_Test: Skipped when IsSoftDeleted is set to false or
-soft-delete is not supported by the target application.
+\(3\) Federated_Identity_Test: Skipped when OAuth client credentials
+are not configured. Only applies if your app uses Workload Identity
+Federation.
+
+Note on WARNING results: The following tests produce a WARNING (not
+FAILED) if they fail — they do not block overall validation:
+
+- Delete_User_Test (hard delete is optional)
+- Delete_Group_Test (group delete is optional)
+- Restore_Group_Test (group restore is optional)
+- SCIM_Group_Pagination_Test (group pagination is optional)
+
+Note on Group tests: Group provisioning is mandatory. If your application
+does not support groups (no Group schema in /Schemas endpoint), all group
+tests will FAIL (not skip). Your application must support both Users and
+Groups provisioning.
 
 “provisioningErrorDetails” gives the glimpse of Error information in
 case of failure.
@@ -1076,7 +1111,7 @@ style="width:6.5in;height:3.65625in" />
 
 # Understanding the Test Results
 
-### The Logic App runs 23 tests across three workflows: 7 User tests, 7 Group tests, and 9 SCIM compliance tests. "For detailed descriptions of each test and what they validate, see the SCIM Validation Test Overview: [SCIMReferenceCode/Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp at master · AzureAD/SCIMReferenceCode · GitHub](https://github.com/AzureAD/SCIMReferenceCode/tree/master/Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp)"
+### The Logic App runs 25 tests across three workflows: 7 User tests, 7 Group tests, and 11 SCIM compliance tests. "For detailed descriptions of each test and what they validate, see the SCIM Validation Test Overview: [SCIMReferenceCode/Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp at master · AzureAD/SCIMReferenceCode · GitHub](https://github.com/AzureAD/SCIMReferenceCode/tree/master/Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp)"
 
 ### Not all tests will run for every application — the Logic App automatically detects what your app supports and skips tests that do not apply. 
 
@@ -1123,7 +1158,7 @@ Here’s what each field means:
 |----|----|----|
 | `"success"` | Test passed — your SCIM endpoint handled the operation correctly | ✅ None |
 | `"FAILED - [Phase] Failed Action: <action_name>"` | Test failed at a specific action. The phase (e.g., Create Phase, Update Phase, Delete Phase) and action name tell you exactly where it broke. | ❌ Yes — see Debugging below |
-| `"skipped"` | Test was skipped because a prerequisite was not met (e.g., `Disable_User_Test` skipped when `IsSoftDeleted` is `false`, or group tests skipped when groups are not supported) | ✅ None (if intentional) |
+| `"skipped"` | Test was skipped because a prerequisite was not met (e.g., `User_Update_Manager_Test` skipped when manager attribute is not in target schema, or `Federated_Identity_Test` skipped when OAuth is not configured) | ✅ None (if intentional) |
 | `"Token acquisition failed"` | Only for `Validate_Credentials_Test` — the OAuth token request failed. Expected when using a static bearer token. | ✅ None (if using static token) |
 | `"The SCIM schema does not support all attributes..."` | `Schema_Discoverability_Test` found that your SCIM schema doesn’t advertise all the attributes in the provisioning mappings. The details show how many are supported vs mapped. | ⚠️ Prune your attribute mappings to match |
 
@@ -1136,22 +1171,34 @@ Here’s what each field means:
         { "testName": "Disable_User_Test", "testResult": "success" },
         { "testName": "Delete_User_Test", "testResult": "success" },
         { "testName": "User_Update_Manager_Test", "testResult": "success" },
+        { "testName": "Restore_User_Test", "testResult": "success" },
+        { "testName": "POD_User_Test", "testResult": "success" },
         { "testName": "Create_Group_Test", "testResult": "success" },
         { "testName": "Update_Group_Test", "testResult": "success" },
         { "testName": "Delete_Group_Test", "testResult": "success" },
         { "testName": "Group_Update_Add_Member_Test", "testResult": "success" },
         { "testName": "Group_Update_Remove_Member_Test", "testResult": "success" },
+        { "testName": "POD_Group_Test", "testResult": "success" },
+        { "testName": "Restore_Group_Test", "testResult": "success" },
         { "testName": "Schema_Discoverability_Test", "testResult": "success" },
         { "testName": "SCIM_Null_Update_Test", "testResult": "success" },
-        { "testName": "Validate_Credentials_Test", "testResult": "Token acquisition failed" }
+        { "testName": "SCIM_User_Create_Test", "testResult": "success" },
+        { "testName": "SCIM_Group_Create_Test", "testResult": "success" },
+        { "testName": "SCIM_User_Update_Test", "testResult": "success" },
+        { "testName": "SCIM_Group_Update_Test", "testResult": "success" },
+        { "testName": "SCIM_Update_Manager_Test", "testResult": "success" },
+        { "testName": "SCIM_User_Pagination_Test", "testResult": "success" },
+        { "testName": "SCIM_Group_Pagination_Test", "testResult": "success" },
+        { "testName": "Validate_Credentials_Test", "testResult": "Token acquisition failed" },
+        { "testName": "Federated_Identity_Test", "testResult": "skipped" }
       ],
       "overallResult": "Failed"
     }
 
-> **Note:** Even with 12/13 tests passing, the `overallResult` shows
+> **Note:** Even with 23/25 tests passing, the `overallResult` shows
 > `"Failed"` because `Validate_Credentials_Test` did not pass. This is
 > expected when using a static bearer token — it does not block
-> onboarding.
+> onboarding. `Federated_Identity_Test` is skipped when OAuth is not configured.
 
 ### Sample Results — With a Failure
 
@@ -1199,24 +1246,18 @@ automatically and tells you the root cause and fix.
 To proceed with gallery onboarding, all applicable tests must pass. The
 following are acceptable exceptions: -
 
-- Validate_Credentials_Test failing when using a static bearer token
-  (OAuth will be required for production).
+- Validate_Credentials_Test or Federated_Identity_Test failing when
+  using a static bearer token (OAuth or WIF will be required for
+  production). At least one of these two must PASS.
 
-- Group tests being SKIPPED if your application does not support group
-  provisioning. This includes all 7 Group tests (Create_Group_Test,
-  Update_Group_Test, Delete_Group_Test, Group_Update_Add_Member_Test,
-  Group_Update_Remove_Member_Test, POD_Group_Test, Restore_Group_Test)
-  and 3 SCIM Group tests (SCIM_Group_Create_Test,
-  SCIM_Group_Update_Test, SCIM_Group_Pagination_Test).
+- User_Update_Manager_Test and SCIM_Update_Manager_Test being SKIPPED
+  when the manager attribute is not present in the target directory
+  schema. The Logic App checks whether manager is in the target
+  directory attributes and automatically skips these tests if it is not.
 
-- User_Update_Manager_Test being SKIPPED when the manager attribute is
-  not present in the target directory schema. The Logic App checks
-  whether manager is mapped and automatically skips this test if it is
-  not.
-
-- Disable_User_Test being SKIPPED when IsSoftDeleted is set to false or
-  soft-delete is not supported. This test only runs when the application
-  supports soft-deletion of users.
+- Delete_User_Test, Delete_Group_Test, Restore_Group_Test, and
+  SCIM_Group_Pagination_Test producing WARNING results. These are
+  optional tests — a failure does not block onboarding.
 
 ## Automatic Failure Diagnosis
 

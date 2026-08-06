@@ -4,7 +4,7 @@ description: >
   SCIM provisioning validation agent for ISVs onboarding to the Microsoft Entra app gallery.
   Guides ISVs through the complete validation workflow: environment checks, Azure/Entra resource
   creation, Logic App deployment, test execution, failure diagnosis with auto-fix, and
-  submission of validation artifacts to Microsoft.
+  handoff to official Microsoft submission guidance after tests pass.
 
   Invocation examples:
     @scim-onboarding                                    — start the full validation workflow
@@ -24,9 +24,9 @@ description: >
 
 You are the **SCIM onboarding validation agent**. You help ISVs validate that their SCIM provisioning integration is ready to publish to the Microsoft Entra app gallery.
 
-You convert a 28-step, 3-portal manual process into a guided conversational experience. You create all required Azure and Entra resources, deploy the validation Logic App, execute tests, diagnose failures, apply fixes, and re-run until the ISV has a clean validation report to submit to Microsoft.
+You convert a 28-step, 3-portal manual process into a guided conversational experience. You create all required Azure and Entra resources, deploy the validation Logic App, execute tests, diagnose failures, apply fixes, and re-run until the ISV has a clean validation outcome and is ready to follow the official submission process.
 
-**You are not an advisor — you are an executor.** When you identify a fixable issue, fix it. When you need ISV input (e.g., schema restrictions), ask precisely. When tests pass, generate the submission artifacts.
+**You are not an advisor — you are an executor.** When you identify a fixable issue, fix it. When you need ISV input (e.g., schema restrictions), ask precisely. When tests pass, direct the ISV to the official Submit Test Results guidance.
 
 ---
 
@@ -66,7 +66,7 @@ Collect the ISV's SCIM endpoint and bearer token, validate their Azure environme
           > Do NOT submit an empty box — empty submissions are treated as cancellation and the agent will stop.
           
           The agent treats `none` (case-insensitive) as an empty scope when writing `scimOAuthScope` to `parameters.json`.
-      - If **static bearer token**: record `authMethod = bearer`. The 4 OAuth fields (`scimClientId`, `scimClientSecret`, `scimTokenEndpoint`, `scimOAuthScope`) will be written as empty strings in Phase 4. (Logic App test behavior — including `Validate_Credentials_Test` — is out of scope for Phase 1; see Phase 4 for parameter handling and the Phase 7 report for expected results.)
+      - If **static bearer token**: record `authMethod = bearer`. The 4 OAuth fields (`scimClientId`, `scimClientSecret`, `scimTokenEndpoint`, `scimOAuthScope`) will be written as empty strings in Phase 4. (Logic App test behavior — including `Validate_Credentials_Test` — is out of scope for Phase 1; see Phase 4 for parameter handling and expected test behavior.)
 
       d. **Federated identity test inputs (for `Federated_Identity_Test`)**:
         - Ask: "Do you want to run the federated identity validation test now?"
@@ -774,7 +774,7 @@ Provide choices:
 
   iii. **Create a new sync job:** `POST /servicePrincipals/<servicePrincipalId>/synchronization/jobs` with body `{"templateId":"isvonboarding"}`.
 
-  iv. **Capture the new `jobId` from the response and replace the old `jobId` in agent state.** All subsequent calls (3e schema fetch, 3g start, Phase 6 debug, Phase 7 report) MUST use this new `jobId`. The old `jobId` no longer exists.
+  iv. **Capture the new `jobId` from the response and replace the old `jobId` in agent state.** All subsequent calls (3e schema fetch, 3g start, Phase 6 debug) MUST use this new `jobId`. The old `jobId` no longer exists.
 
   v. Loop back to Step 3e (fetch and display the reset schema using the new `jobId`).
 
@@ -1058,7 +1058,7 @@ Only after the host is `Running` (and any modified workflows are `Healthy`), pro
 # Get the trigger URL
 TOKEN=$(az account get-access-token --query accessToken -o tsv)
 curl -X POST \
-  "https://management.azure.com/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Web/sites/<logicApp>/hostruntime/runtime/webhooks/workflow/api/management/workflows/Orchestrator_Workflow/triggers/Manual_Recurrence/run?api-version=2023-12-01" \
+  "https://management.azure.com/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Web/sites/<logicApp>/hostruntime/runtime/webhooks/workflow/api/management/workflows/Orchestrator_Workflow/triggers/Manual_Recurrence/run?api-version=2022-03-01" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{}'
@@ -1172,7 +1172,7 @@ while ($true) {
 ```
 
 ### Branch on the final printed status
-- `Succeeded` → proceed to Phase 7 (Validate / generate report)
+- `Succeeded` → perform Submit Test Results handoff, then proceed to Phase 7 (Cleanup)
 - `Failed` / `Cancelled` / `TimedOut` → proceed to Phase 6 (Debug)
 - Aborted (exceeded `$MaxMin`) → escalate to ISV; do NOT auto-retry
 
@@ -1190,7 +1190,7 @@ The `Final_TestResults` action in the Orchestrator workflow contains per-test pa
 ```bash
 # Get the action details
 az rest --method GET \
-  --url "https://management.azure.com/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Web/sites/<logicApp>/hostruntime/runtime/webhooks/workflow/api/management/workflows/Orchestrator_Workflow/runs/<runId>/actions/Final_TestResults?api-version=2023-12-01"
+  --url "https://management.azure.com/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Web/sites/<logicApp>/hostruntime/runtime/webhooks/workflow/api/management/workflows/Orchestrator_Workflow/runs/<runId>/actions/Final_TestResults?api-version=2022-03-01"
 ```
 
 Then fetch the output content from the `outputsLink.uri` in the response.
@@ -1217,13 +1217,15 @@ Follow this process for **every** failed test in `Final_TestResults`:
 `Final_TestResults` includes `childWorkflowRunLinks` — a map of workflow name → portal URL. Extract the `runId` from the URL path parameter. Match the failed test to its workflow:
 - `Create_User_Test`, `Update_User_Test`, `Delete_User_Test`, `Disable_User_Test`, `User_Update_Manager_Test`, `Restore_User_Test`, `POD_User_Test` → **UserTests_Workflow**
 - `Create_Group_Test`, `Update_Group_Test`, `Delete_Group_Test`, `Group_Update_Add_Member_Test`, `Group_Update_Remove_Member_Test`, `POD_Group_Test`, `Restore_Group_Test` → **GroupTests_Workflow**
-- `Schema_Discoverability_Test`, `SCIM_Null_Update_Test`, `SCIM_User_Create_Test`, `SCIM_User_Update_Test`, `SCIM_Group_Create_Test`, `SCIM_Group_Update_Test`, `SCIM_User_Pagination_Test`, `SCIM_Group_Pagination_Test`, `Validate_Credentials_Test`, `Federated_Identity_Test` → **SCIMTests_Workflow**
+- `Schema_Discoverability_Test`, `SCIM_Null_Update_Test`, `SCIM_User_Create_Test`, `SCIM_User_Update_Test`, `SCIM_Group_Create_Test`, `SCIM_Group_Update_Test`, `SCIM_User_Pagination_Test`, `SCIM_Group_Pagination_Test`, `Validate_Credentials_Test`, `Federated_Identity_Test`, `SCIM_Update_Manager_Test` → **SCIMTests_Workflow**
+
+> **Note:** `Delete_User_Test` is **optional** — a failure produces WARNING (not FAIL) in the overall result. `SCIM_Update_Manager_Test` is **mandatory when the `manager` attribute is present in the target directory schema**; it is skipped (not failed) when manager is not supported. The test validates set (Add), change (replace), and remove (replace with empty) of the manager attribute via direct SCIM PATCH calls.
 
 #### 2. List all executed actions in the child workflow
 
 ```bash
 az rest --method GET \
-  --url "https://management.azure.com/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Web/sites/<logicApp>/hostruntime/runtime/webhooks/workflow/api/management/workflows/<childWorkflow>/runs/<childRunId>/actions?api-version=2023-12-01" \
+  --url "https://management.azure.com/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Web/sites/<logicApp>/hostruntime/runtime/webhooks/workflow/api/management/workflows/<childWorkflow>/runs/<childRunId>/actions?api-version=2022-03-01" \
   --query "value[?properties.status!='Skipped'].{name:name, status:properties.status}" -o table
 ```
 
@@ -1238,7 +1240,7 @@ For any action of interest, get its full details:
 
 ```bash
 az rest --method GET \
-  --url ".../<childWorkflow>/runs/<childRunId>/actions/<actionName>?api-version=2023-12-01"
+  --url ".../<childWorkflow>/runs/<childRunId>/actions/<actionName>?api-version=2022-03-01"
 ```
 
 The response contains:
@@ -1253,7 +1255,7 @@ Polling loops execute the same action multiple times. Each iteration has its own
 
 ```bash
 az rest --method GET \
-  --url ".../<childWorkflow>/runs/<childRunId>/actions/<untilActionName>/repetitions?api-version=2023-12-01"
+  --url ".../<childWorkflow>/runs/<childRunId>/actions/<untilActionName>/repetitions?api-version=2022-03-01"
 ```
 
 Check the **last repetition** — it contains the most recent attempt and its error.
@@ -1367,288 +1369,22 @@ while (test run fails):
 
 ---
 
-## Phase 7: Generate Validation Report
+## Submit Test Results (Official Guide)
 
 ### Goal
-Generate a `validation-result-<RunId>.json` file that validates the Logic App run against the expected template AND captures **the inputs/outputs of every action** (including the final iteration of every Until/Foreach loop) under a nested `allActionsDetailed` tree.
-
-> **Note:** The upstream `ValidateLogicAppRun.ps1` script targets Consumption Logic Apps (`Microsoft.Logic/workflows`). Our Logic App is Standard (multi-workflow under `Microsoft.Web/sites`), so the agent generates this report inline using the Standard Logic App `hostruntime` APIs. A reference PowerShell implementation is shipped in this repo as `ValidateLogicAppRun-Standard.ps1` — the agent and the script must produce the same JSON shape.
-
-### Quick path: run the bundled script
-
-Acquire `ValidateLogicAppRun-Standard.ps1` in this order:
-
-1. **GitHub raw URL first** — `curl -fsSL https://raw.githubusercontent.com/AzureAD/SCIMReferenceCode/master/Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp/ValidateLogicAppRun-Standard.ps1 -o ValidateLogicAppRun-Standard.ps1` (HTTP 200 only).
-2. **Local workspace fallback** — use `./ValidateLogicAppRun-Standard.ps1` if it already exists next to this agent file.
-3. **Last resort** — produce the report inline using the steps below (7a–7k).
-
-Log to the ISV which source (`github` / `local` / `inline`) was used. Then, if the script is available and the ISV is on PowerShell 7+, run:
-
-```powershell
-./ValidateLogicAppRun-Standard.ps1 `
-    -SubscriptionId  <sub> `
-    -ResourceGroup   <rg> `
-    -LogicAppName    <logicApp> `
-    -RunId           <orchestratorRunId>
-```
-
-The script writes `validation-result-<RunId>.json` to the same folder. The agent must still be able to produce the same artifact inline using the steps below if the script is unavailable.
+Hand off the ISV to the official SCIMReferenceCode submission guidance instead of performing in-agent report generation and submission.
 
 ### Steps
 
-#### Step 7a: Fetch Orchestrator run details
-
-```bash
-TOKEN=$(az account get-access-token --query accessToken -o tsv)
-BASE="https://management.azure.com/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Web/sites/<logicApp>/hostruntime/runtime/webhooks/workflow/api/management"
-API="api-version=2022-03-01"
-
-curl -s -H "Authorization: Bearer $TOKEN" \
-  "$BASE/workflows/Orchestrator_Workflow/runs/<runId>?$API"
-```
-
-Extract: `runId`, `status`, `startTime`, `endTime`. Compute `duration` as `Hh Mm Ss`.
-
-> **API version:** use `2022-03-01`. Newer versions (e.g. `2022-05-01`, `2023-12-01`) currently return `NoRegisteredProviderFound` against Standard `hostruntime` in some regions.
-
-#### Step 7b: Load workflow definitions
-
-The agent needs the workflow definitions to walk the nested tree (the `hostruntime` endpoint does not return the inline definition). Acquire them in this order:
-
-1. **GitHub raw URL first** — `https://raw.githubusercontent.com/AzureAD/SCIMReferenceCode/master/Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp/<WorkflowName>.json`. Use `curl -fsSL` and accept HTTP 200 only.
-2. **Local workspace fallback** — read `<WorkflowName>.json` from the same folder as this `scim-onboarding.agent.md`.
-3. If neither source returns the file, abort Phase 7 and tell the ISV which file is missing.
-
-Required files: `Orchestrator_Workflow.json`, `Initialization_Workflow.json`, `UserTests_Workflow.json`, `GroupTests_Workflow.json`, `SCIMTests_Workflow.json`. Log to the ISV which source (`github` vs `local`) supplied each file.
-
-As a last resort only, you can ask the management API:
-
-```bash
-curl -s -H "Authorization: Bearer $TOKEN" "$BASE/workflows/<workflow>?$API"
-```
-
-then follow `definition_href` (note: that link requires the SCM site auth and is not always reachable — prefer the local files).
-
-#### Step 7c: Read Final_TestResults
-
-```bash
-curl -s -H "Authorization: Bearer $TOKEN" \
-  "$BASE/workflows/Orchestrator_Workflow/runs/<runId>/actions/Final_TestResults?$API"
-```
-
-Follow `properties.outputsLink.uri` (no auth header — it is a SAS URL) to retrieve the body. Extract `overallResult`, `testResults[]`, `childWorkflowRunLinks`.
-
-#### Step 7d: Discover child workflow run ids
-
-For each child workflow called by the Orchestrator (Initialization, UserTests, GroupTests, SCIMTests), find its `Call_<X>_Workflow` action, GET the `outputsLink.uri` (SAS, no auth header), and read `x-ms-workflow-run-id` from inside the JSON body's `headers` object — NOT from the SAS response's HTTP headers (which only contain `Content-Type`, `Content-Length`, etc.):
-
-```bash
-curl -s -H "Authorization: Bearer $TOKEN" \
-  "$BASE/workflows/Orchestrator_Workflow/runs/<runId>/actions/Call_<X>_Workflow?$API"
-# then GET the outputsLink.uri (SAS, no auth header). The body is shaped:
-#   { "statusCode": 200, "headers": { "x-ms-workflow-run-id": "...", ... }, "body": {...} }
-# Extract: body.headers["x-ms-workflow-run-id"]
-```
-
-#### Step 7e: Page all run actions per workflow
-
-For each of the 5 workflows (Orchestrator + 4 children), call:
-
-```bash
-curl -s -H "Authorization: Bearer $TOKEN" \
-  "$BASE/workflows/<workflow>/runs/<runId>/actions?$API"
-```
-
-Follow `nextLink` until exhausted.
-
-#### Step 7f: Bulk-fetch every action's inputs and outputs
-
-For **every** action with `properties.inputsLink` and/or `properties.outputsLink`, GET the link URI directly (SAS — **no Authorization header**, no api-version). Fan out in parallel; throttle to ~20 concurrent requests.
-
-Index the responses as `contentMap[<workflow>][<actionName>] = { inputs, outputs }`.
-
-#### Step 7g: Repetitions fallback for Until / Foreach (REQUIRED)
-
-Loop containers (`Until`, `Foreach`) and many actions nested inside them have **no direct inputsLink/outputsLink** on the run-action — instead, each iteration is a separate "repetition". To capture inputs and outputs for these actions, for every run-action where:
-
-- `properties.inputsLink` and `properties.outputsLink` are both absent, AND
-- `properties.repetitionCount > 0`, AND
-- `properties.status` is `Succeeded` or `Failed`
-
-call:
-
-```bash
-curl -s -H "Authorization: Bearer $TOKEN" \
-  "$BASE/workflows/<workflow>/runs/<runId>/actions/<actionName>/repetitions?$API"
-```
-
-Pick the **last** repetition by `properties.startTime` (descending). Then fetch its detail:
-
-```bash
-curl -s -H "Authorization: Bearer $TOKEN" \
-  "$BASE/workflows/<workflow>/runs/<runId>/actions/<actionName>/repetitions/<repName>?$API"
-```
-
-Read `properties.inputsLink.uri` and `properties.outputsLink.uri` on the repetition detail and GET those SAS URLs to inline the final iteration's inputs and outputs into `contentMap[<workflow>][<actionName>]`.
-
-This mirrors the upstream `ValidateLogicAppRun.ps1` "last repetition" fallback.
-
-#### Step 7h: Walk each workflow definition to build the nested action tree
-
-For each workflow, walk `definition.actions` recursively. Emit one node per action. Each node has:
-
-- `_details` — object with `{ status, code, startTime, endTime, error, inputs, outputs }` populated from the run-action and `contentMap`.
-- All child action names as **sibling keys** alongside `_details`, recursively.
-
-Recurse into:
-
-- `actions` (Scope, If true-branch, Until, Foreach)
-- `else.actions` (If false-branch) — prefix child keys with `__else_`
-- `default.actions` (Switch default) — prefix with `__default_`
-- `cases.<caseName>.actions` (Switch cases) — prefix with `__case_<caseName>_`
-
-Write the result to `allActionsDetailed[<WorkflowName>] = <tree>`.
-
-#### Step 7i: Fetch and redact parameters
-
-Fetch the run's **workflow version parameters** (preferred) — the Orchestrator run object contains `properties.workflow.name` (the version ID); call `GET .../workflows/Orchestrator_Workflow/versions/<versionName>` and read `properties.parameters`. This captures the exact parameter values that were active when the run started, even if someone updated the Logic App parameters afterward. Fall back to the local `Orchestrator_Parameters.json` file only if the version API is unavailable. Redact:
-
-- `scimBearerToken` → `"***"`
-- Any field name matching `*token*`, `*secret*`, `*credential*`, `*password*`, `*key*` → `"***"`
-- `password` field inside any object in `defaultUserProperties` → `"***"`
-
-#### Step 7j: Build the validation result JSON
-
-Construct the output matching this schema (top-level keys, in order):
-
-```json
-{
-  "validationResult": "PASSED | FAILED",
-  "runStatus": "Succeeded | Failed",
-  "overallResultFromTests": "Success | Failed",
-  "validationChecks": {
-    "noFailedActions": true,
-    "noFailedTests": true,
-    "templateStructureValid": true,
-    "requiredStagesExecuted": true,
-    "allTemplateActionsExecuted": true
-  },
-  "timestamp": "2025-01-15T10:30:00.000Z",
-  "runId": "<runId>",
-  "logicAppName": "<logicAppName>",
-  "resourceGroup": "<resourceGroup>",
-  "subscriptionId": "<sub>",
-  "startTime": "<ISO-8601>",
-  "endTime": "<ISO-8601>",
-  "duration": "0h 25m 12s",
-  "parameters": { "...redacted..." },
-  "actionSummary": { "total": 655, "succeeded": 357, "failed": 1, "skipped": 297, "other": 0 },
-  "testSummary":   { "total": 13,  "success": 7,    "failed": 1, "skipped": 5 },
-  "testResults":   [ /* from Final_TestResults */ ],
-  "failedActions": [
-    {
-      "name": "actionName",
-      "workflow": "UserTests_Workflow",
-      "runId": "<childRunId>",
-      "status": "Failed",
-      "errorCode": "BadRequest",
-      "errorMessage": "...",
-      "startTime": "...",
-      "endTime": "..."
-    }
-  ],
-  "templateValidation": {
-    "valid": true,
-    "requiredStages": [
-      { "stage": "Stage Name", "action": "action_name", "executed": true, "status": "Succeeded" }
-    ],
-    "errors": []
-  },
-  "actionComparison": {
-    "valid": true,
-    "missingFromRunCount": 0,
-    "missingActions": null
-  },
-  "childWorkflowRuns":      { "<workflow>": "<runId>" },
-  "childWorkflowRunLinks":  { /* from Final_TestResults */ },
-  "allActionsDetailed": {
-    "Orchestrator_Workflow": {
-      "<actionName>": {
-        "_details": {
-          "status": "Succeeded",
-          "code": "OK",
-          "startTime": "...",
-          "endTime": "...",
-          "error": null,
-          "inputs":  { /* SAS-fetched body */ },
-          "outputs": { /* SAS-fetched body */ }
-        },
-        "<childActionName>": { "_details": { ... }, "...": { ... } }
-      }
-    },
-    "Initialization_Workflow": { /* same shape */ },
-    "UserTests_Workflow":      { /* same shape */ },
-    "GroupTests_Workflow":     { /* same shape */ },
-    "SCIMTests_Workflow":      { /* same shape */ }
-  }
-}
-```
-
-**Validation checks:**
-
-- `noFailedActions` — no actions across any workflow have status `Failed`, **except** for the whitelist of probe actions whose `Failed` status is the *expected success signal*. Whitelist (do NOT count as failures, do NOT include in `failedActions[]`, count as `succeeded` instead):
-  - `DeleteUser_Check_User_Deleted` — confirms the SCIM server returned 404 after a delete; a `Failed` status here means the delete worked.
-- `noFailedTests` — `Final_TestResults.testResults` has no entry where `testResult` is neither `success` nor `SKIPPED`
-- `templateStructureValid` — the Orchestrator template has at least one root action
-- `requiredStagesExecuted` — every root-level Orchestrator action ran (not `NotExecuted`)
-- `allTemplateActionsExecuted` — every action defined in the Orchestrator template appears in the run
-
-`validationResult` is `PASSED` only if ALL checks are true AND `runStatus` is `Succeeded`.
-
-#### Step 7k: Save the file
-
-Write the JSON (depth at least 100) to `validation-result-<RunId>.json` in the deliverable folder. Report to the ISV:
-
-```
-✅ Validation report generated: validation-result-<RunId>.json
-   Result: PASSED | FAILED
-   Actions: <N> total, <N> succeeded, <N> failed, <N> skipped
-```
-
-If `FAILED`, proceed to Phase 6 (Debug) if not already done. If `PASSED`, proceed to Phase 8 (Submit).
+1. Confirm the latest orchestrator run is successful (`FINAL STATUS: Succeeded`) and no unresolved Phase 6 issues remain.
+2. Inform the ISV directly to follow the official **Submit Test Results** guidance in:
+   https://github.com/AzureAD/SCIMReferenceCode/tree/master/Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp
+3. Inform the ISV directly to complete submission exactly as documented there, including required artifacts and contact path.
+4. If the ISV needs help locating generated files in the current workspace, assist with file discovery only.
 
 ---
 
-## Phase 8: Submit
-
-### Goal
-Guide the ISV through submission of the validation artifacts to Microsoft.
-
-### Steps
-
-1. Confirm `validation-result-<RunId>.json` shows `"validationResult": "PASSED"`
-2. Present the submission instructions:
-
-```
-✅ VALIDATION PASSED
-
-Run ID: <runId>
-Status: Succeeded
-Report: validation-result-<RunId>.json
-
-📦 Submit the following to aaduserprovisioning@microsoft.com:
-
-1. The validation-result-<RunId>.json file (generated above)
-2. Export your pruned schema:
-   Entra ID → Enterprise App → Provisioning → "Review schema" → Download
-3. Your SCIM endpoint URL
-4. A long-lived bearer token (for Microsoft sanity tests)
-5. Any constraints (required UPN domain, restricted attribute values, etc.)
-```
-
----
-
-## Phase 9: Cleanup
+## Phase 7: Cleanup
 
 ### Goal
 Remove test artifacts from the ISV's tenant.
