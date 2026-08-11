@@ -41,7 +41,7 @@ Collect the ISV's SCIM endpoint and bearer token, validate their Azure environme
 
    📄 **https://forms.microsoft.com/pages/responsepage.aspx?id=v4j5cvGGr0GRqy180BHbR3elR4YvzS1IhaP_XITThvJUODY1UTJSSUFXTzFYMTQ0SkxSWTY4OTYzRi4u&route=shorturl**
 
-   After submitting, the ISV must **wait for an explicit confirmation from the Microsoft team** that their tenant has been whitelisted. Do not attempt to continue with the onboarding steps until this confirmation is received — any Azure or Entra resource creation will fail if the tenant has not yet been approved.
+   After submitting, the ISV must **wait for an explicit confirmation from the Microsoft team** that their tenant has been whitelisted. This typically takes **2 business days**. Do not attempt to continue with the onboarding steps until this confirmation is received — any Azure or Entra resource creation will fail if the tenant has not yet been approved.
 
    Use `ask_user` to confirm the ISV has received whitelisting confirmation from Microsoft before proceeding. Do NOT continue to Step 2 until confirmed.
 
@@ -179,7 +179,7 @@ az rest --method POST \
 >
 > 📄 **https://forms.microsoft.com/pages/responsepage.aspx?id=v4j5cvGGr0GRqy180BHbR3elR4YvzS1IhaP_XITThvJUODY1UTJSSUFXTzFYMTQ0SkxSWTY4OTYzRi4u&route=shorturl**
 >
-> *After submitting, wait for an explicit confirmation from the Microsoft team that your tenant has been whitelisted. Do not attempt to continue until you receive this confirmation. Once confirmed, restart the agent from the beginning.*
+> *After submitting, wait for an explicit confirmation from the Microsoft team that your tenant has been whitelisted (typically 2 business days). Do not attempt to continue until you receive this confirmation. Once confirmed, restart the agent from the beginning.*
 
 **If the instantiate call succeeds (HTTP 200/201):**
 
@@ -195,16 +195,16 @@ Extract from response:
 >
 > **`scimBearerToken` is ALWAYS required** — the LA workflows use it for all 22 direct SCIM HTTP calls. If the ISV did not provide a bearer token at all, the Logic App tests cannot run — abort and ask for one.
 >
-> **NEVER mix** bearer + OAuth keys in the same PUT `/synchronization/secrets` call — Graph returns 500 and silently drops the entire payload.
+> **NEVER mix** bearer + OAuth keys in the same credential-save call. Use the beta portal path `PATCH /servicePrincipals/<servicePrincipalId>/synchronization/connectivityParameters` with only the keys for the selected auth mode.
 
 > Always pass the body via a file (`--body '@file.json'`). Inline JSON gets corrupted on Windows pwsh.
 
 **Determine the branch** based on what the ISV provided in Phase 1:
 
-| ISV provided | Branch | Entra sync uses | PUT secrets with |
+| ISV provided | Branch | Entra sync uses | Save connectivity with |
 |---|---|---|---|
-| Bearer only | A | Bearer | `BaseAddress` + `SecretToken` |
-| Bearer + OAuth | B | OAuth | `BaseAddress` + `Oauth2ClientId` + `Oauth2ClientSecret` + `Oauth2TokenExchangeUri` |
+| Bearer only | A | Bearer | `authenticationType` + `baseAddress` + `secretToken` |
+| Bearer + OAuth | B | OAuth | `authenticationType` + `baseAddress` + `oauth2ClientId` + `oauth2ClientSecret` + `oauth2TokenExchangeUri` + `credentialLocationInRequest` |
 
 ---
 
@@ -234,55 +234,53 @@ az rest --method POST \
 | HTTP 400 `RequestMissingRequiredParameter` | Body is missing `templateId` or `credentials` array | Fix the body shape. |
 | Any other 4xx/5xx | Unexpected | Surface verbatim and abort. |
 
-**Sub-step 2b-2: PUT the credentials into `/synchronization/secrets`**
+**Sub-step 2b-2: PATCH the credentials into `/synchronization/connectivityParameters` (portal path)**
 
-> **IMPORTANT (PUT secrets — both branches):** Every PUT to `/synchronization/secrets` **MUST** include `SyncNotificationSettings` and `SyncAll` keys alongside the auth-specific keys. Without them, Graph silently drops the entire payload — no error is returned, but no secrets are persisted. The subsequent `useSavedCredentials: true` validation then fails because there are no saved credentials.
+> **IMPORTANT (beta portal path):** Save sync connectivity using `PATCH https://graph.microsoft.com/beta/servicePrincipals/<servicePrincipalId>/synchronization/connectivityParameters` with the lower-case key names shown below. This is the portal-style path and avoids the `Oauth2TokenExchangeUri ... NotInAllowList` failure seen on `PUT /v1.0/.../synchronization/secrets` for OAuth.
 >
-> This matches what the Entra portal sends (observable in Developer Tools → Network tab on the "Test Connection" button). The portal always includes these keys.
+> `SyncNotificationSettings` and `SyncAll` are not part of the `connectivityParameters` payload. Do not include them here.
 
 **Branch A (bearer only):**
 ```bash
-# secrets.json:
+# connectivity.json:
 # {"value":[
-#   {"key":"SyncNotificationSettings","value":"{\"Enabled\":false,\"DeleteThresholdEnabled\":true,\"DeleteThresholdValue\":500}"},
-#   {"key":"SyncAll","value":"false"},
-#   {"key":"BaseAddress","value":"<scimEndpoint>"},
-#   {"key":"SecretToken","value":"<bearerToken>"}
+#   {"key":"authenticationType","value":"AuthenticationToken"},
+#   {"key":"baseAddress","value":"<scimEndpoint>"},
+#   {"key":"secretToken","value":"<bearerToken>"}
 # ]}
-az rest --method PUT \
-  --url "https://graph.microsoft.com/v1.0/servicePrincipals/<servicePrincipalId>/synchronization/secrets" \
+az rest --method PATCH \
+  --url "https://graph.microsoft.com/beta/servicePrincipals/<servicePrincipalId>/synchronization/connectivityParameters" \
   --headers "Content-Type=application/json" \
-  --body '@secrets.json'
+  --body '@connectivity.json'
 ```
 
 **Branch B (OAuth — ISV provided OAuth creds):**
 ```bash
-# secrets.json:
+# connectivity.json:
 # {"value":[
-#   {"key":"SyncNotificationSettings","value":"{\"Enabled\":false,\"DeleteThresholdEnabled\":true,\"DeleteThresholdValue\":500}"},
-#   {"key":"SyncAll","value":"false"},
-#   {"key":"AuthenticationType","value":"OAuth2ClientCredentialsGrant"},
-#   {"key":"BaseAddress","value":"<scimEndpoint>"},
-#   {"key":"Oauth2ClientId","value":"<clientId>"},
-#   {"key":"Oauth2ClientSecret","value":"<clientSecret>"},
-#   {"key":"Oauth2TokenExchangeUri","value":"<tokenEndpoint>"}
+#   {"key":"authenticationType","value":"OAuth2ClientCredentialsGrant"},
+#   {"key":"baseAddress","value":"<scimEndpoint>"},
+#   {"key":"oauth2ClientId","value":"<clientId>"},
+#   {"key":"oauth2ClientSecret","value":"<clientSecret>"},
+#   {"key":"oauth2TokenExchangeUri","value":"<tokenEndpoint>"},
+#   {"key":"credentialLocationInRequest","value":"Header"}
 # ]}
-az rest --method PUT \
-  --url "https://graph.microsoft.com/v1.0/servicePrincipals/<servicePrincipalId>/synchronization/secrets" \
+az rest --method PATCH \
+  --url "https://graph.microsoft.com/beta/servicePrincipals/<servicePrincipalId>/synchronization/connectivityParameters" \
   --headers "Content-Type=application/json" \
-  --body '@secrets.json'
+  --body '@connectivity.json'
 ```
 
-> Note: `AuthenticationType=OAuth2ClientCredentialsGrant` is required for OAuth — without it, Graph won't attempt OAuth token acquisition from the stored creds.
+> Note: `authenticationType=OAuth2ClientCredentialsGrant` is required for OAuth — without it, Graph won't attempt OAuth token acquisition from the stored creds.
 >
-> Inline `validateCredentials` with OAuth keys (i.e. `useSavedCredentials: false` + credentials array including OAuth keys) **works** — this is exactly what the Entra portal does. Earlier advice to avoid inline OAuth validation was incorrect; the real issue was missing `SyncNotificationSettings`/`SyncAll` in the PUT payload.
+> Inline `validateCredentials` with OAuth keys (i.e. `useSavedCredentials: false` + credentials array including OAuth keys) **works**, but do **not** include `CredentialLocationInRequest` in that inline payload — Graph returns `InternalError: Requested value 'CredentialLocationInRequest' was not found.` Keep that key only in the beta `connectivityParameters` PATCH payload.
 
 Then validate saved credentials work (both branches) — **this is the Test Connection**:
 ```bash
 # validate_saved.json:
 # {"templateId":"isvonboarding","useSavedCredentials":true}
 az rest --method POST \
-  --url "https://graph.microsoft.com/v1.0/servicePrincipals/<servicePrincipalId>/synchronization/jobs/validateCredentials" \
+  --url "https://graph.microsoft.com/beta/servicePrincipals/<servicePrincipalId>/synchronization/jobs/validateCredentials" \
   --headers "Content-Type=application/json" \
   --body '@validate_saved.json'
 ```
@@ -292,11 +290,11 @@ az rest --method POST \
 | Response | What it means | Action |
 |---|---|---|
 | HTTP 200/204 (empty body) | Test Connection succeeded — Entra can reach the ISV's SCIM endpoint using the saved credentials | Proceed to 2b-3 |
-| HTTP 400 `CredentialValidationUnavailable` | **Branch A:** bearer token rejected by the ISV's SCIM server (401/403/5xx). **Branch B:** OAuth token exchange failed — wrong client ID, wrong client secret, bad token endpoint URL, scope issue, or the ISV's token endpoint issued a token that their SCIM server rejected. | Surface the inner error verbatim to the ISV. **ABORT.** Do NOT create the sync job — it will immediately quarantine. Wait for the ISV to provide corrected credentials, then re-PUT secrets and re-validate. |
-| HTTP 500 `InternalError` — `"Requested value 'X' was not found"` | Secrets payload was silently rejected — wrong key names or mixed bearer + OAuth keys in the same PUT | Re-PUT secrets with the correct keys for the branch, **always including `SyncNotificationSettings` and `SyncAll`** (Branch A: + `BaseAddress` + `SecretToken`; Branch B: + `AuthenticationType` + `BaseAddress` + `Oauth2ClientId` + `Oauth2ClientSecret` + `Oauth2TokenExchangeUri`). Then re-validate. |
+| HTTP 400 `CredentialValidationUnavailable` | **Branch A:** bearer token rejected by the ISV's SCIM server (401/403/5xx). **Branch B:** OAuth token exchange failed — wrong client ID, wrong client secret, bad token endpoint URL, scope issue, or the ISV's token endpoint issued a token that their SCIM server rejected. | Surface the inner error verbatim to the ISV. **ABORT.** Do NOT create the sync job — it will immediately quarantine. Wait for the ISV to provide corrected credentials, then re-PATCH `connectivityParameters` and re-validate. |
+| HTTP 500 `InternalError` — `"Requested value 'X' was not found"` | Inline validation payload included an unsupported key (for example `CredentialLocationInRequest`) or the connectivity parameters used the wrong key casing | Re-run inline validation with only the supported OAuth keys, then re-PATCH `connectivityParameters` using the lower-case portal keys (`authenticationType`, `baseAddress`, `oauth2ClientId`, `oauth2ClientSecret`, `oauth2TokenExchangeUri`, `credentialLocationInRequest`). Then re-validate. |
 | Any other 4xx/5xx | Unexpected | Surface verbatim and **ABORT**. |
 
-> ⚠️ **GATE: Do NOT proceed to Sub-step 2b-3 until the saved-credential Test Connection returns 200/204.** Creating a sync job with invalid credentials causes immediate quarantine, and recovering from quarantine requires a full restart cycle (re-PUT secrets → restart job with `resetScope: Full` → start → re-verify). It is far cheaper to fix credentials now.
+> ⚠️ **GATE: Do NOT proceed to Sub-step 2b-3 until the saved-credential Test Connection returns 200/204.** Creating a sync job with invalid credentials causes immediate quarantine, and recovering from quarantine requires a full restart cycle (re-PATCH connectivity parameters → restart job with `resetScope: Full` → start → re-verify). It is far cheaper to fix credentials now.
 
 **Sub-step 2b-3: Create the sync job**
 ```bash
@@ -329,7 +327,7 @@ else:
 >
 > 📄 **https://forms.microsoft.com/pages/responsepage.aspx?id=v4j5cvGGr0GRqy180BHbR3elR4YvzS1IhaP_XITThvJUODY1UTJSSUFXTzFYMTQ0SkxSWTY4OTYzRi4u&route=shorturl**
 >
-> *After submitting, wait for an explicit confirmation from the Microsoft team that your tenant has been whitelisted. Do not attempt to continue until you receive this confirmation. The Entra app and sync job have been left in place. Once confirmed, restart the agent — it will detect the existing resources and continue from where it left off.*
+> *After submitting, wait for an explicit confirmation from the Microsoft team that your tenant has been whitelisted (typically 2 business days). Do not attempt to continue until you receive this confirmation. The Entra app and sync job have been left in place. Once confirmed, restart the agent — it will detect the existing resources and continue from where it left off.*
 
 **If the ISV's tenant IS in the whitelist** → proceed normally.
 
@@ -427,6 +425,7 @@ Files to acquire (exact names, case-sensitive):
 
 Example acquisition loop the agent must follow before any upload:
 
+done
 ```bash
 BASE_RAW="https://raw.githubusercontent.com/AzureAD/SCIMReferenceCode/master/Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp"
 FILES=(Orchestrator_Workflow.json Initialization_Workflow.json UserTests_Workflow.json GroupTests_Workflow.json SCIMTests_Workflow.json Orchestrator_Parameters.json)
@@ -439,11 +438,10 @@ for f in "${FILES[@]}"; do
   else
     echo "  [MISSING] $f — abort"; exit 1
   fi
-done
+
 ```
 
 Always log to the ISV which source (`github` vs `local`) was used per file, so they know whether they are deploying the upstream version or a locally modified one.
-
 **Pre-deploy validation (MANDATORY)** — Before uploading ANY files, run these checks. Do NOT deploy invalid files — the runtime will silently fail with `WorkflowNotFound` on ALL workflows and the error only appears in Kudu host logs (`/api/vfs/LogFiles/Application/Functions/Host/`).
 
 ```python
@@ -809,8 +807,8 @@ Pass criteria (ALL must hold):
 - `status.quarantine` is `null`
 - `schedule.state` is `Active`
 
-If `status.code == Quarantine` with `lastExecError == SystemForCrossDomainIdentityManagementInvalidCredentials` and `lastExecMsg` mentions `BaseAddress`/`SecretToken`/credential, the Step 2b secrets payload was silently rejected. Recovery:
-1. Re-PUT secrets with ONLY the supported keys for the auth mode (`BaseAddress` + `SecretToken` for bearer, or `BaseAddress` + `ClientId` + `ClientSecret` + `TokenEndpoint` for OAuth).
+If `status.code == Quarantine` with `lastExecError == SystemForCrossDomainIdentityManagementInvalidCredentials` and `lastExecMsg` mentions `BaseAddress`/`SecretToken`/credential, the Step 2b connectivity parameters were rejected or incomplete. Recovery:
+1. Re-PATCH `https://graph.microsoft.com/beta/servicePrincipals/<servicePrincipalId>/synchronization/connectivityParameters` with ONLY the supported keys for the auth mode (bearer: `authenticationType` + `baseAddress` + `secretToken`; OAuth: `authenticationType` + `baseAddress` + `oauth2ClientId` + `oauth2ClientSecret` + `oauth2TokenExchangeUri` + `credentialLocationInRequest`).
 2. `POST /servicePrincipals/<sp>/synchronization/jobs/<jobId>/restart` with body `{"criteria":{"resetScope":"Full"}}`. (Note: `credentials`/`watermark`/`escrows`/`quarantineState` are NOT valid restart criteria properties — schema only allows `resetScope`.)
 3. `POST /jobs/<jobId>/start` again.
 4. Re-run this Step 3h check. If still quarantined, abort and report the exact error.
@@ -998,7 +996,7 @@ Pass criteria (ALL must hold — identical to Phase 3h):
 Failure handling:
 - `status.code == Paused` or `schedule.state == Disabled` → **DO NOT trigger.** Call `POST /jobs/<jobId>/start`, wait 10s, re-check. If still Paused, abort and tell the ISV the job was manually paused in the portal.
 - `status.code == NotRun` with `schedule.state == Active` is **acceptable** — the scheduler is enabled and POD will work; the first scheduled cycle just hasn't fired yet. Proceed.
-- `status.code == Quarantine` → follow Phase 3h Quarantine recovery (re-PUT minimal secrets, `/restart` with `{"criteria":{"resetScope":"Full"}}`, `/start`, re-check). DO NOT trigger the orchestrator until status flips to `Active`/`InProgress`.
+- `status.code == Quarantine` → follow Phase 3h Quarantine recovery (re-PATCH `connectivityParameters` with supported keys only, `/restart` with `{"criteria":{"resetScope":"Full"}}`, `/start`, re-check). DO NOT trigger the orchestrator until status flips to `Active`/`InProgress`.
 - Any other unhealthy state → abort and report.
 
 Only after this check passes, proceed to Step 5a2.
@@ -1323,7 +1321,7 @@ All 8 required permissions must be present:
 | 11 | `Request_ResourceNotFound` on group assignment | Graph API eventual consistency race | ⚠️ Maybe | Re-run (group wasn't replicated yet). Usually passes on retry |
 | 12 | `NO_LOGS` / `PROVISIONING_LOGS_MISSING` **after Step 6c confirms no permission error AND Pattern #14 is ruled out** | Entra sync cycle too slow | ⚠️ Maybe | Re-run once (sync service gets faster on subsequent cycles). If same failure repeats, escalate. |
 | 13 | `Authentication_MSGraphPermissionMissing` | MI missing Graph permission | ✅ Yes | Parse the missing permission name(s) from the error, find the appRoleId from the Graph SP, assign via `appRoleAssignments`. This is NOT a propagation delay — the permission was never assigned. **After assigning, you MUST `az webapp restart` the LA** to force a new MI token that carries the added appRole; without restart the cached token still lacks the permission and the next run will fail identically. Poll `/host/default/properties/status` until `state=Running` (~60s), then re-run. |
-| 14 | `NO_LOGS_FOUND` on **every** UserTests/GroupTests test AND/OR `POD_User_Test`/`POD_Group_Test` returns 401 from `provisionOnDemand` AND/OR `GET /synchronization/jobs/<jobId>.status.code == Quarantine` | Entra sync job quarantined (secrets missing/rejected) OR LA MI is not an owner of the App + SP (synchronization owner required for `provisionOnDemand`) | ✅ Yes | **Before any re-run of the orchestrator**, GET `/synchronization/jobs/<jobId>` and check `status.code`. If `Quarantine`: re-PUT minimal `/synchronization/secrets` (only `BaseAddress` + `SecretToken` for bearer; `BaseAddress` + `ClientId` + `ClientSecret` + `TokenEndpoint` for OAuth — extra keys cause 500 and silent drop), then `POST /jobs/<jobId>/restart` with `{"criteria":{"resetScope":"Full"}}`, then `POST /jobs/<jobId>/start`, then re-verify `status.code` is `Active` and `lastExecution.error` is `null`. If `provisionOnDemand` still 401s after the job is healthy: add the LA MI's enterprise object id as owner of BOTH the application and the SP — `POST /applications/<appObjectId>/owners/$ref` and `POST /servicePrincipals/<spId>/owners/$ref` with body `{"@odata.id":"https://graph.microsoft.com/v1.0/directoryObjects/<miObjectId>"}` — then `az webapp restart` the LA and re-trigger the orchestrator. |
+| 14 | `NO_LOGS_FOUND` on **every** UserTests/GroupTests test AND/OR `POD_User_Test`/`POD_Group_Test` returns 401 from `provisionOnDemand` AND/OR `GET /synchronization/jobs/<jobId>.status.code == Quarantine` | Entra sync job quarantined (connectivity parameters missing/rejected) OR LA MI is not an owner of the App + SP (synchronization owner required for `provisionOnDemand`) | ✅ Yes | **Before any re-run of the orchestrator**, GET `/synchronization/jobs/<jobId>` and check `status.code`. If `Quarantine`: re-PATCH `https://graph.microsoft.com/beta/servicePrincipals/<servicePrincipalId>/synchronization/connectivityParameters` with only the supported keys for the auth mode (bearer: `authenticationType` + `baseAddress` + `secretToken`; OAuth: `authenticationType` + `baseAddress` + `oauth2ClientId` + `oauth2ClientSecret` + `oauth2TokenExchangeUri` + `credentialLocationInRequest`). Then `POST /jobs/<jobId>/restart` with `{"criteria":{"resetScope":"Full"}}`, then `POST /jobs/<jobId>/start`, then re-verify `status.code` is `Active` and `lastExecution.error` is `null`. If `provisionOnDemand` still 401s after the job is healthy: add the LA MI's enterprise object id as owner of BOTH the application and the SP — `POST /applications/<appObjectId>/owners/$ref` and `POST /servicePrincipals/<spId>/owners/$ref` with body `{"@odata.id":"https://graph.microsoft.com/v1.0/directoryObjects/<miObjectId>"}` — then `az webapp restart` the LA and re-trigger the orchestrator. |
 
 ### Step 6e: Extract canonical values from schema validation errors
 
@@ -1378,7 +1376,7 @@ Hand off the ISV to the official SCIMReferenceCode submission guidance instead o
 
 1. Confirm the latest orchestrator run is successful (`FINAL STATUS: Succeeded`) and no unresolved Phase 6 issues remain.
 2. Inform the ISV directly to follow the official **Submit Test Results** guidance in:
-   https://github.com/AzureAD/SCIMReferenceCode/tree/master/Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp
+  https://github.com/AzureAD/SCIMReferenceCode/blob/master/Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp/SetupLogicApp-Standard-Agent.md#submittest-results
 3. Inform the ISV directly to complete submission exactly as documented there, including required artifacts and contact path.
 4. If the ISV needs help locating generated files in the current workspace, assist with file discovery only.
 

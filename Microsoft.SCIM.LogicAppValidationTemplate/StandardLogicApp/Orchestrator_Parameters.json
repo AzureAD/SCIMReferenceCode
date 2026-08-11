@@ -39,7 +39,7 @@
       "description": "Version of the Logic App for tracking and deployment purposes"
     },
     "type": "String",
-    "value": "8.0"
+    "value": "9.0"
   },
   "attributeTransforms": {
     "metadata": {
