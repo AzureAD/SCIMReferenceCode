@@ -41,7 +41,7 @@ Collect the ISV's SCIM endpoint and bearer token, validate their Azure environme
 
    📄 **https://forms.microsoft.com/pages/responsepage.aspx?id=v4j5cvGGr0GRqy180BHbR3elR4YvzS1IhaP_XITThvJUODY1UTJSSUFXTzFYMTQ0SkxSWTY4OTYzRi4u&route=shorturl**
 
-   After submitting, the ISV must **wait for an explicit confirmation from the Microsoft team** that their tenant has been whitelisted. This typically takes **2 business days**. Do not attempt to continue with the onboarding steps until this confirmation is received — any Azure or Entra resource creation will fail if the tenant has not yet been approved.
+  After submitting, the ISV must **wait for an explicit confirmation from the Microsoft team** that their tenant has been whitelisted. Allowlisting will be available **within 2 business days**. Do not attempt to continue with the onboarding steps until this confirmation is received — any Azure or Entra resource creation will fail if the tenant has not yet been approved.
 
    Use `ask_user` to confirm the ISV has received whitelisting confirmation from Microsoft before proceeding. Do NOT continue to Step 2 until confirmed.
 
@@ -146,6 +146,10 @@ Present a summary to the ISV:
 SCIM capabilities: Users ✓  Groups <✓|✗>  Manager <✓|✗>  Soft delete <✓|✗>
 ```
 
+If `/Groups` is unsupported, warn the ISV:
+
+> ⚠️ **Your SCIM endpoint does not support `/Groups`.** The validation suite includes Group tests (`Create_Group_Test`, `Update_Group_Test`, `Delete_Group_Test`, `SCIM_Group_Create_Test`, `SCIM_Group_Update_Test`, `SCIM_Group_Pagination_Test`, `POD_Group_Test`, `Restore_Group_Test`) that **will fail** because they call `/Groups` on your endpoint. These failures will block submission — the test suite requires all executed tests to pass. To pass Group tests, your SCIM server must implement the `/Groups` resource type and return HTTP 200 for `GET /Groups` (even if the response is an empty list). If you choose to proceed without Group support, the agent will apply Pattern #15 (disable Group sync mappings) to prevent Entra quarantine, but the Logic App Group tests will still fail and submission will not be possible until Groups are implemented.
+
 If empty filter is non-compliant, **STOP** and tell the ISV this is a mandatory requirement. They must fix their SCIM server before proceeding.
 
 ### Failure handling
@@ -179,7 +183,7 @@ az rest --method POST \
 >
 > 📄 **https://forms.microsoft.com/pages/responsepage.aspx?id=v4j5cvGGr0GRqy180BHbR3elR4YvzS1IhaP_XITThvJUODY1UTJSSUFXTzFYMTQ0SkxSWTY4OTYzRi4u&route=shorturl**
 >
-> *After submitting, wait for an explicit confirmation from the Microsoft team that your tenant has been whitelisted (typically 2 business days). Do not attempt to continue until you receive this confirmation. Once confirmed, restart the agent from the beginning.*
+> *After submitting, wait for an explicit confirmation from the Microsoft team that your tenant has been whitelisted. Allowlisting will be available within 2 business days. Do not attempt to continue until you receive this confirmation. Once confirmed, restart the agent from the beginning.*
 
 **If the instantiate call succeeds (HTTP 200/201):**
 
@@ -233,6 +237,8 @@ az rest --method POST \
 | HTTP 400 `CredentialValidationUnavailable` | Graph contacted the ISV's SCIM server and got an error back (401, 403, 5xx, etc.). Bearer token may be wrong or expired. | Surface the inner error verbatim to the ISV. ABORT. |
 | HTTP 400 `RequestMissingRequiredParameter` | Body is missing `templateId` or `credentials` array | Fix the body shape. |
 | Any other 4xx/5xx | Unexpected | Surface verbatim and abort. |
+
+Before aborting on any validation failure, capture the exact inner error and match it against **Step 6d: Known Issues**. In particular, `SystemForCrossDomainIdentityManagementServiceIncompatible`, `CredentialValidationUnavailable`, or an inner Group `404` may match **Pattern #15**. At this pre-job stage there is no job schema to update, so do not bypass the creation gate or invent a schema target; report the known issue as a possible cause and apply Pattern #15 only if a synchronization job already exists.
 
 **Sub-step 2b-2: PATCH the credentials into `/synchronization/connectivityParameters` (portal path)**
 
@@ -294,6 +300,8 @@ az rest --method POST \
 | HTTP 500 `InternalError` — `"Requested value 'X' was not found"` | Inline validation payload included an unsupported key (for example `CredentialLocationInRequest`) or the connectivity parameters used the wrong key casing | Re-run inline validation with only the supported OAuth keys, then re-PATCH `connectivityParameters` using the lower-case portal keys (`authenticationType`, `baseAddress`, `oauth2ClientId`, `oauth2ClientSecret`, `oauth2TokenExchangeUri`, `credentialLocationInRequest`). Then re-validate. |
 | Any other 4xx/5xx | Unexpected | Surface verbatim and **ABORT**. |
 
+Before aborting or retrying, capture the exact inner error and match it against **Step 6d: Known Issues**. If the response mentions `SystemForCrossDomainIdentityManagementServiceIncompatible`, Group connectivity, or an inner Group `404`, evaluate **Pattern #15**. Do not classify a generic `401`, `403`, rejected bearer token, or OAuth token-exchange failure as Pattern #15.
+
 > ⚠️ **GATE: Do NOT proceed to Sub-step 2b-3 until the saved-credential Test Connection returns 200/204.** Creating a sync job with invalid credentials causes immediate quarantine, and recovering from quarantine requires a full restart cycle (re-PATCH connectivity parameters → restart job with `resetScope: Full` → start → re-verify). It is far cheaper to fix credentials now.
 
 **Sub-step 2b-3: Create the sync job**
@@ -327,7 +335,7 @@ else:
 >
 > 📄 **https://forms.microsoft.com/pages/responsepage.aspx?id=v4j5cvGGr0GRqy180BHbR3elR4YvzS1IhaP_XITThvJUODY1UTJSSUFXTzFYMTQ0SkxSWTY4OTYzRi4u&route=shorturl**
 >
-> *After submitting, wait for an explicit confirmation from the Microsoft team that your tenant has been whitelisted (typically 2 business days). Do not attempt to continue until you receive this confirmation. The Entra app and sync job have been left in place. Once confirmed, restart the agent — it will detect the existing resources and continue from where it left off.*
+> *After submitting, wait for an explicit confirmation from the Microsoft team that your tenant has been whitelisted. Allowlisting will be available within 2 business days. Do not attempt to continue until you receive this confirmation. The Entra app and sync job have been left in place. Once confirmed, restart the agent — it will detect the existing resources and continue from where it left off.*
 
 **If the ISV's tenant IS in the whitelist** → proceed normally.
 
@@ -473,7 +481,7 @@ else:
     print('All parameter types OK')
 "
 
-# 3. BOM check — UTF-8 BOM causes runtime crash (see Pattern #15)
+# 3. BOM check — UTF-8 BOM causes runtime crash (see this Step 2f validation)
 python -c "
 import glob
 for f in glob.glob('*_Workflow.json') + ['parameters.json']:
@@ -813,6 +821,8 @@ If `status.code == Quarantine` with `lastExecError == SystemForCrossDomainIdenti
 3. `POST /jobs/<jobId>/start` again.
 4. Re-run this Step 3h check. If still quarantined, abort and report the exact error.
 
+If `status.code == Quarantine` and the inner error contains `SystemForCrossDomainIdentityManagementServiceIncompatible`, Group connectivity, or an HTTP `404`, match the exact error against **Pattern #15** before treating it as invalid credentials. Apply Pattern #15 only when Phase 1 showed that `/Groups` is unsupported and the current job schema has an enabled Group object mapping.
+
 If `status.code` is healthy → continue to Phase 4.
 
 ---
@@ -1029,7 +1039,7 @@ for i in {1..36}; do
 done
 ```
 
-**Pass criteria:** `state == "Running"`. If the runtime is still not `Running` after 3 minutes, abort and investigate (commonly a `workflow.json` syntax error or UTF-8 BOM corruption left the runtime in `Error` state — see Pattern #15 in Step 6d).
+**Pass criteria:** `state == "Running"`. If the runtime is still not `Running` after 3 minutes, abort and investigate (commonly a `workflow.json` syntax error or UTF-8 BOM corruption left the runtime in `Error` state — see the BOM validation in Step 2f).
 
 **Optional sanity check (recommended on re-deploys):** Before triggering, GET each modified workflow and assert `health.state == "Healthy"`:
 ```bash
@@ -1322,6 +1332,36 @@ All 8 required permissions must be present:
 | 12 | `NO_LOGS` / `PROVISIONING_LOGS_MISSING` **after Step 6c confirms no permission error AND Pattern #14 is ruled out** | Entra sync cycle too slow | ⚠️ Maybe | Re-run once (sync service gets faster on subsequent cycles). If same failure repeats, escalate. |
 | 13 | `Authentication_MSGraphPermissionMissing` | MI missing Graph permission | ✅ Yes | Parse the missing permission name(s) from the error, find the appRoleId from the Graph SP, assign via `appRoleAssignments`. This is NOT a propagation delay — the permission was never assigned. **After assigning, you MUST `az webapp restart` the LA** to force a new MI token that carries the added appRole; without restart the cached token still lacks the permission and the next run will fail identically. Poll `/host/default/properties/status` until `state=Running` (~60s), then re-run. |
 | 14 | `NO_LOGS_FOUND` on **every** UserTests/GroupTests test AND/OR `POD_User_Test`/`POD_Group_Test` returns 401 from `provisionOnDemand` AND/OR `GET /synchronization/jobs/<jobId>.status.code == Quarantine` | Entra sync job quarantined (connectivity parameters missing/rejected) OR LA MI is not an owner of the App + SP (synchronization owner required for `provisionOnDemand`) | ✅ Yes | **Before any re-run of the orchestrator**, GET `/synchronization/jobs/<jobId>` and check `status.code`. If `Quarantine`: re-PATCH `https://graph.microsoft.com/beta/servicePrincipals/<servicePrincipalId>/synchronization/connectivityParameters` with only the supported keys for the auth mode (bearer: `authenticationType` + `baseAddress` + `secretToken`; OAuth: `authenticationType` + `baseAddress` + `oauth2ClientId` + `oauth2ClientSecret` + `oauth2TokenExchangeUri` + `credentialLocationInRequest`). Then `POST /jobs/<jobId>/restart` with `{"criteria":{"resetScope":"Full"}}`, then `POST /jobs/<jobId>/start`, then re-verify `status.code` is `Active` and `lastExecution.error` is `null`. If `provisionOnDemand` still 401s after the job is healthy: add the LA MI's enterprise object id as owner of BOTH the application and the SP — `POST /applications/<appObjectId>/owners/$ref` and `POST /servicePrincipals/<spId>/owners/$ref` with body `{"@odata.id":"https://graph.microsoft.com/v1.0/directoryObjects/<miObjectId>"}` — then `az webapp restart` the LA and re-trigger the orchestrator. |
+| 15 | Entra `/validateConnectivity` behavior (surfaced through Graph `validateCredentials`) returns `SystemForCrossDomainIdentityManagementServiceIncompatible`, `CredentialValidationUnavailable`, or inner HTTP `404` involving Group connectivity **and** Phase 1 found `/Groups` unsupported **and** the job schema has an enabled Group object mapping | Entra processes or probes Group because the synchronization schema enables its Group object mapping, but the SCIM endpoint is user-only | ✅ Yes | Follow the mandatory Pattern #15 procedure below: disable every Group object mapping with a full-schema `PUT`, verify, restart/start the job, and revalidate. |
+| 16 | Any Group test (`Create_Group_Test`, `Update_Group_Test`, `Delete_Group_Test`, `Group_Update_Add_Member_Test`, `Group_Update_Remove_Member_Test`, `SCIM_Group_Create_Test`, `SCIM_Group_Update_Test`, `SCIM_Group_Pagination_Test`, `POD_Group_Test`, `Restore_Group_Test`) fails with `404`, `Not Found`, or SCIM error **and** Phase 1 found `/Groups` unsupported | The Logic App test workflows call `/Groups` directly using the bearer token — Pattern #15 only disables the Entra sync-engine Group mapping, not the LA tests themselves | ❌ No | **Do NOT auto-fix or suppress.** Report to the ISV: *"Your SCIM endpoint does not implement the `/Groups` resource type. The following Group tests failed because your server returned 404 for `/Groups` requests: [list failed tests]. To pass validation and submit to the Entra app gallery, your SCIM server must support the `/Groups` endpoint and return HTTP 200 (even for an empty group list). These failures block submission."* Do NOT allow submission. Do NOT re-run — the same tests will fail identically. Wait for the ISV to confirm they have added `/Groups` support, then re-probe `/Groups` (Phase 1 Step 6) to confirm before re-triggering. |
+
+#### Pattern #15: Disable Group object mappings for a user-only endpoint
+
+This issue is commonly described as `/validateConnectivity` failing. The public Graph calls in this agent use the `validateCredentials` endpoints; the Group probe is part of Entra's underlying connectivity-validation behavior.
+
+Apply this recovery only after all three conditions are confirmed:
+1. Phase 1 showed that `<scimEndpoint>/Groups?count=1` is unsupported or returns `404`.
+2. The actual inner connectivity error is `SystemForCrossDomainIdentityManagementServiceIncompatible`, `CredentialValidationUnavailable`, or an HTTP `404` involving Group. A generic `401`, `403`, rejected bearer token, or OAuth token-exchange failure does not match.
+3. `GET /servicePrincipals/<servicePrincipalId>/synchronization/jobs/<jobId>/schema` contains at least one object mapping where `sourceObjectName == "Group"` or `targetObjectName == "Group"` and `enabled == true`.
+
+If no Group mapping exists or every Group mapping is already disabled, do not write the schema. Pattern #15 is not the root cause; continue diagnosis using the exact inner error.
+
+When all conditions match:
+1. GET the **complete** schema from `https://graph.microsoft.com/v1.0/servicePrincipals/<servicePrincipalId>/synchronization/jobs/<jobId>/schema`.
+2. Log every matching Group mapping's `name`, `sourceObjectName`, `targetObjectName`, and current `enabled` value.
+3. Across **every** `synchronizationRules[*].objectMappings[*]`, set only `enabled = false` where `sourceObjectName == "Group"` or `targetObjectName == "Group"`. Do not assume rule index `0`, remove mappings, disable User mappings, or modify attributes/metadata.
+4. Save the complete modified schema as UTF-8 **without BOM** and replace the job schema with:
+   ```bash
+   az rest --method PUT \
+     --url "https://graph.microsoft.com/v1.0/servicePrincipals/<servicePrincipalId>/synchronization/jobs/<jobId>/schema" \
+     --headers "Content-Type=application/json" \
+     --body '@updated-sync-schema.json'
+   ```
+   This API fully replaces the schema. Do not use `PATCH` or send only the changed object mapping. Require HTTP `204 No Content`.
+5. GET the complete schema again. Assert every Group object mapping is disabled and all previously enabled User object mappings remain enabled. Log the before/after Group mapping values.
+6. `POST /servicePrincipals/<servicePrincipalId>/synchronization/jobs/<jobId>/restart` with `{"criteria":{"resetScope":"Full"}}`, then `POST /jobs/<jobId>/start`.
+7. Re-run saved-credential connectivity validation where applicable, then poll the job until `status.code` is `Active` or `InProgress`, `status.quarantine` is `null`, and `status.lastExecution.error` is `null` (or `lastExecution.state == "Succeeded"`).
+8. Before re-triggering tests, follow the existing Step 5a sync-job health gate and mandatory Step 5a2 Logic App restart. Do not ask the ISV for permission; this pattern is auto-fixable.
 
 ### Step 6e: Extract canonical values from schema validation errors
 
@@ -1352,9 +1392,16 @@ while (test run fails):
             if auto-fixable → apply fix
             if maybe-fixable AND root cause confirmed as timing → no fix needed
             if ISV-must-fix → report to ISV, wait for confirmation
+            if Pattern #15 → GET the full schema, disable every enabled Group
+               object mapping, PUT the full schema, re-GET and verify, then
+               restart/start/revalidate the sync job exactly as Pattern #15 requires
+            if Pattern #16 (Group tests failing, /Groups unsupported) →
+               report ALL failed Group tests to the ISV with the Pattern #16 message.
+               Do NOT re-run — the same tests will fail identically.
+               Do NOT allow submission. Wait for ISV to add /Groups support.
     # Mandatory pre-trigger restart on EVERY iteration (see Step 5a2):
     if any workflow.json was modified OR any appRoleAssignment / owner / secret
-       / sync-job state was changed during this iteration:
+             / sync schema / sync-job state was changed during this iteration:
         az webapp restart -n <logicApp> -g <rg>
         poll /host/default/properties/status until state == "Running" (~60s)
     re-trigger orchestrator (Step 5b) and watch (Step 5b loop)
@@ -1370,15 +1417,64 @@ while (test run fails):
 ## Submit Test Results (Official Guide)
 
 ### Goal
-Hand off the ISV to the official SCIMReferenceCode submission guidance instead of performing in-agent report generation and submission.
+Give the ISV a complete, copy-ready submission summary for the exact successful run, then hand off to the official SCIMReferenceCode submission guidance. The agent does not submit the form on the ISV's behalf.
 
 ### Steps
 
-1. Confirm the latest orchestrator run is successful (`FINAL STATUS: Succeeded`) and no unresolved Phase 6 issues remain.
-2. Inform the ISV directly to follow the official **Submit Test Results** guidance in:
-  https://github.com/AzureAD/SCIMReferenceCode/blob/master/Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp/SetupLogicApp-Standard-Agent.md#submittest-results
-3. Inform the ISV directly to complete submission exactly as documented there, including required artifacts and contact path.
-4. If the ISV needs help locating generated files in the current workspace, assist with file discovery only.
+1. **Apply the success gate.** Continue only when all of the following are true:
+   - The exact captured orchestrator `<runId>` reached terminal status `Succeeded`.
+   - `Final_TestResults` for that same run has no blocking failures.
+   - No Phase 6 issue remains unresolved.
+
+   Do not print submission details for a failed, cancelled, timed-out, running, or stale run. A workflow status of `Succeeded` and the test-result totals are separate facts; verify and print both.
+
+2. **Recover the service principal ID from the successful run — never from setup memory or the current parameters file.**
+   - GET the `Call_Initialization_Workflow` action for the exact successful `<runId>`:
+     `https://management.azure.com/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Web/sites/<logicApp>/hostruntime/runtime/webhooks/workflow/api/management/workflows/Orchestrator_Workflow/runs/<runId>/actions/Call_Initialization_Workflow?api-version=2022-03-01`
+   - Follow `properties.inputsLink.uri` and read `body.servicePrincipalId` from the parent-to-child request payload.
+   - Reject a missing or non-GUID value. Call this value `<runServicePrincipalId>`.
+
+3. **Resolve the corresponding application ID and display name from Graph.** Use the run-derived ID:
+   `GET https://graph.microsoft.com/v1.0/servicePrincipals/<runServicePrincipalId>?$select=id,appId,displayName`
+
+   Require the returned `id` to equal `<runServicePrincipalId>`. Use the returned `appId` as `<applicationAppId>` and `displayName` as `<entraAppName>`. Do not use the Logic App managed identity object ID.
+
+4. **Build both direct links.** URL-encode all substituted path values.
+   - Azure run link:
+     `https://portal.azure.com/#view/Microsoft_Azure_EMA/DesignerEditor.ReactView/id/%2Fsubscriptions%2F<sub>%2FresourceGroups%2F<rg>%2Fproviders%2FMicrosoft.Web%2Fsites%2F<logicApp>%2Fworkflows%2FOrchestrator_Workflow/location/<location>/isReadOnly~/false/isMonitoringView~/true/runId/<runId>`
+   - App-specific Entra developer portal submission link:
+     `https://entra.microsoft.com/?Microsoft_AAD_Connect_Provisioning=tip&feature.enableSelfServiceOnboardingDeveloperPortal=true&feature.consoletelemetry=true#view/Microsoft_AAD_Connect_Provisioning/ProvisioningMenuBlade/~/SubmitValidationResults/objectId/<runServicePrincipalId>/appId/<applicationAppId>`
+   - Generic developer portal fallback:
+     `https://entra.microsoft.com/?Microsoft_AAD_Connect_Provisioning=tip&feature.enableSelfServiceOnboardingDeveloperPortal=true&feature.consoletelemetry=true#view/Microsoft_AAD_IAM/StartboardApplicationsMenuBlade/~/AppAppsPreview`
+
+5. **Print this mandatory final submission summary.** Replace every placeholder with the verified value. `Run status: Succeeded` must appear literally; phrases such as "validation passed" or `0 failed` are not substitutes.
+
+```text
+VALIDATION COMPLETE — READY TO SUBMIT
+
+Subscription ID: <sub>
+Resource group: <rg>
+Logic App name: <logicApp>
+Workflow: Orchestrator_Workflow
+Run ID: <runId>
+Run status: Succeeded
+Tests passed: <passedCount>
+Tests skipped: <skippedCount>
+Tests failed: 0
+
+Entra application: <entraAppName>
+Service principal object ID: <runServicePrincipalId>
+Application (client) ID: <applicationAppId>
+Developer portal submission link: <app-specific Entra link>
+
+Azure run link: <Azure run link>
+Generic developer portal fallback: <generic Entra link>
+Official submission guide: https://github.com/AzureAD/SCIMReferenceCode/blob/master/Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp/SetupLogicApp-Standard-Agent.md#submittest-results
+
+Submission request ID: Enter the request ID supplied separately by the Microsoft team; the Logic App does not generate it.
+```
+
+6. Tell the ISV to review the application details and attestations before submitting because the form cannot be edited after submission. If the app-specific link does not open, use the generic fallback, select the enterprise application matching both `<entraAppName>` and `<runServicePrincipalId>`, then go to **Provisioning > Submit validation results**.
 
 ---
 
@@ -1423,3 +1519,5 @@ Ask the ISV if they want to keep or delete the Logic App and resource group.
 14. **Prefer `Invoke-RestMethod` over `az rest` for repeated API calls.** On Windows, each `az rest` invocation spawns a full Python process (~30-60s on machines with 32-bit Python). For any loop or sequence of 3+ API calls, fetch a token once with `az account get-access-token --query accessToken -o tsv` and use `Invoke-RestMethod -Headers @{Authorization="Bearer $token"}` for subsequent calls. Refresh the token every 25 minutes. This applies to permission assignment loops, polling loops, and diagnostic queries.
 15. **Always query actual appRoleIds from the Graph service principal** — do NOT hardcode appRoleIds. They can differ across tenants/environments. Query `GET /servicePrincipals?$filter=appId eq '00000003-0000-0000-c000-000000000000'` and look up `.appRoles[]` by `.value` (permission name). Then use the `.id` field for assignment.
 16. **Pre-deploy validation is mandatory** — before any VFS upload or zip deploy, run JSON syntax validation, parameter type/value checks, and BOM detection on ALL workflow files and parameters.json (see Step 2f). Deploying invalid files causes the runtime to reject ALL workflows with a generic `WorkflowNotFound` error that is only visible in Kudu host logs.
+17. **A successful run requires the complete submission handoff.** After the success gate passes, do not end with only "validation passed," test totals, or a run ID. Print the mandatory `VALIDATION COMPLETE — READY TO SUBMIT` block from **Submit Test Results**, including the literal `Run status: Succeeded`, run-derived service principal ID, Graph-resolved application ID, Azure run link, and app-specific Entra developer portal link.
+18. **Every failure must be checked against known issues before aborting, retrying, or escalating.** Capture the exact inner HTTP/Graph/SCIM error, then match Step 6d in every phase, including Phase 2 connectivity setup and Phase 3 sync-job health. For Phase 5/6 test failures, first complete the mandatory Step 6c child-action drill-down. Never apply a pattern from a high-level summary alone.

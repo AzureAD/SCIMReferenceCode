@@ -68,6 +68,11 @@
                             "name": "scimDirectUserCreateBody",
                             "type": "Object",
                             "value": {}
+                        },
+                        {
+                            "name": "additionalFunctionSources",
+                            "type": "Array",
+                            "value": []
                         }
                     ]
                 }
@@ -216,7 +221,10 @@
                                     "memberUser1Mail": "@{concat('lamem1', substring(guid(),0,8), '@', parameters('testUserDomain'))}",
                                     "memberUser2Mail": "@{concat('lamem2', substring(guid(),0,8), '@', parameters('testUserDomain'))}",
                                     "scimDirectUser": "@{concat('lascuser', substring(guid(),0,8), '@', parameters('testUserDomain'))}",
-                                    "scimDirectUserNickname": "@{concat('lascuser', substring(guid(),0,8))}"
+                                    "scimDirectUserNickname": "@{concat('lascuser', substring(guid(),0,8))}",
+                                    "podUser": "@{concat('lapod', substring(guid(),0,8), '@', parameters('testUserDomain'))}",
+                                    "podUserMail": "@{concat('lapod', substring(guid(),0,8), '@', parameters('testUserDomain'))}",
+                                    "podUserNickname": "@{concat('lapod', substring(guid(),0,8))}"
                                 }
                             },
                             "Generate_Test_GroupNames": {
@@ -626,6 +634,40 @@
                                         "else": {
                                             "actions": {}
                                         }
+                                    },
+                                    "Select_Transformed_Additional_Sources": {
+                                        "runAfter": {
+                                            "Condition_Source_Not_Exists": [
+                                                "Succeeded",
+                                                "Skipped"
+                                            ]
+                                        },
+                                        "type": "Select",
+                                        "inputs": {
+                                            "from": "@if(and(equals(coalesce(items('ForEach_AttributeMappings')?['source']?['type'], ''), 'Function'), greater(length(body('Select_Source_Attribute_Names')), 1)), skip(body('Select_Source_Attribute_Names'), 1), json('[]'))",
+                                            "select": "@if(contains(parameters('attributeTransforms'), item()), parameters('attributeTransforms')[item()], item())"
+                                        }
+                                    },
+                                    "Compose_Union_AdditionalFunctionSources": {
+                                        "runAfter": {
+                                            "Select_Transformed_Additional_Sources": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "Compose",
+                                        "inputs": "@union(variables('additionalFunctionSources'), body('Select_Transformed_Additional_Sources'))"
+                                    },
+                                    "Set_AdditionalFunctionSources": {
+                                        "runAfter": {
+                                            "Compose_Union_AdditionalFunctionSources": [
+                                                "Succeeded"
+                                            ]
+                                        },
+                                        "type": "SetVariable",
+                                        "inputs": {
+                                            "name": "additionalFunctionSources",
+                                            "value": "@outputs('Compose_Union_AdditionalFunctionSources')"
+                                        }
                                     }
                                 },
                                 "else": {
@@ -681,8 +723,17 @@
                             "select": "@item()?['source']"
                         }
                     },
+                    "Compose_All_Source_Names": {
+                        "runAfter": {
+                            "Select_Graph_Property_Names": [
+                                "Succeeded"
+                            ]
+                        },
+                        "type": "Compose",
+                        "inputs": "@union(body('Select_Graph_Property_Names'), variables('additionalFunctionSources'))"
+                    },
                     "For_Each_Build_UserBody": {
-                        "foreach": "@body('Select_Graph_Property_Names')",
+                        "foreach": "@outputs('Compose_All_Source_Names')",
                         "actions": {
                             "Filter_Lookup_For_Source": {
                                 "runAfter": {},
@@ -778,7 +829,7 @@
                             }
                         },
                         "runAfter": {
-                            "Select_Graph_Property_Names": [
+                            "Compose_All_Source_Names": [
                                 "Succeeded"
                             ],
                             "Select_ObjectAddOnly_SourceNames": [

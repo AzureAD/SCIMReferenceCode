@@ -3906,7 +3906,7 @@
                         "expression": "@greater(length(coalesce(body('RestoreGroupTest_SCIM_Check_Created')?['Resources'], json('[]'))), 0)",
                         "limit": {
                           "count": 200,
-                          "timeout": "PT50M"
+                          "timeout": "PT20M"
                         },
                         "actions": {
                           "RestoreGroupTest_SCIM_Check_Created": {
@@ -4138,7 +4138,7 @@
                             "expression": "@equals(length(coalesce(body('RestoreGroupTest_SCIM_Check_Gone')?['Resources'], json('[]'))), 0)",
                             "limit": {
                               "count": 200,
-                              "timeout": "PT50M"
+                              "timeout": "PT20M"
                             },
                             "actions": {
                               "RestoreGroupTest_SCIM_Check_Gone": {
@@ -4380,7 +4380,7 @@
                                 "expression": "@greater(length(coalesce(body('RestoreGroupTest_SCIM_Check_Restored')?['Resources'], json('[]'))), 0)",
                                 "limit": {
                                   "count": 200,
-                                  "timeout": "PT50M"
+                                  "timeout": "PT20M"
                                 },
                                 "actions": {
                                   "RestoreGroupTest_SCIM_Check_Restored": {
