@@ -3,7 +3,8 @@
 namespace Microsoft.SCIM.WebHostSample.Resources
 {
     using System;
-
+    using System.Collections.Generic;
+    
     public class SampleResourceTypes
     {
         public static Core2ResourceType UserResourceType
@@ -14,7 +15,14 @@ namespace Microsoft.SCIM.WebHostSample.Resources
                 {
                     Identifier = Types.User,
                     Endpoint = new Uri($"{SampleConstants.SampleScimEndpoint}/Users"),
-                    Schema = SampleConstants.UserEnterpriseSchema
+                    Schema = $"{SampleConstants.Core2SchemaPrefix}{Types.User}",
+                    SchemaExtensions = new List<Core2SchemaExtensions>() {
+                        new Core2SchemaExtensions()
+                        {
+                            Schema = SampleConstants.UserEnterpriseSchema,
+                            Required = false
+                        }
+                    }
                 };
 
                 return userResource;

@@ -80,6 +80,7 @@ namespace Microsoft.SCIM
         public const string ResourceType = "resourceType";
         public const string Returned = "returned";
         public const string Schema = "schema";
+        public const string SchemaExtensions = "schemaExtensions";
         public const string Schemas = "schemas";
         public const string SecurityEnabled = "securityEnabled";
         public const string Sort = "sort";
