@@ -1,0 +1,28 @@
+{
+  "userName": "UserNameReplace2",
+  "active": true,
+  "displayName": "BobIsAmazing",
+  "schemas": [
+    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+    "urn:ietf:params:scim:schemas:core:2.0:User"
+  ],
+  "id": "{{id2}}",
+  "externalId": "${__UUID}",
+  "name": {
+    "formatted": "NewName",
+    "familyName": "Leenay",
+    "givenName": "Ryan"
+  },
+  "emails": [
+    {
+      "Primary": true,
+      "type": "work",
+      "value": "testing@bobREPLACE.com"
+    },
+    {
+      "Primary": false,
+      "type": "home",
+      "value": "testinghome@bob.com"
+    }
+  ]
+}

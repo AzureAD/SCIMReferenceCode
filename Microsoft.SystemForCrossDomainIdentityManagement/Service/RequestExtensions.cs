@@ -6,9 +6,10 @@ namespace Microsoft.SCIM
     using System.Linq;
     using System.Net;
     using System.Net.Http;
-    using System.Web.Http;
     using System.Collections.Generic;
     using Newtonsoft.Json;
+    using Microsoft.AspNetCore.Http;
+    using Microsoft.Extensions.Primitives;
 
     public static class RequestExtensions
     {
@@ -24,24 +25,24 @@ namespace Microsoft.SCIM
                     SegmentSeparator.ToArray());
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "0", Justification = "False analysis of the 'this' parameter of an extension method")]
-        public static Uri GetBaseResourceIdentifier(this HttpRequestMessage request)
+        public static Uri GetBaseResourceIdentifier(this HttpContext context)
         {
-            if (null == request.RequestUri)
+            if (null == context.Request.Path.Value)
             {
                 throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidRequest);
             }
 
             string lastSegment =
-                request.RequestUri.AbsolutePath.Split(
+                context.Request.Path.Value.Split(
                     RequestExtensions.SegmentSeparators.Value,
                     StringSplitOptions.RemoveEmptyEntries)
                 .Last();
             if (string.Equals(lastSegment, SchemaConstants.PathInterface, StringComparison.OrdinalIgnoreCase))
             {
-                return request.RequestUri;
+                return new Uri($"{context.Request.Scheme}://{context.Request.Host.Value}{context.Request.Path.Value}");
             }
 
-            string resourceIdentifier = request.RequestUri.AbsoluteUri;
+            string resourceIdentifier = $"{context.Request.Scheme}://{context.Request.Host.Value}{context.Request.Path.Value}";
 
             int indexInterface =
                 resourceIdentifier
@@ -59,9 +60,10 @@ namespace Microsoft.SCIM
             return result;
         }
 
-        public static bool TryGetRequestIdentifier(this HttpRequestMessage request, out string requestIdentifier)
+        public static bool TryGetRequestIdentifier(this HttpContext context, out string requestIdentifier)
         {
-            request?.Headers.TryGetValues("client-id", out IEnumerable<string> _);
+            // TODO: Who knows why?
+            context.Request.Headers.TryGetValue("client-id", out StringValues _);
             requestIdentifier = Guid.NewGuid().ToString();
             return true;
         }
@@ -114,11 +116,9 @@ namespace Microsoft.SCIM
             }
             catch
             {
-                throw new HttpResponseException(HttpStatusCode.BadRequest);
+                throw new CustomHttpResponseException(HttpStatusCode.BadRequest);
             }
-                   
         }
-        
 
         private static void Enlist(
             this IRequest<BulkRequest2> request,
@@ -191,7 +191,7 @@ namespace Microsoft.SCIM
             {
                 IBulkOperationContext context = new BulkDeletionOperationContext(request, operation);
                 operations.Add(context);
-                return; 
+                return;
             }
 
             if (ProtocolExtensions.PatchMethod == operation.Method)
@@ -203,7 +203,7 @@ namespace Microsoft.SCIM
                 return;
             }
 
-            throw new HttpResponseException(HttpStatusCode.BadRequest);
+            throw new NotSupportedException();
         }
 
         public static Queue<IBulkOperationContext> EnqueueOperations(this IRequest<BulkRequest2> request)
@@ -271,7 +271,7 @@ namespace Microsoft.SCIM
                         }
                         break;
                     default:
-                        throw new HttpResponseException(HttpStatusCode.BadRequest);
+                        throw new CustomHttpResponseException(HttpStatusCode.BadRequest);
                 }
             }
         }

@@ -1,0 +1,27 @@
+{
+  "userName": "UserName444",
+  "active": true,
+  "displayName": "lennay",
+  "schemas": [
+    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+    "urn:ietf:params:scim:schemas:core:2.0:User"
+  ],
+  "externalId": "${__UUID}",
+  "name": {
+    "formatted": "Adrew Ryan",
+    "familyName": "Ryan",
+    "givenName": "Andrew"
+  },
+  "emails": [
+    {
+      "Primary": true,
+      "type": "work",
+      "value": "testing@bob2.com"
+    },
+    {
+      "Primary": false,
+      "type": "home",
+      "value": "testinghome@bob3.com"
+    }
+  ]
+}

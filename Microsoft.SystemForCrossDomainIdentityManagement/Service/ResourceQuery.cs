@@ -9,7 +9,7 @@ namespace Microsoft.SCIM
     using System.Linq;
     using System.Net;
     using System.Web;
-    using System.Web.Http;
+    using Microsoft.AspNetCore.Http;
 
     public sealed class ResourceQuery : IResourceQuery
     {
@@ -117,6 +117,79 @@ namespace Microsoft.SCIM
             }
         }
 
+        public ResourceQuery(HttpContext context)
+        {
+            if (null == context)
+            {
+                throw new ArgumentNullException(nameof(context));
+            }
+
+            IQueryCollection keyedValues = context.Request.Query;
+            IEnumerable<string> keys = keyedValues.Keys;
+            foreach (string key in keys)
+            {
+                if (string.Equals(key, QueryKeys.Attributes, StringComparison.OrdinalIgnoreCase))
+                {
+                    string attributeExpression = keyedValues[key];
+                    if (!string.IsNullOrWhiteSpace(attributeExpression))
+                    {
+                        this.Attributes = ResourceQuery.ParseAttributes(attributeExpression);
+                    }
+                }
+
+                if (string.Equals(key, QueryKeys.Count, StringComparison.OrdinalIgnoreCase))
+                {
+                    Action<IPaginationParameters, int> action =
+                        new Action<IPaginationParameters, int>(
+                            (IPaginationParameters pagination, int paginationValue) =>
+                                pagination.Count = paginationValue);
+                    this.ApplyPaginationParameter(keyedValues[key], action);
+                }
+
+                if (string.Equals(key, QueryKeys.ExcludedAttributes, StringComparison.OrdinalIgnoreCase))
+                {
+                    string attributeExpression = keyedValues[key];
+                    if (!string.IsNullOrWhiteSpace(attributeExpression))
+                    {
+                        this.ExcludedAttributes = ResourceQuery.ParseAttributes(attributeExpression);
+                    }
+                }
+
+                if (string.Equals(key, QueryKeys.Filter, StringComparison.OrdinalIgnoreCase))
+                {
+                    string filterExpression = keyedValues[key];
+                    if (!string.IsNullOrWhiteSpace(filterExpression))
+                    {
+                        this.Filters = ResourceQuery.ParseFilters(filterExpression);
+                    }
+                }
+
+                if (string.Equals(key, QueryKeys.StartIndex, StringComparison.OrdinalIgnoreCase))
+                {
+                    Action<IPaginationParameters, int> action =
+                        new Action<IPaginationParameters, int>(
+                            (IPaginationParameters pagination, int paginationValue) =>
+                                pagination.StartIndex = paginationValue);
+                    this.ApplyPaginationParameter(keyedValues[key], action);
+                }
+            }
+
+            if (null == this.Filters)
+            {
+                this.Filters = Array.Empty<Filter>();
+            }
+
+            if (null == this.Attributes)
+            {
+                this.Attributes = Array.Empty<string>();
+            }
+
+            if (null == this.ExcludedAttributes)
+            {
+                this.ExcludedAttributes = Array.Empty<string>();
+            }
+        }
+
         public IReadOnlyCollection<string> Attributes
         {
             get;
@@ -160,6 +233,7 @@ namespace Microsoft.SCIM
             {
                 this.PaginationParameters = new PaginationParameters();
             }
+
             action(this.PaginationParameters, parsedValue);
         }
 
@@ -172,11 +246,11 @@ namespace Microsoft.SCIM
 
             IReadOnlyCollection<string> results =
                 attributeExpression
-                .Split(ResourceQuery.SeperatorsAttributes.Value)
-                .Select(
-                    (string item) =>
-                        item.Trim())
-                .ToArray();
+                    .Split(ResourceQuery.SeperatorsAttributes.Value)
+                    .Select(
+                        (string item) =>
+                            item.Trim())
+                    .ToArray();
             return results;
         }
 
@@ -189,7 +263,7 @@ namespace Microsoft.SCIM
 
             if (!Filter.TryParse(filterExpression, out IReadOnlyCollection<IFilter> results))
             {
-                throw new HttpResponseException(HttpStatusCode.NotAcceptable);
+                throw new CustomHttpResponseException(HttpStatusCode.NotAcceptable);
             }
 
             return results;

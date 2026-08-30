@@ -36,7 +36,7 @@ namespace Microsoft.SCIM
         }
 
         public IReadOnlyCollection<IBulkCreationOperationContext> Dependencies => this.dependenciesWrapper;
-        
+
         public IBulkCreationOperationContext Parent
         {
             get;
@@ -140,8 +140,8 @@ namespace Microsoft.SCIM
                     PatchRequest = patchRequest
                 };
             IRequest<IPatch> requestBuffer =
-                new UpdateRequest(
-                    this.BulkRequest.Request,
+                new SystemForCrossDomainIdentityManagementRequest<IPatch>(
+                    this.BulkRequest.HttpContext,
                     patch,
                     this.BulkRequest.CorrelationIdentifier,
                     this.BulkRequest.Extensions);

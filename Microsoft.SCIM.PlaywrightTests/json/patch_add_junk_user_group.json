@@ -1,0 +1,13 @@
+{
+  "id": "{{1stgroupid}}",
+  "Operations": [
+    {
+      "op":"add",
+      "path": "members",
+      "value": "{{junkuserid}}"
+    }
+  ],
+  "schemas": [
+    "urn:ietf:params:scim:api:messages:2.0:PatchOp"
+  ]
+}

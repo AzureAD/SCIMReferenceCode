@@ -128,7 +128,7 @@ namespace Microsoft.SCIM
                 }
                 if (null == resource)
                 {
-                    string invalidOperationExceptionMessage = 
+                    string invalidOperationExceptionMessage =
                         string.Format(
                             CultureInfo.InvariantCulture,
                             SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidOperationTemplate,
@@ -136,7 +136,7 @@ namespace Microsoft.SCIM
                     throw new ArgumentException(invalidOperationExceptionMessage);
                 }
                 this.creationRequest =
-                        new CreationRequest(request.Request, resource, request.CorrelationIdentifier,
+                        new SystemForCrossDomainIdentityManagementRequest<Resource>(request.HttpContext, resource, request.CorrelationIdentifier,
                         request.Extensions);
             }
             else
@@ -151,9 +151,9 @@ namespace Microsoft.SCIM
         }
 
         public IReadOnlyCollection<IBulkUpdateOperationContext> Dependents => this.dependentsWrapper;
-       
+
         public IReadOnlyCollection<IBulkUpdateOperationContext> Subordinates => this.subordinatesWrapper;
-       
+
         public void AddDependent(IBulkUpdateOperationContext dependent)
         {
             if (null == dependent)

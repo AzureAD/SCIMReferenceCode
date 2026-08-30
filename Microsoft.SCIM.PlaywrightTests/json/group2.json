@@ -1,0 +1,12 @@
+{
+  "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+  "externalId":"${__UUID}",
+  "displayName": "GroupDisplayName2",
+  "members":
+  [
+    {
+      "value":"{{id3}}",
+      "display":"VP"
+    }
+  ]
+}

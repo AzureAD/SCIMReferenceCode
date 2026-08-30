@@ -131,9 +131,10 @@ namespace Microsoft.SCIM
             return result;
         }
 
-        public abstract Task DeleteAsync(IResourceIdentifier resourceIdentifier, string correlationIdentifier);
+        public abstract Task<Resource> DeleteAsync(IResourceIdentifier resourceIdentifier,
+            string correlationIdentifier);
 
-        public virtual async Task DeleteAsync(IRequest<IResourceIdentifier> request)
+        public virtual async Task<Resource> DeleteAsync(IRequest<IResourceIdentifier> request)
         {
             if (null == request)
             {
@@ -150,7 +151,7 @@ namespace Microsoft.SCIM
                 throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidRequest);
             }
 
-            await this.DeleteAsync(request.Payload, request.CorrelationIdentifier).ConfigureAwait(false);
+            return await this.DeleteAsync(request.Payload, request.CorrelationIdentifier).ConfigureAwait(false);
         }
 
         public virtual async Task<QueryResponseBase> PaginateQueryAsync(IRequest<IQueryParameters> request)
@@ -177,7 +178,7 @@ namespace Microsoft.SCIM
                 throw new ArgumentNullException(nameof(request));
             }
 
-            if (null == request.Request)
+            if (null == request.HttpContext)
             {
                 throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidRequest);
             }
@@ -338,8 +339,7 @@ namespace Microsoft.SCIM
                 throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidRequest);
             }
 
-            Resource[] result = await this.QueryAsync(request.Payload, request.CorrelationIdentifier).ConfigureAwait(false);
-            return result;
+            return await this.QueryAsync(request.Payload, request.CorrelationIdentifier).ConfigureAwait(false);
         }
 
         public virtual Task<Resource> ReplaceAsync(Resource resource, string correlationIdentifier)
@@ -364,8 +364,7 @@ namespace Microsoft.SCIM
                 throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidRequest);
             }
 
-            Resource result = await this.ReplaceAsync(request.Payload, request.CorrelationIdentifier).ConfigureAwait(false);
-            return result;
+            return await this.ReplaceAsync(request.Payload, request.CorrelationIdentifier).ConfigureAwait(false);
         }
 
         public abstract Task<Resource> RetrieveAsync(IResourceRetrievalParameters parameters, string correlationIdentifier);
@@ -387,13 +386,12 @@ namespace Microsoft.SCIM
                 throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidRequest);
             }
 
-            Resource result = await this.RetrieveAsync(request.Payload, request.CorrelationIdentifier).ConfigureAwait(false);
-            return result;
+            return await this.RetrieveAsync(request.Payload, request.CorrelationIdentifier).ConfigureAwait(false);
         }
 
-        public abstract Task UpdateAsync(IPatch patch, string correlationIdentifier);
+        public abstract Task<Resource> UpdateAsync(IPatch patch, string correlationIdentifier);
 
-        public virtual async Task UpdateAsync(IRequest<IPatch> request)
+        public virtual async Task<Resource> UpdateAsync(IRequest<IPatch> request)
         {
             if (null == request)
             {
@@ -410,7 +408,7 @@ namespace Microsoft.SCIM
                 throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidRequest);
             }
 
-            await this.UpdateAsync(request.Payload, request.CorrelationIdentifier).ConfigureAwait(false);
+            return await this.UpdateAsync(request.Payload, request.CorrelationIdentifier).ConfigureAwait(false);
         }
     }
 }
