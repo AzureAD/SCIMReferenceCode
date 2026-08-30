@@ -27,25 +27,23 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                 throw new HttpResponseException(HttpStatusCode.BadRequest);
             }
 
-            Core2EnterpriseUser user = resource as Core2EnterpriseUser;
-            if (string.IsNullOrWhiteSpace(user.UserName))
+            var user = resource as Core2EnterpriseUser;
+            if (string.IsNullOrWhiteSpace(user?.UserName))
             {
                 throw new HttpResponseException(HttpStatusCode.BadRequest);
             }
 
-            IEnumerable<Core2EnterpriseUser> exisitingUsers = this.storage.Users.Values;
+            IEnumerable<Core2EnterpriseUser> existingUsers = this.storage.Users.Values;
             if
             (
-                exisitingUsers.Any(
-                    (Core2EnterpriseUser exisitingUser) =>
-                        string.Equals(exisitingUser.UserName, user.UserName, StringComparison.Ordinal))
+                existingUsers.Any(existingUser => string.Equals(existingUser.UserName, user.UserName, StringComparison.Ordinal))
             )
             {
                 throw new HttpResponseException(HttpStatusCode.Conflict);
             }
 
             // Update metadata
-            DateTime created = DateTime.UtcNow;
+            var created = DateTime.UtcNow;
             user.Metadata.Created = created;
             user.Metadata.LastModified = created; 
             
@@ -64,7 +62,6 @@ namespace Microsoft.SCIM.WebHostSample.Provider
             }
 
             string identifier = resourceIdentifier.Identifier;
-
             if (this.storage.Users.ContainsKey(identifier))
             {
                 this.storage.Users.Remove(identifier);
@@ -97,20 +94,18 @@ namespace Microsoft.SCIM.WebHostSample.Provider
 
             IEnumerable<Resource> results;
             var predicate = PredicateBuilder.False<Core2EnterpriseUser>();
-            Expression<Func<Core2EnterpriseUser, bool>> predicateAnd;
 
 
             if (parameters.AlternateFilters.Count <= 0)
             {
-                results = this.storage.Users.Values.Select(
-                    (Core2EnterpriseUser user) => user as Resource);
+                results = this.storage.Users.Values.Select(user => user as Resource);
             }
             else
             {
 
                 foreach (IFilter queryFilter in parameters.AlternateFilters)
                 {
-                    predicateAnd = PredicateBuilder.True<Core2EnterpriseUser>();
+                    var predicateAnd = PredicateBuilder.True<Core2EnterpriseUser>();
 
                     IFilter andFilter = queryFilter;
                     IFilter currentFilter = andFilter;
@@ -120,10 +115,22 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                         {
                             throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidParameters);
                         }
-
                         else if (string.IsNullOrWhiteSpace(andFilter.ComparisonValue))
                         {
                             throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidParameters);
+                        }
+
+                        // ID filter
+                        else if (andFilter.AttributePath.Equals(AttributeNames.Identifier, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (andFilter.FilterOperator != ComparisonOperator.Equals)
+                            {
+                                throw new NotSupportedException(
+                                    string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterOperatorNotSupportedTemplate, andFilter.FilterOperator));
+                            }
+
+                            var id = andFilter.ComparisonValue;
+                            predicateAnd = predicateAnd.And(p => string.Equals(p.Identifier, id, StringComparison.OrdinalIgnoreCase));
                         }
 
                         // UserName filter
@@ -137,8 +144,6 @@ namespace Microsoft.SCIM.WebHostSample.Provider
 
                             string userName = andFilter.ComparisonValue;
                             predicateAnd = predicateAnd.And(p => string.Equals(p.UserName, userName, StringComparison.OrdinalIgnoreCase));
-
-                           
                         }
 
                         // ExternalId filter
@@ -152,11 +157,9 @@ namespace Microsoft.SCIM.WebHostSample.Provider
 
                             string externalIdentifier = andFilter.ComparisonValue;
                             predicateAnd = predicateAnd.And(p => string.Equals(p.ExternalIdentifier, externalIdentifier, StringComparison.OrdinalIgnoreCase));
-
-                           
                         }
 
-                        //Active Filter
+                        // Active Filter
                         else if (andFilter.AttributePath.Equals(AttributeNames.Active, StringComparison.OrdinalIgnoreCase))
                         {
                             if (andFilter.FilterOperator != ComparisonOperator.Equals)
@@ -167,32 +170,37 @@ namespace Microsoft.SCIM.WebHostSample.Provider
 
                             bool active = bool.Parse(andFilter.ComparisonValue);
                             predicateAnd = predicateAnd.And(p => p.Active == active);
-
                         }
 
-                        //LastModified filter
+                        // DisplayName Filter
+                        else if (andFilter.AttributePath.Equals(AttributeNames.DisplayName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (andFilter.FilterOperator != ComparisonOperator.Equals)
+                            {
+                                throw new NotSupportedException(
+                                    string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterOperatorNotSupportedTemplate, andFilter.FilterOperator));
+                            }
+
+                            var displayName = andFilter.ComparisonValue;
+                            predicateAnd = predicateAnd.And(p => p.DisplayName == displayName);
+                        }
+
+                        // LastModified filter
                         else if (andFilter.AttributePath.Equals($"{AttributeNames.Metadata}.{AttributeNames.LastModified}", StringComparison.OrdinalIgnoreCase))
                         {
                             if (andFilter.FilterOperator == ComparisonOperator.EqualOrGreaterThan)
                             {
                                 DateTime comparisonValue = DateTime.Parse(andFilter.ComparisonValue).ToUniversalTime();
                                 predicateAnd = predicateAnd.And(p => p.Metadata.LastModified >= comparisonValue);
-
-                               
                             }
                             else if (andFilter.FilterOperator == ComparisonOperator.EqualOrLessThan)
                             {
                                 DateTime comparisonValue = DateTime.Parse(andFilter.ComparisonValue).ToUniversalTime();
                                 predicateAnd = predicateAnd.And(p => p.Metadata.LastModified <= comparisonValue);
-
-                                
                             }
                             else
                                 throw new NotSupportedException(
                                     string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterOperatorNotSupportedTemplate, andFilter.FilterOperator));
-
-
-
                         }
                         else
                             throw new NotSupportedException(
@@ -204,7 +212,6 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                     } while (currentFilter.AdditionalFilter != null);
 
                     predicate = predicate.Or(predicateAnd);
-
                 }
 
                 results = this.storage.Users.Values.Where(predicate.Compile());
@@ -212,7 +219,7 @@ namespace Microsoft.SCIM.WebHostSample.Provider
 
             if (parameters.PaginationParameters != null)
             {
-                int count = parameters.PaginationParameters.Count.HasValue ? parameters.PaginationParameters.Count.Value : 0;
+                int count = parameters.PaginationParameters.Count ?? 0;
                 return Task.FromResult(results.Take(count).ToArray());
             }
             else
@@ -226,40 +233,33 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                 throw new HttpResponseException(HttpStatusCode.BadRequest);
             }
 
-            Core2EnterpriseUser user = resource as Core2EnterpriseUser;
-
-            if (string.IsNullOrWhiteSpace(user.UserName))
+            var user = resource as Core2EnterpriseUser;
+            if (string.IsNullOrWhiteSpace(user?.UserName))
             {
                 throw new HttpResponseException(HttpStatusCode.BadRequest);
             }
 
-            if
-            (
-                this.storage.Users.Values.Any(
-                    (Core2EnterpriseUser exisitingUser) =>
-                        string.Equals(exisitingUser.UserName, user.UserName, StringComparison.Ordinal) &&
-                        !string.Equals(exisitingUser.Identifier, user.Identifier, StringComparison.OrdinalIgnoreCase))
-            )
+            if (this.storage.Users.Values.Any(existingUser =>
+                string.Equals(existingUser.UserName, user.UserName, StringComparison.Ordinal) &&
+                !string.Equals(existingUser.Identifier, user.Identifier, StringComparison.OrdinalIgnoreCase)))
             {
                 throw new HttpResponseException(HttpStatusCode.Conflict);
             }
 
-            Core2EnterpriseUser exisitingUser = this.storage.Users.Values
-                .FirstOrDefault(
-                    (Core2EnterpriseUser exisitingUser) =>
-                        string.Equals(exisitingUser.Identifier, user.Identifier, StringComparison.OrdinalIgnoreCase)
-                );
-            if (exisitingUser == null)
+            Core2EnterpriseUser existingUser = this.storage.Users.Values
+                .FirstOrDefault(existingUser =>
+                    string.Equals(existingUser.Identifier, user.Identifier, StringComparison.OrdinalIgnoreCase));
+            if (existingUser == null)
             {
                 throw new HttpResponseException(HttpStatusCode.NotFound);
             }
 
             // Update metadata
-            user.Metadata.Created = exisitingUser.Metadata.Created;
+            user.Metadata.Created = existingUser.Metadata.Created;
             user.Metadata.LastModified = DateTime.UtcNow;
 
             this.storage.Users[user.Identifier] = user;
-            Resource result = user as Resource;
+            var result = user as Resource;
             return Task.FromResult(result);
         }
 
@@ -280,14 +280,12 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                 throw new ArgumentNullException(nameof(parameters));
             }
 
-            Resource result = null;
             string identifier = parameters.ResourceIdentifier.Identifier;
-
             if (this.storage.Users.ContainsKey(identifier))
             {
-                if (this.storage.Users.TryGetValue(identifier, out Core2EnterpriseUser user))
+                if (this.storage.Users.TryGetValue(identifier, out var user))
                 {
-                    result = user as Resource;
+                    var result = user as Resource;
                     return Task.FromResult(result);
                 }
             }
@@ -317,9 +315,7 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                 throw new ArgumentException(SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidOperation);
             }
 
-            PatchRequest2 patchRequest =
-                patch.PatchRequest as PatchRequest2;
-
+            PatchRequest2 patchRequest = patch.PatchRequest as PatchRequest2;
             if (null == patchRequest)
             {
                 string unsupportedPatchTypeName = patch.GetType().FullName;
