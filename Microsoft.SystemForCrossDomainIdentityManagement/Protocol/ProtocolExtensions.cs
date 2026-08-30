@@ -174,6 +174,11 @@ namespace Microsoft.SCIM
                                 }
                                 foreach (Member member in membersToAdd)
                                 {
+                                    if(group.Members == null)
+                                    {
+                                        group.Members = Enumerable.Empty<Member>();
+                                    }
+
                                     //O(n) with the number of group members, so for large groups this is not optimal
                                     if (!group.Members.Any((Member item) =>
                                             string.Equals(item.Value, member.Value, StringComparison.OrdinalIgnoreCase)))
