@@ -1063,7 +1063,7 @@
                   "flattenedGroupSchemaAttrCount": "@length(variables('flattenedGroupAttrNames'))",
                   "missingGroupAttrCount": "@length(body('Filter_Missing_Group_Attrs'))",
                   "missingGroupAttrs": "@body('Select_Missing_Group_Attr_Names')",
-                  "overallResult": "@if(and(equals(outputs('SCIM_Get_Schemas')['statusCode'], 200), greater(length(coalesce(body('SCIM_Get_Schemas')?['Resources'], json('[]'))), 0), equals(length(body('Filter_Missing_User_Attrs')), 0), equals(length(body('Filter_Missing_Group_Attrs')), 0)), 'PASSED', 'FAILED')"
+                  "overallResult": "@if(and(equals(outputs('SCIM_Get_Schemas')['statusCode'], 200), greater(length(coalesce(body('SCIM_Get_Schemas')?['Resources'], json('[]'))), 0), equals(length(body('Filter_Missing_User_Attrs')), 0), or(not(coalesce(triggerBody()?['initializationData']?['isGroupSupported'], false)), equals(length(body('Filter_Missing_Group_Attrs')), 0))), 'PASSED', 'FAILED')"
                 }
               },
               "Set_SchemaDiscoverabilityTestOutputs": {
@@ -1077,11 +1077,11 @@
                   "name": "SchemaDiscoverabilityTestOutputs",
                   "value": {
                     "overallResult": "@coalesce(outputs('Compose_Schema_Discoverability_Summary')?['overallResult'], 'FAILED')",
-                    "result": "@if(equals(coalesce(outputs('Compose_Schema_Discoverability_Summary')?['overallResult'], 'FAILED'), 'PASSED'), 'success', if(not(equals(outputs('SCIM_Get_Schemas')['statusCode'], 200)), concat('FAILED - Action: SCIM_Get_Schemas - HTTP ', string(outputs('SCIM_Get_Schemas')['statusCode'])), if(equals(length(coalesce(body('SCIM_Get_Schemas')?['Resources'], json('[]'))), 0), 'FAILED - Action: SCIM_Get_Schemas - endpoint returned no schemas', concat('FAILED - Action: Compose_Schema_Discoverability_Summary - Missing user attrs: ', string(body('Select_Missing_User_Attr_Names')), ' | Missing group attrs: ', string(body('Select_Missing_Group_Attr_Names'))))))",
+                    "result": "@if(equals(coalesce(outputs('Compose_Schema_Discoverability_Summary')?['overallResult'], 'FAILED'), 'PASSED'), 'success', if(not(equals(outputs('SCIM_Get_Schemas')['statusCode'], 200)), concat('FAILED - Action: SCIM_Get_Schemas - HTTP ', string(outputs('SCIM_Get_Schemas')['statusCode'])), if(equals(length(coalesce(body('SCIM_Get_Schemas')?['Resources'], json('[]'))), 0), 'FAILED - Action: SCIM_Get_Schemas - endpoint returned no schemas', concat('FAILED - Action: Compose_Schema_Discoverability_Summary - Missing user attrs: ', string(body('Select_Missing_User_Attr_Names')), if(coalesce(triggerBody()?['initializationData']?['isGroupSupported'], false), concat(' | Missing group attrs: ', string(body('Select_Missing_Group_Attr_Names'))), '')))))",
                     "summary": "@outputs('Compose_Schema_Discoverability_Summary')",
                     "detailedResults": [],
                     "errorDetails": {
-                      "summary": "@if(equals(coalesce(outputs('Compose_Schema_Discoverability_Summary')?['overallResult'], 'FAILED'), 'PASSED'), null, concat(if(greater(length(body('Filter_Missing_User_Attrs')), 0), concat('Missing user attributes (', string(length(body('Filter_Missing_User_Attrs'))), '): ', string(body('Select_Missing_User_Attr_Names')), '. '), ''), if(greater(length(body('Filter_Missing_Group_Attrs')), 0), concat('Missing group attributes (', string(length(body('Filter_Missing_Group_Attrs'))), '): ', string(body('Select_Missing_Group_Attr_Names')), '.'), '')))"
+                      "summary": "@if(equals(coalesce(outputs('Compose_Schema_Discoverability_Summary')?['overallResult'], 'FAILED'), 'PASSED'), null, concat(if(greater(length(body('Filter_Missing_User_Attrs')), 0), concat('Missing user attributes (', string(length(body('Filter_Missing_User_Attrs'))), '): ', string(body('Select_Missing_User_Attr_Names')), '. '), ''), if(and(coalesce(triggerBody()?['initializationData']?['isGroupSupported'], false), greater(length(body('Filter_Missing_Group_Attrs')), 0)), concat('Missing group attributes (', string(length(body('Filter_Missing_Group_Attrs'))), '): ', string(body('Select_Missing_Group_Attr_Names')), '.'), '')))"
                     }
                   }
                 }
@@ -2321,23 +2321,33 @@
               "actions": {}
             },
             "expression": {
-              "or": [
+              "and": [
                 {
                   "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "All"
+                    "@coalesce(triggerBody()?['initializationData']?['isGroupSupported'], false)",
+                    true
                   ]
                 },
                 {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "SCIMTests"
-                  ]
-                },
-                {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "SCIM_Group_Create_Test"
+                  "or": [
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "All"
+                      ]
+                    },
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "SCIMTests"
+                      ]
+                    },
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "SCIM_Group_Create_Test"
+                      ]
+                    }
                   ]
                 }
               ]
@@ -2982,23 +2992,33 @@
               "actions": {}
             },
             "expression": {
-              "or": [
+              "and": [
                 {
                   "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "All"
+                    "@coalesce(triggerBody()?['initializationData']?['isGroupSupported'], false)",
+                    true
                   ]
                 },
                 {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "SCIMTests"
-                  ]
-                },
-                {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "SCIM_Group_Update_Test"
+                  "or": [
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "All"
+                      ]
+                    },
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "SCIMTests"
+                      ]
+                    },
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "SCIM_Group_Update_Test"
+                      ]
+                    }
                   ]
                 }
               ]
@@ -4293,23 +4313,33 @@
               "actions": {}
             },
             "expression": {
-              "or": [
+              "and": [
                 {
                   "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "All"
+                    "@coalesce(triggerBody()?['initializationData']?['isGroupSupported'], false)",
+                    true
                   ]
                 },
                 {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "SCIMTests"
-                  ]
-                },
-                {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "SCIM_Group_Pagination_Test"
+                  "or": [
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "All"
+                      ]
+                    },
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "SCIMTests"
+                      ]
+                    },
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "SCIM_Group_Pagination_Test"
+                      ]
+                    }
                   ]
                 }
               ]
@@ -4643,6 +4673,12 @@
               "and": [
                 {
                   "equals": [
+                    "@coalesce(triggerBody()?['initializationData']?['isManagerAttributeSupported'], false)",
+                    true
+                  ]
+                },
+                {
+                  "equals": [
                     "@contains(string(coalesce(triggerBody()?['initializationData']?['targetDirectoryUserAttributes'], json('[]'))), 'manager')",
                     true
                   ]
@@ -4698,8 +4734,9 @@
           "SCIMUserPaginationTestOutputs": "@variables('SCIMUserPaginationTestOutputs')",
           "SCIMGroupPaginationTestOutputs": "@variables('SCIMGroupPaginationTestOutputs')",
           "SCIMUpdateManagerTestOutputs": "@variables('SCIMUpdateManagerTestOutputs')",
+          "authenticationModelResult": "@if(or(equals(variables('ValidateCredentialsTestOutputs')['overallResult'], 'PASSED'), equals(variables('FederatedIdentityTestOutputs')['overallResult'], 'PASSED')), 'PASSED', 'FAILED')",
           "testSuiteName": "SCIMTests",
-          "status": "@if(or(or(or(equals(variables('SchemaDiscoverabilityTestOutputs')['overallResult'], 'FAILED'), equals(variables('SCIMNullUpdateTestOutputs')['overallResult'], 'FAILED')), or(or(equals(variables('ValidateCredentialsTestOutputs')['overallResult'], 'FAILED'), equals(variables('FederatedIdentityTestOutputs')['overallResult'], 'FAILED')), equals(variables('SCIMUserCreateTestOutputs')['overallResult'], 'FAILED'))), or(or(or(equals(variables('SCIMGroupCreateTestOutputs')['overallResult'], 'FAILED'), equals(variables('SCIMUserUpdateTestOutputs')['overallResult'], 'FAILED')), equals(variables('SCIMGroupUpdateTestOutputs')['overallResult'], 'FAILED')), and(contains(string(coalesce(triggerBody()?['initializationData']?['targetDirectoryUserAttributes'], json('[]'))), 'manager'), equals(variables('SCIMUpdateManagerTestOutputs')['overallResult'], 'FAILED')))), 'Failed', 'Passed')",
+          "status": "@if(or(or(or(equals(variables('SchemaDiscoverabilityTestOutputs')['overallResult'], 'FAILED'), equals(variables('SCIMNullUpdateTestOutputs')['overallResult'], 'FAILED')), or(and(not(equals(variables('ValidateCredentialsTestOutputs')['overallResult'], 'PASSED')), not(equals(variables('FederatedIdentityTestOutputs')['overallResult'], 'PASSED'))), equals(variables('SCIMUserCreateTestOutputs')['overallResult'], 'FAILED'))), or(or(or(equals(variables('SCIMGroupCreateTestOutputs')['overallResult'], 'FAILED'), equals(variables('SCIMUserUpdateTestOutputs')['overallResult'], 'FAILED')), equals(variables('SCIMGroupUpdateTestOutputs')['overallResult'], 'FAILED')), and(contains(string(coalesce(triggerBody()?['initializationData']?['targetDirectoryUserAttributes'], json('[]'))), 'manager'), equals(variables('SCIMUpdateManagerTestOutputs')['overallResult'], 'FAILED')))), 'Failed', 'Passed')",
           "workflowRunId": "@workflow().run.name"
         }
       }

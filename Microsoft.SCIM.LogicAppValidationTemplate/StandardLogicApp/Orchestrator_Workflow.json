@@ -504,9 +504,9 @@
             "GroupTests_Workflow": "@outputs('Compose_GroupTests_RunLink')",
             "SCIMTests_Workflow": "@outputs('Compose_SCIMTests_RunLink')"
           },
-          "overallLogicAppResult": "@if(or(or(or(or(or(or(or(or(or(or(or(or(or(or(or(or(or(or(or(or(equals(coalesce(body('Get_UserTests_Output_Content')?['CreateUserTestOutputs']?['overallResult'],'SKIPPED'),'FAILED'),equals(coalesce(body('Get_UserTests_Output_Content')?['UpdateUserTestOutputs']?['overallResult'],'SKIPPED'),'FAILED')),equals(coalesce(body('Get_UserTests_Output_Content')?['DisableUserTestOutputs']?['overallResult'],'SKIPPED'),'FAILED')),equals(coalesce(body('Get_UserTests_Output_Content')?['ManagerTestOutputs']?['overallResult'],'SKIPPED'),'FAILED')),or(equals(coalesce(body('Get_UserTests_Output_Content')?['RestoreUserTestOutputs']?['overallResult'],'SKIPPED'),'FAILED'),equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMNullUpdateTestOutputs']?['overallResult'],'SKIPPED'),'FAILED'))),equals(coalesce(body('Get_GroupTests_Output_Content')?['CreateGroupTestOutputs']?['overallResult'],'SKIPPED'),'FAILED')),equals(coalesce(body('Get_GroupTests_Output_Content')?['UpdateGroupTestOutputs']?['overallResult'],'SKIPPED'),'FAILED')),equals(coalesce(body('Get_GroupTests_Output_Content')?['AddMemberTestOutputs']?['overallResult'],'SKIPPED'),'FAILED')),equals(coalesce(body('Get_GroupTests_Output_Content')?['RemoveMemberTestOutputs']?['overallResult'],'SKIPPED'),'FAILED')),equals(coalesce(body('Get_SCIMTests_Output_Content')?['SchemaDiscoverabilityTestOutputs']?['overallResult'],'SKIPPED'),'FAILED')),equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMUserCreateTestOutputs']?['overallResult'],'SKIPPED'),'FAILED')),equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupCreateTestOutputs']?['overallResult'],'SKIPPED'),'FAILED')),equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMUserUpdateTestOutputs']?['overallResult'],'SKIPPED'),'FAILED')),equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupUpdateTestOutputs']?['overallResult'],'SKIPPED'),'FAILED')),equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMUserPaginationTestOutputs']?['overallResult'],'SKIPPED'),'FAILED')),equals(coalesce(body('Get_UserTests_Output_Content')?['PODUserTestOutputs']?['overallResult'],'SKIPPED'),'FAILED')),equals(coalesce(body('Get_GroupTests_Output_Content')?['PODGroupTestOutputs']?['overallResult'],'SKIPPED'),'FAILED')),equals(actions('Call_Initialization_Workflow')?['status'],'Failed')),equals(coalesce(body('Poll_UserTests_Status')?['properties']?['status'],''),'Failed')),equals(coalesce(body('Poll_GroupTests_Status')?['properties']?['status'],''),'Failed')),or(and(not(equals(coalesce(body('Get_SCIMTests_Output_Content')?['ValidateCredentialsTestOutputs']?['overallResult'],'SKIPPED'),'PASSED')),not(equals(coalesce(body('Get_SCIMTests_Output_Content')?['FederatedIdentityTestOutputs']?['overallResult'],'SKIPPED'),'PASSED'))),and(contains(string(coalesce(body('Call_Initialization_Workflow')?['targetDirectoryUserAttributes'],json('[]'))),'manager'),equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMUpdateManagerTestOutputs']?['overallResult'],'SKIPPED'),'FAILED')))),'Failed',if(equals(coalesce(body('Poll_SCIMTests_Status')?['properties']?['status'],''),'Failed'),'Failed','Succeeded'))",
-          "optionalTestsResult": "@if(or(or(or(equals(coalesce(body('Get_UserTests_Output_Content')?['DeleteUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), equals(coalesce(body('Get_GroupTests_Output_Content')?['DeleteGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED')), equals(coalesce(body('Get_GroupTests_Output_Content')?['RestoreGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED')), equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupPaginationTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED')), 'WARNING', 'PASSED')",
-          "authenticationModelResult": "@if(or(equals(coalesce(body('Get_SCIMTests_Output_Content')?['ValidateCredentialsTestOutputs']?['overallResult'], 'SKIPPED'), 'PASSED'), equals(coalesce(body('Get_SCIMTests_Output_Content')?['FederatedIdentityTestOutputs']?['overallResult'], 'SKIPPED'), 'PASSED')), 'PASSED', 'FAILED')"
+          "overallLogicAppResult": "@if(or(not(equals(coalesce(body('Get_UserTests_Output_Content')?['CreateUserTestOutputs']?['overallResult'],'SKIPPED'),'PASSED')),not(equals(coalesce(body('Get_UserTests_Output_Content')?['UpdateUserTestOutputs']?['overallResult'],'SKIPPED'),'PASSED')),not(equals(coalesce(body('Get_UserTests_Output_Content')?['DisableUserTestOutputs']?['overallResult'],'SKIPPED'),'PASSED')),and(coalesce(body('Call_Initialization_Workflow')?['isManagerAttributeSupported'],false),not(equals(coalesce(body('Get_UserTests_Output_Content')?['ManagerTestOutputs']?['overallResult'],'SKIPPED'),'PASSED'))),not(equals(coalesce(body('Get_UserTests_Output_Content')?['RestoreUserTestOutputs']?['overallResult'],'SKIPPED'),'PASSED')),not(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMNullUpdateTestOutputs']?['overallResult'],'SKIPPED'),'PASSED')),and(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'],false),not(equals(coalesce(body('Get_GroupTests_Output_Content')?['CreateGroupTestOutputs']?['overallResult'],'SKIPPED'),'PASSED'))),and(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'],false),not(equals(coalesce(body('Get_GroupTests_Output_Content')?['UpdateGroupTestOutputs']?['overallResult'],'SKIPPED'),'PASSED'))),and(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'],false),not(equals(coalesce(body('Get_GroupTests_Output_Content')?['AddMemberTestOutputs']?['overallResult'],'SKIPPED'),'PASSED'))),and(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'],false),not(equals(coalesce(body('Get_GroupTests_Output_Content')?['RemoveMemberTestOutputs']?['overallResult'],'SKIPPED'),'PASSED'))),not(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SchemaDiscoverabilityTestOutputs']?['overallResult'],'SKIPPED'),'PASSED')),not(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMUserCreateTestOutputs']?['overallResult'],'SKIPPED'),'PASSED')),and(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'],false),not(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupCreateTestOutputs']?['overallResult'],'SKIPPED'),'PASSED'))),not(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMUserUpdateTestOutputs']?['overallResult'],'SKIPPED'),'PASSED')),and(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'],false),not(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupUpdateTestOutputs']?['overallResult'],'SKIPPED'),'PASSED'))),not(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMUserPaginationTestOutputs']?['overallResult'],'SKIPPED'),'PASSED')),not(equals(coalesce(body('Get_UserTests_Output_Content')?['PODUserTestOutputs']?['overallResult'],'SKIPPED'),'PASSED')),and(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'],false),not(equals(coalesce(body('Get_GroupTests_Output_Content')?['PODGroupTestOutputs']?['overallResult'],'SKIPPED'),'PASSED'))),equals(actions('Call_Initialization_Workflow')?['status'],'Failed'),equals(coalesce(body('Poll_UserTests_Status')?['properties']?['status'],''),'Failed'),equals(coalesce(body('Poll_GroupTests_Status')?['properties']?['status'],''),'Failed'),or(equals(coalesce(body('Get_SCIMTests_Output_Content')?['authenticationModelResult'],'FAILED'),'FAILED'),and(coalesce(body('Call_Initialization_Workflow')?['isManagerAttributeSupported'],false),contains(string(coalesce(body('Call_Initialization_Workflow')?['targetDirectoryUserAttributes'],json('[]'))),'manager'),not(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMUpdateManagerTestOutputs']?['overallResult'],'SKIPPED'),'PASSED'))))),'Failed',if(equals(coalesce(body('Poll_SCIMTests_Status')?['properties']?['status'],''),'Failed'),'Failed','Succeeded'))",
+          "optionalSuccessTestsResult": "@if(or(not(equals(coalesce(body('Get_UserTests_Output_Content')?['DeleteUserTestOutputs']?['overallResult'], 'SKIPPED'), 'PASSED')), and(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'], false), not(equals(coalesce(body('Get_GroupTests_Output_Content')?['DeleteGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'PASSED'))), and(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'], false), not(equals(coalesce(body('Get_GroupTests_Output_Content')?['RestoreGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'PASSED'))), and(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'], false), not(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupPaginationTestOutputs']?['overallResult'], 'SKIPPED'), 'PASSED')))), 'WARNING', 'PASSED')",
+          "authenticationModelResult": "@coalesce(body('Get_SCIMTests_Output_Content')?['authenticationModelResult'], 'FAILED')"
         }
       },
       "Final_TestResults": {
@@ -520,7 +520,7 @@
           "testResults": [
             {
               "testName": "Create_User_Test",
-              "testCategory": "mandatory",
+              "testCategory": "Mandatory/StrictSuccess",
               "testResult": "@coalesce(body('Get_UserTests_Output_Content')?['CreateUserTestOutputs']?['result'], 'SKIPPED')",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['CreateUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_UserTests_Output_Content')?['CreateUserTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['CreateUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
@@ -529,7 +529,7 @@
             },
             {
               "testName": "Update_User_Test",
-              "testCategory": "mandatory",
+              "testCategory": "Mandatory/StrictSuccess",
               "testResult": "@coalesce(body('Get_UserTests_Output_Content')?['UpdateUserTestOutputs']?['result'], 'SKIPPED')",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['UpdateUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_UserTests_Output_Content')?['UpdateUserTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['UpdateUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
@@ -538,7 +538,7 @@
             },
             {
               "testName": "Disable_User_Test",
-              "testCategory": "mandatory",
+              "testCategory": "Mandatory/StrictSuccess",
               "testResult": "@coalesce(body('Get_UserTests_Output_Content')?['DisableUserTestOutputs']?['result'], 'SKIPPED')",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['DisableUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_UserTests_Output_Content')?['DisableUserTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['DisableUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
@@ -547,7 +547,7 @@
             },
             {
               "testName": "Delete_User_Test",
-              "testCategory": "optional",
+              "testCategory": "Mandatory/OptionalSuccess",
               "testResult": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['DeleteUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), replace(coalesce(body('Get_UserTests_Output_Content')?['DeleteUserTestOutputs']?['result'], 'SKIPPED'), 'FAILED', 'WARNING'), coalesce(body('Get_UserTests_Output_Content')?['DeleteUserTestOutputs']?['result'], 'SKIPPED'))",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['DeleteUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_UserTests_Output_Content')?['DeleteUserTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['DeleteUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
@@ -556,7 +556,7 @@
             },
             {
               "testName": "User_Update_Manager_Test",
-              "testCategory": "mandatory",
+              "testCategory": "Skippable/StrictSuccess",
               "testResult": "@coalesce(body('Get_UserTests_Output_Content')?['ManagerTestOutputs']?['result'], if(not(body('Call_Initialization_Workflow')?['isManagerAttributeSupported']), 'SKIPPED - IsManagerAttributeSupported is false', 'SKIPPED'))",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['ManagerTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_UserTests_Output_Content')?['ManagerTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['ManagerTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
@@ -565,7 +565,7 @@
             },
             {
               "testName": "Restore_User_Test",
-              "testCategory": "mandatory",
+              "testCategory": "Mandatory/StrictSuccess",
               "testResult": "@coalesce(body('Get_UserTests_Output_Content')?['RestoreUserTestOutputs']?['result'], 'SKIPPED')",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['RestoreUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_UserTests_Output_Content')?['RestoreUserTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['RestoreUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
@@ -574,8 +574,8 @@
             },
             {
               "testName": "Create_Group_Test",
-              "testCategory": "mandatory",
-              "testResult": "@coalesce(body('Get_GroupTests_Output_Content')?['CreateGroupTestOutputs']?['result'], if(not(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'], false)), 'FAILED - [Initialization Phase] Schema_Discovery - /Schemas did not return Group schema (urn:ietf:params:scim:schemas:core:2.0:Group). Group provisioning is mandatory.', 'SKIPPED'))",
+              "testCategory": "Skippable/StrictSuccess",
+              "testResult": "@if(not(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'], false)), 'SKIPPED - Group object mapping disabled in Entra sync schema', coalesce(body('Get_GroupTests_Output_Content')?['CreateGroupTestOutputs']?['result'], 'SKIPPED'))",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['CreateGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_GroupTests_Output_Content')?['CreateGroupTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['CreateGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
               "runLink": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['CreateGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', outputs('Compose_GroupTests_RunLink'))",
@@ -583,8 +583,8 @@
             },
             {
               "testName": "Update_Group_Test",
-              "testCategory": "mandatory",
-              "testResult": "@coalesce(body('Get_GroupTests_Output_Content')?['UpdateGroupTestOutputs']?['result'], if(not(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'], false)), 'FAILED - [Initialization Phase] Schema_Discovery - /Schemas did not return Group schema (urn:ietf:params:scim:schemas:core:2.0:Group). Group provisioning is mandatory.', 'SKIPPED'))",
+              "testCategory": "Skippable/StrictSuccess",
+              "testResult": "@if(not(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'], false)), 'SKIPPED - Group object mapping disabled in Entra sync schema', coalesce(body('Get_GroupTests_Output_Content')?['UpdateGroupTestOutputs']?['result'], 'SKIPPED'))",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['UpdateGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_GroupTests_Output_Content')?['UpdateGroupTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['UpdateGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
               "runLink": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['UpdateGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', outputs('Compose_GroupTests_RunLink'))",
@@ -592,8 +592,8 @@
             },
             {
               "testName": "Delete_Group_Test",
-              "testCategory": "optional",
-              "testResult": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['DeleteGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), replace(coalesce(body('Get_GroupTests_Output_Content')?['DeleteGroupTestOutputs']?['result'], 'SKIPPED'), 'FAILED', 'WARNING'), coalesce(body('Get_GroupTests_Output_Content')?['DeleteGroupTestOutputs']?['result'], 'SKIPPED'))",
+              "testCategory": "Skippable/OptionalSuccess",
+              "testResult": "@if(not(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'], false)), 'SKIPPED - Group object mapping disabled in Entra sync schema', if(equals(coalesce(body('Get_GroupTests_Output_Content')?['DeleteGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), replace(coalesce(body('Get_GroupTests_Output_Content')?['DeleteGroupTestOutputs']?['result'], 'SKIPPED'), 'FAILED', 'WARNING'), coalesce(body('Get_GroupTests_Output_Content')?['DeleteGroupTestOutputs']?['result'], 'SKIPPED')))",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['DeleteGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_GroupTests_Output_Content')?['DeleteGroupTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['DeleteGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
               "runLink": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['DeleteGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', outputs('Compose_GroupTests_RunLink'))",
@@ -601,8 +601,8 @@
             },
             {
               "testName": "Group_Update_Add_Member_Test",
-              "testCategory": "mandatory",
-              "testResult": "@coalesce(body('Get_GroupTests_Output_Content')?['AddMemberTestOutputs']?['result'], if(not(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'], false)), 'FAILED - [Initialization Phase] Schema_Discovery - /Schemas did not return Group schema (urn:ietf:params:scim:schemas:core:2.0:Group). Group provisioning is mandatory.', 'SKIPPED'))",
+              "testCategory": "Skippable/StrictSuccess",
+              "testResult": "@if(not(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'], false)), 'SKIPPED - Group object mapping disabled in Entra sync schema', coalesce(body('Get_GroupTests_Output_Content')?['AddMemberTestOutputs']?['result'], 'SKIPPED'))",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['AddMemberTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_GroupTests_Output_Content')?['AddMemberTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['AddMemberTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
               "runLink": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['AddMemberTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', outputs('Compose_GroupTests_RunLink'))",
@@ -610,8 +610,8 @@
             },
             {
               "testName": "Group_Update_Remove_Member_Test",
-              "testCategory": "mandatory",
-              "testResult": "@coalesce(body('Get_GroupTests_Output_Content')?['RemoveMemberTestOutputs']?['result'], if(not(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'], false)), 'FAILED - [Initialization Phase] Schema_Discovery - /Schemas did not return Group schema (urn:ietf:params:scim:schemas:core:2.0:Group). Group provisioning is mandatory.', 'SKIPPED'))",
+              "testCategory": "Skippable/StrictSuccess",
+              "testResult": "@if(not(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'], false)), 'SKIPPED - Group object mapping disabled in Entra sync schema', coalesce(body('Get_GroupTests_Output_Content')?['RemoveMemberTestOutputs']?['result'], 'SKIPPED'))",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['RemoveMemberTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_GroupTests_Output_Content')?['RemoveMemberTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['RemoveMemberTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
               "runLink": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['RemoveMemberTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', outputs('Compose_GroupTests_RunLink'))",
@@ -619,7 +619,7 @@
             },
             {
               "testName": "Schema_Discoverability_Test",
-              "testCategory": "mandatory",
+              "testCategory": "Mandatory/StrictSuccess",
               "testResult": "@coalesce(body('Get_SCIMTests_Output_Content')?['SchemaDiscoverabilityTestOutputs']?['result'], 'SKIPPED')",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SchemaDiscoverabilityTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_SCIMTests_Output_Content')?['SchemaDiscoverabilityTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SchemaDiscoverabilityTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
@@ -628,7 +628,7 @@
             },
             {
               "testName": "SCIM_Null_Update_Test",
-              "testCategory": "mandatory",
+              "testCategory": "Mandatory/StrictSuccess",
               "testResult": "@coalesce(body('Get_SCIMTests_Output_Content')?['SCIMNullUpdateTestOutputs']?['result'], 'SKIPPED')",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMNullUpdateTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_SCIMTests_Output_Content')?['SCIMNullUpdateTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMNullUpdateTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
@@ -637,7 +637,7 @@
             },
             {
               "testName": "SCIM_User_Create_Test",
-              "testCategory": "mandatory",
+              "testCategory": "Mandatory/StrictSuccess",
               "testResult": "@coalesce(body('Get_SCIMTests_Output_Content')?['SCIMUserCreateTestOutputs']?['result'], 'SKIPPED')",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMUserCreateTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_SCIMTests_Output_Content')?['SCIMUserCreateTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMUserCreateTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
@@ -646,8 +646,8 @@
             },
             {
               "testName": "SCIM_Group_Create_Test",
-              "testCategory": "mandatory",
-              "testResult": "@coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupCreateTestOutputs']?['result'], if(not(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'], false)), 'FAILED - [Initialization Phase] Schema_Discovery - /Schemas did not return Group schema (urn:ietf:params:scim:schemas:core:2.0:Group). Group provisioning is mandatory.', 'SKIPPED'))",
+              "testCategory": "Skippable/StrictSuccess",
+              "testResult": "@if(not(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'], false)), 'SKIPPED - Group object mapping disabled in Entra sync schema', coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupCreateTestOutputs']?['result'], 'SKIPPED'))",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupCreateTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_SCIMTests_Output_Content')?['SCIMGroupCreateTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupCreateTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
               "runLink": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupCreateTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', outputs('Compose_SCIMTests_RunLink'))",
@@ -655,7 +655,7 @@
             },
             {
               "testName": "SCIM_User_Update_Test",
-              "testCategory": "mandatory",
+              "testCategory": "Mandatory/StrictSuccess",
               "testResult": "@coalesce(body('Get_SCIMTests_Output_Content')?['SCIMUserUpdateTestOutputs']?['result'], 'SKIPPED')",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMUserUpdateTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_SCIMTests_Output_Content')?['SCIMUserUpdateTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMUserUpdateTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
@@ -664,8 +664,8 @@
             },
             {
               "testName": "SCIM_Group_Update_Test",
-              "testCategory": "mandatory",
-              "testResult": "@coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupUpdateTestOutputs']?['result'], if(not(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'], false)), 'FAILED - [Initialization Phase] Schema_Discovery - /Schemas did not return Group schema (urn:ietf:params:scim:schemas:core:2.0:Group). Group provisioning is mandatory.', 'SKIPPED'))",
+              "testCategory": "Skippable/StrictSuccess",
+              "testResult": "@if(not(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'], false)), 'SKIPPED - Group object mapping disabled in Entra sync schema', coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupUpdateTestOutputs']?['result'], 'SKIPPED'))",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupUpdateTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_SCIMTests_Output_Content')?['SCIMGroupUpdateTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupUpdateTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
               "runLink": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupUpdateTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', outputs('Compose_SCIMTests_RunLink'))",
@@ -673,7 +673,7 @@
             },
             {
               "testName": "Validate_Credentials_Test",
-              "testCategory": "mandatory",
+              "testCategory": "Mandatory/StrictOneSuccess",
               "testResult": "@coalesce(body('Get_SCIMTests_Output_Content')?['ValidateCredentialsTestOutputs']?['result'], 'SKIPPED')",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['ValidateCredentialsTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_SCIMTests_Output_Content')?['ValidateCredentialsTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['ValidateCredentialsTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
@@ -682,7 +682,7 @@
             },
             {
               "testName": "Federated_Identity_Test",
-              "testCategory": "mandatory",
+              "testCategory": "Mandatory/StrictOneSuccess",
               "testResult": "@coalesce(body('Get_SCIMTests_Output_Content')?['FederatedIdentityTestOutputs']?['result'], 'SKIPPED')",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['FederatedIdentityTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_SCIMTests_Output_Content')?['FederatedIdentityTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['FederatedIdentityTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
@@ -691,7 +691,7 @@
             },
             {
               "testName": "SCIM_User_Pagination_Test",
-              "testCategory": "mandatory",
+              "testCategory": "Mandatory/StrictSuccess",
               "testResult": "@coalesce(body('Get_SCIMTests_Output_Content')?['SCIMUserPaginationTestOutputs']?['result'], 'SKIPPED')",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMUserPaginationTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_SCIMTests_Output_Content')?['SCIMUserPaginationTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMUserPaginationTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
@@ -700,8 +700,8 @@
             },
             {
               "testName": "SCIM_Group_Pagination_Test",
-              "testCategory": "optional",
-              "testResult": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupPaginationTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), replace(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupPaginationTestOutputs']?['result'], 'SKIPPED'), 'FAILED', 'WARNING'), coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupPaginationTestOutputs']?['result'], 'SKIPPED'))",
+              "testCategory": "Skippable/OptionalSuccess",
+              "testResult": "@if(not(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'], false)), 'SKIPPED - Group object mapping disabled in Entra sync schema', if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupPaginationTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), replace(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupPaginationTestOutputs']?['result'], 'SKIPPED'), 'FAILED', 'WARNING'), coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupPaginationTestOutputs']?['result'], 'SKIPPED')))",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupPaginationTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_SCIMTests_Output_Content')?['SCIMGroupPaginationTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupPaginationTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
               "runLink": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMGroupPaginationTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', outputs('Compose_SCIMTests_RunLink'))",
@@ -709,7 +709,7 @@
             },
             {
               "testName": "SCIM_Update_Manager_Test",
-              "testCategory": "mandatory",
+              "testCategory": "Skippable/StrictSuccess",
               "testResult": "@if(not(contains(string(coalesce(body('Call_Initialization_Workflow')?['targetDirectoryUserAttributes'], json('[]'))), 'manager')), 'SKIPPED - manager attribute not in target directory', coalesce(body('Get_SCIMTests_Output_Content')?['SCIMUpdateManagerTestOutputs']?['result'], 'SKIPPED'))",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMUpdateManagerTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_SCIMTests_Output_Content')?['SCIMUpdateManagerTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_SCIMTests_Output_Content')?['SCIMUpdateManagerTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
@@ -718,7 +718,7 @@
             },
             {
               "testName": "POD_User_Test",
-              "testCategory": "mandatory",
+              "testCategory": "Mandatory/StrictSuccess",
               "testResult": "@coalesce(body('Get_UserTests_Output_Content')?['PODUserTestOutputs']?['result'], 'SKIPPED')",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['PODUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_UserTests_Output_Content')?['PODUserTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_UserTests_Output_Content')?['PODUserTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
@@ -727,8 +727,8 @@
             },
             {
               "testName": "POD_Group_Test",
-              "testCategory": "mandatory",
-              "testResult": "@coalesce(body('Get_GroupTests_Output_Content')?['PODGroupTestOutputs']?['result'], if(not(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'], false)), 'FAILED - [Initialization Phase] Schema_Discovery - /Schemas did not return Group schema (urn:ietf:params:scim:schemas:core:2.0:Group). Group provisioning is mandatory.', 'SKIPPED'))",
+              "testCategory": "Skippable/StrictSuccess",
+              "testResult": "@if(not(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'], false)), 'SKIPPED - Group object mapping disabled in Entra sync schema', coalesce(body('Get_GroupTests_Output_Content')?['PODGroupTestOutputs']?['result'], 'SKIPPED'))",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['PODGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_GroupTests_Output_Content')?['PODGroupTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['PODGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
               "runLink": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['PODGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', outputs('Compose_GroupTests_RunLink'))",
@@ -736,8 +736,8 @@
             },
             {
               "testName": "Restore_Group_Test",
-              "testCategory": "optional",
-              "testResult": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['RestoreGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), replace(coalesce(body('Get_GroupTests_Output_Content')?['RestoreGroupTestOutputs']?['result'], 'SKIPPED'), 'FAILED', 'WARNING'), coalesce(body('Get_GroupTests_Output_Content')?['RestoreGroupTestOutputs']?['result'], 'SKIPPED'))",
+              "testCategory": "Skippable/OptionalSuccess",
+              "testResult": "@if(not(coalesce(body('Call_Initialization_Workflow')?['isGroupSupported'], false)), 'SKIPPED - Group object mapping disabled in Entra sync schema', if(equals(coalesce(body('Get_GroupTests_Output_Content')?['RestoreGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), replace(coalesce(body('Get_GroupTests_Output_Content')?['RestoreGroupTestOutputs']?['result'], 'SKIPPED'), 'FAILED', 'WARNING'), coalesce(body('Get_GroupTests_Output_Content')?['RestoreGroupTestOutputs']?['result'], 'SKIPPED')))",
               "provisioningErrorDetails": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['RestoreGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), body('Get_GroupTests_Output_Content')?['RestoreGroupTestOutputs']?['errorDetails'], '')",
               "recommendationUrl": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['RestoreGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'FAILED'), 'https://learn.microsoft.com/en-us/azure/active-directory/app-provisioning/known-issues', '')",
               "runLink": "@if(equals(coalesce(body('Get_GroupTests_Output_Content')?['RestoreGroupTestOutputs']?['overallResult'], 'SKIPPED'), 'SKIPPED'), '', outputs('Compose_GroupTests_RunLink'))",
@@ -750,6 +750,7 @@
             "GroupTests_Workflow": "@outputs('Compose_GroupTests_RunLink')",
             "SCIMTests_Workflow": "@outputs('Compose_SCIMTests_RunLink')"
           },
+          "authenticationModelResult": "@outputs('Evaluate_Test_Results')?['authenticationModelResult']",
           "overallResult": "@outputs('Evaluate_Test_Results')?['overallLogicAppResult']"
         }
       },
