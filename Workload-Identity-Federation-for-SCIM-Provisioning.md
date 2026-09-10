@@ -161,18 +161,19 @@ When Entra ID sends the JWT bearer assertion request, the **JWT assertion (clien
 
 ### JWT Claims in the Entra-Issued Assertion
 
-| Claim | Description | Example Value |
-|---|---|---|
-| `aud` (Audience) | Workload Identity App ID | `api://b5ba7a93-4452-4522-aeb4-a2b5da870c16` |
-| `iss` (Issuer) | Customer tenant v2 issuer endpoint | `https://login.microsoftonline.com/ce5f061f-abe6-4e40-9615-301f87bcb7f0/v2.0` |
-| `sub` (Subject) | Sync Fabric Workload Identity 1P app object ID | `<Sync Fabric Workload Identity 1P app object ID>` |
-| `oid` (Object ID) | Workload Identity Object ID | `d2f8ee76-c549-45b8-a143-f5b640669704` |
-| `appid` | Workload Identity App ID | `b5ba7a93-4452-4522-aeb4-a2b5da870c16` |
-| `tid` (Tenant ID) | Customer Tenant ID | `ce5f061f-abe6-4e40-9615-301f87bcb7f0` |
-| `iat` (Issued At) | Token issue timestamp | `1772175916` |
-| `nbf` (Not Before) | Token not valid before | `1772175916` |
-| `exp` (Expiration) | Token expiry timestamp | `1772179816` |
-| `ver` | Token version | `2.0` |
+| Claim | Description | Should Validate? | Example Value |
+|---|---|---|---|
+| `aud` (Audience) | Workload Identity App ID | Yes, Identifies the client app for this integration | `api://b5ba7a93-4452-4522-aeb4-a2b5da870c16` |
+| `iss` (Issuer) | Customer tenant v2 issuer endpoint | Yes, Identifies the tenant in Entra for this integration | `https://login.microsoftonline.com/ce5f061f-abe6-4e40-9615-301f87bcb7f0/v2.0` |
+| `sub` (Subject) | Sync Fabric Workload Identity 1P app object ID | May be, already covered by iss. sub will have same value for all integrations in a tenant | `<Sync Fabric Workload Identity 1P app object ID>` |
+| `oid` (Object ID) | Workload Identity Object ID | |`d2f8ee76-c549-45b8-a143-f5b640669704` |
+| `azp` (Authorized Party) | Provisioning Client 1P App ID | Yes, Unique Id for Provisioning Client, proves that this token was requested by Provisioning Client | `cb1d50fe-8ed0-4944-9e7d-5981aad3bc4b` |
+| `azpacr` | Authentication method used for the Workload Identity | |`2` |
+| `tid` (Tenant ID) | Customer Tenant ID | | `ce5f061f-abe6-4e40-9615-301f87bcb7f0` |
+| `iat` (Issued At) | Token issue timestamp | Yes | `1772175916` |
+| `nbf` (Not Before) | Token not valid before | Yes | `1772175916` |
+| `exp` (Expiration) | Token expiry timestamp | Yes | `1772179816` |
+| `ver` | Token version | | `2.0` |
 
 ### Example Token Payload
 
@@ -183,8 +184,8 @@ When Entra ID sends the JWT bearer assertion request, the **JWT assertion (clien
   "iat": 1772175916,
   "nbf": 1772175916,
   "exp": 1772179816,
-  "appid": "b5ba7a93-4452-4522-aeb4-a2b5da870c16",
-  "appidacr": "2",
+  "azp": "cb1d50fe-8ed0-4944-9e7d-5981aad3bc4b",
+  "azpacr": "2",
   "idp": "https://login.microsoftonline.com/ce5f061f-abe6-4e40-9615-301f87bcb7f0/v2.0",
   "oid": "d2f8ee76-c549-45b8-a143-f5b640669704",
   "sub": "<Sync Fabric Workload Identity 1P app object ID>",
@@ -223,7 +224,8 @@ ISVs must validate the Entra-issued JWT assertion using Microsoft's published JW
 The ISV portal must allow administrators to configure the expected claim values for each integration:
 
 - **`aud` (Audience)** — the audience value the ISV expects in incoming JWTs
-- **`sub` (Subject)** — the subject identifier for the Sync Fabric Workload Identity 1P app
+- **`azp` (Authorized Party)** — the ID of the Sync Fabric/Provisioning Client 1P app
+- **`iss` (Issuer)** - Customer tenant v2 issuer endpoint
 - **JWKS URL** — the endpoint to fetch Microsoft's signing keys
 
 These values are provided by the Entra portal during Step 1 of the configuration flow and entered by the administrator in Step 2.
