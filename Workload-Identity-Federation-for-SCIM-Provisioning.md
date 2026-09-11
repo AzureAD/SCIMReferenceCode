@@ -82,20 +82,20 @@ After selecting **Workload Identity Federation**, the administrator chooses **Se
 |---|---|
 | ![Register a new workload identity in Entra](media/workload-identity-federation/register-new-workload-identity.jpg) | ![Select an existing workload identity in Entra](media/workload-identity-federation/select-existing-workload-identity.jpg) |
 
-After the access app is configured, the UX displays the following values to be **copied to the ISV Portal**:
+After the workload identity app is configured, the UX displays the following values to be **copied to the ISV Portal**:
 
 | Value | Format |
 |---|---|
 | **Issuer (iss)** | `https://login.microsoftonline.com/<TenantID>/v2.0` |
 | **JWKS URL** | `https://login.microsoftonline.com/<TenantID>/discovery/v2.0/keys` |
-| **Subject (sub)** | `<Sync Fabric Workload Identity 1P app object ID>` |
-| **Audience (aud)** | `api://{WorkloadIdentity_appid}/.default` |
+| **Audience (aud)** | `<WorkloadIdentity_appid>` |
+| **Authorized Party (azp)** | `<Provisioning Client 1P app ID>` |
 
 ![Copy WIF claims and JWKS URL from Entra to the ISV portal](media/workload-identity-federation/copy-wif-claims-to-isv.png)
 
 ### Step 2: Set up SCIM Client with JWKS in ISV Portal
 
-In the ISV portal, the administrator sets up a client for the ISV's SCIM endpoint. As part of setting up the auth integration, the administrator copies the values from Step 1 (issuer, JWKS URL, subject, audience) into the ISV portal.
+In the ISV portal, the administrator sets up a client for the ISV's SCIM endpoint. As part of setting up the auth integration, the administrator copies the values from Step 1 (issuer, JWKS URL, audience, and authorized party) into the ISV portal.
 
 The ISV portal will then display the following values, needed for Step 3:
 
@@ -146,7 +146,7 @@ Back in the Entra App Gallery:
 
 2. **ISV's Token Endpoint** validates the JWT assertion:
    - Verifies the JWT signature using Microsoft's public OIDC keys
-   - Validates the `issuer`, `audience`, and `subject` claims
+   - Validates the `iss`, `aud`, and `azp` claims and the token timestamps
    - Issues an **access token** back to the Entra provisioning service
 
 3. **Entra Provisioning Service** uses the issued access token as a **Bearer token** in SCIM API calls (GET, POST, PATCH, DELETE) to the ISV's SCIM endpoint
@@ -161,18 +161,19 @@ When Entra ID sends the JWT bearer assertion request, the **JWT assertion (clien
 
 ### JWT Claims in the Entra-Issued Assertion
 
-| Claim | Description | Example Value |
-|---|---|---|
-| `aud` (Audience) | Workload Identity App ID | `api://b5ba7a93-4452-4522-aeb4-a2b5da870c16` |
-| `iss` (Issuer) | Customer tenant v2 issuer endpoint | `https://login.microsoftonline.com/ce5f061f-abe6-4e40-9615-301f87bcb7f0/v2.0` |
-| `sub` (Subject) | Sync Fabric Workload Identity 1P app object ID | `<Sync Fabric Workload Identity 1P app object ID>` |
-| `oid` (Object ID) | Workload Identity Object ID | `d2f8ee76-c549-45b8-a143-f5b640669704` |
-| `appid` | Workload Identity App ID | `b5ba7a93-4452-4522-aeb4-a2b5da870c16` |
-| `tid` (Tenant ID) | Customer Tenant ID | `ce5f061f-abe6-4e40-9615-301f87bcb7f0` |
-| `iat` (Issued At) | Token issue timestamp | `1772175916` |
-| `nbf` (Not Before) | Token not valid before | `1772175916` |
-| `exp` (Expiration) | Token expiry timestamp | `1772179816` |
-| `ver` | Token version | `2.0` |
+| Claim | Description | Should Validate? | Example Value |
+|---|---|---|---|
+| `aud` (Audience) | Workload Identity App ID | Yes, Identifies the client app for this integration | `api://b5ba7a93-4452-4522-aeb4-a2b5da870c16` |
+| `iss` (Issuer) | Customer tenant v2 issuer endpoint | Yes, Identifies the tenant in Entra for this integration | `https://login.microsoftonline.com/ce5f061f-abe6-4e40-9615-301f87bcb7f0/v2.0` |
+| `sub` (Subject) | Sync Fabric Workload Identity 1P app object ID | May be, already covered by iss. sub will have same value for all integrations in a tenant | `<Sync Fabric Workload Identity 1P app object ID>` |
+| `oid` (Object ID) | Workload Identity Object ID | |`d2f8ee76-c549-45b8-a143-f5b640669704` |
+| `azp` (Authorized Party) | Provisioning Client 1P App ID | Yes, Unique Id for Provisioning Client, proves that this token was requested by Provisioning Client | `cb1d50fe-8ed0-4944-9e7d-5981aad3bc4b` |
+| `azpacr` | Authentication method used for the Workload Identity | |`2` |
+| `tid` (Tenant ID) | Customer Tenant ID | | `ce5f061f-abe6-4e40-9615-301f87bcb7f0` |
+| `iat` (Issued At) | Token issue timestamp | Yes | `1772175916` |
+| `nbf` (Not Before) | Token not valid before | Yes | `1772175916` |
+| `exp` (Expiration) | Token expiry timestamp | Yes | `1772179816` |
+| `ver` | Token version | | `2.0` |
 
 ### Example Token Payload
 
@@ -183,9 +184,8 @@ When Entra ID sends the JWT bearer assertion request, the **JWT assertion (clien
   "iat": 1772175916,
   "nbf": 1772175916,
   "exp": 1772179816,
-  "appid": "b5ba7a93-4452-4522-aeb4-a2b5da870c16",
-  "appidacr": "2",
-  "idp": "https://login.microsoftonline.com/ce5f061f-abe6-4e40-9615-301f87bcb7f0/v2.0",
+  "azp": "cb1d50fe-8ed0-4944-9e7d-5981aad3bc4b",
+  "azpacr": "2",
   "oid": "d2f8ee76-c549-45b8-a143-f5b640669704",
   "sub": "<Sync Fabric Workload Identity 1P app object ID>",
   "tid": "ce5f061f-abe6-4e40-9615-301f87bcb7f0",
@@ -194,7 +194,7 @@ When Entra ID sends the JWT bearer assertion request, the **JWT assertion (clien
 ```
 
 > [!NOTE]
-> The `iss` and `sub` claims in the Entra-issued token identify the **customer's tenant** and the **Sync Fabric Workload Identity 1P app object**, respectively. The ISV validates these against the values provided during the 3-step configuration.
+> The ISV validates `aud`, `iss`, and `azp` against the values provided during the 3-step configuration. The `sub` claim identifies the **Sync Fabric Workload Identity 1P app object**, but validating it is optional because its value is shared by all integrations in the tenant.
 
 ### Additional Context Provided
 
@@ -223,7 +223,8 @@ ISVs must validate the Entra-issued JWT assertion using Microsoft's published JW
 The ISV portal must allow administrators to configure the expected claim values for each integration:
 
 - **`aud` (Audience)** — the audience value the ISV expects in incoming JWTs
-- **`sub` (Subject)** — the subject identifier for the Sync Fabric Workload Identity 1P app
+- **`azp` (Authorized Party)** — the ID of the Provisioning Client 1P app
+- **`iss` (Issuer)** — the customer tenant v2 issuer endpoint
 - **JWKS URL** — the endpoint to fetch Microsoft's signing keys
 
 These values are provided by the Entra portal during Step 1 of the configuration flow and entered by the administrator in Step 2.
@@ -275,7 +276,7 @@ SAP SuccessFactors is the first application to support this new authentication m
 2. **Selects "Provisioning"** and chooses **Workload Identity Federation** as the authentication method (instead of basic auth or bearer token)
 3. **Entra ID automatically**:
    - Creates a federated identity credential on the provisioning app's service principal
-   - Configures the JWT bearer assertion parameters (audience, issuer, subject mapping)
+   - Configures the JWT bearer assertion parameters (audience, issuer, and authorized party)
 4. **No secrets to manage** — the admin only provides the SuccessFactors SCIM endpoint URL
 5. **Provisioning cycles** automatically perform JWT bearer assertion authentication before each sync
 
@@ -371,13 +372,15 @@ Authorization: Bearer sl.Adf8sHg7jKl3nM...
 
 3. **Issuer Validation**: Confirm the `iss` claim matches the expected Microsoft Entra ID v2 issuer format: `https://login.microsoftonline.com/{tenantId}/v2.0`
 
-4. **Token Expiry**: Always check `exp` and `nbf` claims. Reject expired or not-yet-valid tokens.
+4. **Authorized Party Validation**: Verify the `azp` claim matches the Provisioning Client 1P app ID. Reject tokens requested by an unexpected client.
 
-5. **Tenant Isolation**: Use the `tid` claim to ensure provisioning operations are scoped to the correct customer tenant. Cross-tenant data leaks are a critical risk if this is not enforced.
+5. **Token Lifetime Validation**: Check the `iat`, `nbf`, and `exp` claims. Reject tokens issued unexpectedly far in the past or future, expired tokens, and tokens that are not yet valid.
 
-6. **Rate Limiting**: Implement rate limiting on the token endpoint to prevent abuse.
+6. **Tenant Isolation**: Validate the complete tenant-specific `iss` value to ensure provisioning operations are scoped to the correct customer tenant. Do not rely on an unvalidated `tid` claim for tenant isolation.
 
-7. **TLS Requirement**: All JWT assertion and SCIM communications MUST use TLS 1.2 or higher.
+7. **Rate Limiting**: Implement rate limiting on the token endpoint to prevent abuse.
+
+8. **TLS Requirement**: All JWT assertion and SCIM communications MUST use TLS 1.2 or higher.
 
 ---
 
