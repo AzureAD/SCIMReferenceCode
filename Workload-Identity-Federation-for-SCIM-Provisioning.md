@@ -68,19 +68,20 @@ The administrator must perform **3 steps** to set up the integration for their a
 
 In the Entra App Gallery, the administrator:
 
-1. Creates an app for provisioning for that ISV and configures the Connectivity
-2. On the Connectivity Page, picks **"Workload Identity Federation"** as the auth method
-3. Clicks **"Select Workload Identity"** — customers can register a new Workload Identity App or reuse an existing one they have already used to set up with the ISV
+1. Opens the provisioning app for the ISV
+2. Pauses provisioning before changing the authentication method
+3. In the **Connectivity** section, selects **Workload identity-based authentication**
+4. Clicks **Select workload identity** — customers can register a new workload identity app or reuse an existing one they have already configured with the ISV
 
-The Connectivity page exposes **Workload Identity Federation** as an authentication method alongside the existing authentication options.
+The Connectivity page exposes **Workload identity-based authentication** alongside the existing authentication options.
 
-![Select Workload Identity Federation as the provisioning authentication method](media/workload-identity-federation/select-workload-identity-federation-auth-method.jpg)
+![Switch the provisioning app to workload identity-based authentication](media/workload-identity-federation/switch-to-workload-identity-authentication.png)
 
-After selecting **Workload Identity Federation**, the administrator chooses **Select Workload Identity**. From there, they can either register a new workload identity app or select an existing workload identity that has already been configured with the ISV.
+After selecting **Workload identity-based authentication**, the administrator enters the Application URL/SCIM endpoint and chooses **Select workload identity**. From there, they can either register a new workload identity app or select an existing workload identity that has already been configured with the ISV.
 
 | Register a new workload identity | Select an existing workload identity |
 |---|---|
-| ![Register a new workload identity in Entra](media/workload-identity-federation/register-new-workload-identity.jpg) | ![Select an existing workload identity in Entra](media/workload-identity-federation/select-existing-workload-identity.jpg) |
+| ![Register a new workload identity in Entra](media/workload-identity-federation/register-new-workload-identity.png) | ![Select an existing workload identity in Entra](media/workload-identity-federation/select-existing-workload-identity.jpg) |
 
 After the workload identity app is configured, the UX displays the following values to be **copied to the ISV Portal**:
 
@@ -417,7 +418,7 @@ If the JWKS endpoint is temporarily unavailable:
 | Microsoft Entra Workload Identity Federation | [https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation](https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation) |
 | Configure Federated Identity Credentials | [https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation-create-trust](https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation-create-trust) |
 | SCIM Provisioning with Microsoft Entra | [https://learn.microsoft.com/en-us/entra/identity/app-provisioning/use-scim-to-provision-users-and-groups](https://learn.microsoft.com/en-us/entra/identity/app-provisioning/use-scim-to-provision-users-and-groups) |
-| SAP SuccessFactors Integration Reference | [https://learn.microsoft.com/en-us/entra/identity/app-provisioning/sap-successfactors-integration-reference](https://learn.microsoft.com/en-us/entra/identity/app-provisioning/sap-successfactors-integration-reference) |
+| Configure Workload Identity for SAP SuccessFactors Provisioning | [https://learn.microsoft.com/en-us/entra/identity/app-provisioning/configure-workload-identity-sap-successfactors-provisioning](https://learn.microsoft.com/en-us/entra/identity/app-provisioning/configure-workload-identity-sap-successfactors-provisioning) |
 | Microsoft Identity Platform OIDC Metadata | `https://login.microsoftonline.com/{tenantId}/v2.0/.well-known/openid-configuration`|
 ---
 
