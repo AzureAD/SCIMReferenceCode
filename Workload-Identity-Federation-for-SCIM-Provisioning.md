@@ -68,14 +68,13 @@ The administrator must perform **3 steps** to set up the integration for their a
 
 In the Entra App Gallery, the administrator:
 
-1. Opens the provisioning app for the ISV
-2. Pauses provisioning before changing the authentication method
-3. In the **Connectivity** section, selects **Workload identity-based authentication**
-4. Clicks **Select workload identity** — customers can register a new workload identity app or reuse an existing one they have already configured with the ISV
+1. Creates an app for provisioning for that ISV and configures the Connectivity
+2. On the Connectivity Page, picks **"Workload Identity Federation"** as the auth method
+3. Clicks **"Select Workload Identity"** — customers can register a new Workload Identity App or reuse an existing one they have already used to set up with the ISV
 
-The Connectivity page exposes **Workload identity-based authentication** alongside the existing authentication options.
+The Connectivity page exposes **Workload Identity Federation** as an authentication method alongside the existing authentication options.
 
-![Switch the provisioning app to workload identity-based authentication](media/workload-identity-federation/switch-to-workload-identity-authentication.png)
+![Select Workload Identity Federation as the provisioning authentication method](media/workload-identity-federation/switch-to-workload-identity-authentication.png)
 
 After selecting **Workload identity-based authentication**, the administrator enters the Application URL/SCIM endpoint and chooses **Select workload identity**. From there, they can either register a new workload identity app or select an existing workload identity that has already been configured with the ISV.
 
