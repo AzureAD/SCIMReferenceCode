@@ -649,23 +649,33 @@
               "actions": {}
             },
             "expression": {
-              "or": [
+              "and": [
                 {
                   "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "All"
+                    "@coalesce(triggerBody()?['initializationData']?['isGroupSupported'], false)",
+                    true
                   ]
                 },
                 {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "GroupTests"
-                  ]
-                },
-                {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "Create_Group_Test"
+                  "or": [
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "All"
+                      ]
+                    },
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "GroupTests"
+                      ]
+                    },
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "Create_Group_Test"
+                      ]
+                    }
                   ]
                 }
               ]
@@ -1281,23 +1291,33 @@
               "actions": {}
             },
             "expression": {
-              "or": [
+              "and": [
                 {
                   "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "All"
+                    "@coalesce(triggerBody()?['initializationData']?['isGroupSupported'], false)",
+                    true
                   ]
                 },
                 {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "GroupTests"
-                  ]
-                },
-                {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "Update_Group_Test"
+                  "or": [
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "All"
+                      ]
+                    },
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "GroupTests"
+                      ]
+                    },
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "Update_Group_Test"
+                      ]
+                    }
                   ]
                 }
               ]
@@ -1883,23 +1903,33 @@
               "actions": {}
             },
             "expression": {
-              "or": [
+              "and": [
                 {
                   "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "All"
+                    "@coalesce(triggerBody()?['initializationData']?['isGroupSupported'], false)",
+                    true
                   ]
                 },
                 {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "GroupTests"
-                  ]
-                },
-                {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "Delete_Group_Test"
+                  "or": [
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "All"
+                      ]
+                    },
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "GroupTests"
+                      ]
+                    },
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "Delete_Group_Test"
+                      ]
+                    }
                   ]
                 }
               ]
@@ -2639,23 +2669,33 @@
               "actions": {}
             },
             "expression": {
-              "or": [
+              "and": [
                 {
                   "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "All"
+                    "@coalesce(triggerBody()?['initializationData']?['isGroupSupported'], false)",
+                    true
                   ]
                 },
                 {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "GroupTests"
-                  ]
-                },
-                {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "Group_Update_Add_Member_Test"
+                  "or": [
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "All"
+                      ]
+                    },
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "GroupTests"
+                      ]
+                    },
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "Group_Update_Add_Member_Test"
+                      ]
+                    }
                   ]
                 }
               ]
@@ -3410,23 +3450,33 @@
               "actions": {}
             },
             "expression": {
-              "or": [
+              "and": [
                 {
                   "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "All"
+                    "@coalesce(triggerBody()?['initializationData']?['isGroupSupported'], false)",
+                    true
                   ]
                 },
                 {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "GroupTests"
-                  ]
-                },
-                {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "Group_Update_Remove_Member_Test"
+                  "or": [
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "All"
+                      ]
+                    },
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "GroupTests"
+                      ]
+                    },
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "Group_Update_Remove_Member_Test"
+                      ]
+                    }
                   ]
                 }
               ]
@@ -3761,23 +3811,33 @@
             },
             "runAfter": {},
             "expression": {
-              "or": [
+              "and": [
                 {
                   "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "All"
+                    "@coalesce(triggerBody()?['initializationData']?['isGroupSupported'], false)",
+                    true
                   ]
                 },
                 {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "GroupTests"
-                  ]
-                },
-                {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "POD_Group_Test"
+                  "or": [
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "All"
+                      ]
+                    },
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "GroupTests"
+                      ]
+                    },
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "POD_Group_Test"
+                      ]
+                    }
                   ]
                 }
               ]
@@ -4567,7 +4627,7 @@
                                 "inputs": {
                                   "name": "RestoreGroupTestOutputs",
                                   "value": {
-                                    "result": "@if(and(equals(coalesce(outputs('RestoreGroupTest_Analyze_Phase3_Provisioning_Results')?['provisioningResult'], ''), 'success'), equals(coalesce(outputs('RestoreGroupTest_Analyze_Phase3_Provisioning_Results')?['scimCheckResult'], ''), 'success')), 'success (UnassignReassign)', if(startsWith(coalesce(outputs('RestoreGroupTest_Analyze_Phase3_Provisioning_Results')?['provisioningResult'], ''), 'Failed Action:'), concat('FAILED - [Reassign Phase] ', coalesce(outputs('RestoreGroupTest_Analyze_Phase3_Provisioning_Results')?['provisioningResult'], '')), concat('FAILED - [Reassign Phase] Provisioning: ', coalesce(outputs('RestoreGroupTest_Analyze_Phase3_Provisioning_Results')?['provisioningResult'], ''), ' | SCIM: ', coalesce(outputs('RestoreGroupTest_Analyze_Phase3_Provisioning_Results')?['scimCheckResult'], ''))))",
+                                    "result": "@if(and(equals(coalesce(outputs('RestoreGroupTest_Analyze_Phase3_Provisioning_Results')?['provisioningResult'], ''), 'success'), equals(coalesce(outputs('RestoreGroupTest_Analyze_Phase3_Provisioning_Results')?['scimCheckResult'], ''), 'success')), 'success', if(startsWith(coalesce(outputs('RestoreGroupTest_Analyze_Phase3_Provisioning_Results')?['provisioningResult'], ''), 'Failed Action:'), concat('FAILED - [Reassign Phase] ', coalesce(outputs('RestoreGroupTest_Analyze_Phase3_Provisioning_Results')?['provisioningResult'], '')), concat('FAILED - [Reassign Phase] Provisioning: ', coalesce(outputs('RestoreGroupTest_Analyze_Phase3_Provisioning_Results')?['provisioningResult'], ''), ' | SCIM: ', coalesce(outputs('RestoreGroupTest_Analyze_Phase3_Provisioning_Results')?['scimCheckResult'], ''))))",
                                     "overallResult": "@outputs('RestoreGroupTest_Analyze_Phase3_Provisioning_Results')?['overallResult']",
                                     "provisioningLogsResult": "@if(equals(coalesce(outputs('RestoreGroupTest_Analyze_Phase3_Provisioning_Results')?['provisioningResult'], ''), 'success'), 'success', 'failure')",
                                     "scimCheckResult": "@if(equals(coalesce(outputs('RestoreGroupTest_Analyze_Phase3_Provisioning_Results')?['scimCheckResult'], ''), 'success'), 'success', 'failure')",
@@ -4659,23 +4719,33 @@
               "actions": {}
             },
             "expression": {
-              "or": [
+              "and": [
                 {
                   "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "All"
+                    "@coalesce(triggerBody()?['initializationData']?['isGroupSupported'], false)",
+                    true
                   ]
                 },
                 {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "GroupTests"
-                  ]
-                },
-                {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "Restore_Group_Test"
+                  "or": [
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "All"
+                      ]
+                    },
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "GroupTests"
+                      ]
+                    },
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "Restore_Group_Test"
+                      ]
+                    }
                   ]
                 }
               ]

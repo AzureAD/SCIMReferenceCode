@@ -115,15 +115,20 @@ Collect the ISV's SCIM endpoint and bearer token, validate their Azure environme
    $groups = Invoke-RestMethod -Uri "<endpoint>/Groups?count=1" -Headers $h
    $empty  = Invoke-RestMethod -Uri "<endpoint>/Users?filter=userName%20eq%20%22nonexistent_xyz%22" -Headers $h
    $schema = Invoke-RestMethod -Uri "<endpoint>/Schemas" -Headers $h
+  $groupSchemaId = "urn:ietf:params:scim:schemas:core:2.0:Group"
+  $schemaSupportsGroups = @($schema.Resources).id -contains $groupSchemaId
    # Save schema as proper JSON
    $schema | ConvertTo-Json -Depth 20 | Set-Content .scim-schemas.json -NoNewline
    ```
    From the schema response, detect:
    - `supportsUsers`: /Users returns 200
-   - `supportsGroups`: /Groups returns 200
+  - `supportsGroups`: /Groups returns 200 (runtime resource probe)
+  - `schemaSupportsGroups`: `/Schemas` contains a resource whose `id` is `urn:ietf:params:scim:schemas:core:2.0:Group` (schema-advertisement probe)
    - `supportsManager`: `manager` attribute in User schema
    - `supportsSoftDelete`: `active` attribute in User schema
    - `emptyFilterCompliant`: empty filter returns 200 with `totalResults: 0`
+
+  Keep `supportsGroups` and `schemaSupportsGroups` as separate facts. `/Groups` proves runtime resource availability; `/Schemas` proves whether the endpoint advertises the standard SCIM Group schema. Do not infer one result from the other.
 
 7. **Analyze bearer token** — if it's a JWT, decode the payload (base64) and check `exp` claim:
    ```bash
@@ -141,14 +146,15 @@ Present a summary to the ISV:
 ✅ SCIM endpoint — HTTP 200
 ✅ /Users — Supported
 ✅ /Groups — <Supported | Not available>
+✅ /Schemas Group resource — <Advertised | Not advertised>
 ✅ Empty filter — <Compliant | NOT COMPLIANT — must fix>
 
-SCIM capabilities: Users ✓  Groups <✓|✗>  Manager <✓|✗>  Soft delete <✓|✗>
+SCIM capabilities: Users ✓  Groups endpoint <✓|✗>  Group schema <✓|✗>  Manager <✓|✗>  Soft delete <✓|✗>
 ```
 
-If `/Groups` is unsupported, warn the ISV:
+If `/Groups` is unsupported or `/Schemas` does not advertise the Group schema, explain both observed facts to the ISV. If the endpoint is user-only and the Entra synchronization Group object mapping is disabled, Group tests are legitimate skips rather than failures:
 
-> ⚠️ **Your SCIM endpoint does not support `/Groups`.** The validation suite includes Group tests (`Create_Group_Test`, `Update_Group_Test`, `Delete_Group_Test`, `SCIM_Group_Create_Test`, `SCIM_Group_Update_Test`, `SCIM_Group_Pagination_Test`, `POD_Group_Test`, `Restore_Group_Test`) that **will fail** because they call `/Groups` on your endpoint. These failures will block submission — the test suite requires all executed tests to pass. To pass Group tests, your SCIM server must implement the `/Groups` resource type and return HTTP 200 for `GET /Groups` (even if the response is an empty list). If you choose to proceed without Group support, the agent will apply Pattern #15 (disable Group sync mappings) to prevent Entra quarantine, but the Logic App Group tests will still fail and submission will not be possible until Groups are implemented.
+> ℹ️ **This is a user-only SCIM endpoint.** The endpoint's `/Schemas` response does not advertise `urn:ietf:params:scim:schemas:core:2.0:Group`, and `/Groups` is not available. When the Entra synchronization Group object mapping is disabled, the validation suite legitimately skips Group tests. The final ISV summary must state this reason explicitly. If a Group mapping is enabled, apply Pattern #15 before testing. If Group tests execute and `/Groups` returns an error, apply blocking Pattern #16; do not relabel executed failures as skips.
 
 If empty filter is non-compliant, **STOP** and tell the ISV this is a mandatory requirement. They must fix their SCIM server before proceeding.
 
@@ -372,7 +378,7 @@ For federated identity testing, also pass these Phase 4 parameters:
 |---|---|---|
 | Core SCIM tests | Use `scimBearerToken` ✓ | Use `scimBearerToken` ✓ |
 | `Validate_Credentials_Test` | **SKIPPED** (empty tokenEndpoint) | **RUNS** (exercises OAuth) |
-| `Federated_Identity_Test` | **SKIPPED/FAILED based on missing federated inputs** | **RUNS** when federated inputs are populated |
+| `Federated_Identity_Test` | **SKIPPED/FAILED based on missing federated inputs** | **RUNS** when federated inputs are populated; a non-passing result is acceptable when `Validate_Credentials_Test` succeeds |
 | POD / sync engine | Uses bearer from stored secrets | Uses OAuth from stored secrets |
 
 #### Step 2c: Create resource group (if needed)
@@ -1203,16 +1209,43 @@ az rest --method GET \
 
 Then fetch the output content from the `outputsLink.uri` in the response.
 
+The sibling `Evaluate_Test_Results` action on the same run also exposes three top-level aggregation fields (fetch its `outputsLink.uri` the same way):
+
+| Field | Values | Meaning |
+|---|---|---|
+| `overallLogicAppResult` | `"Succeeded"` \| `"Failed"` | LA pass/fail verdict. `"Failed"` when any Strict test (User/SCIM/Group) is not `PASSED` — including illegitimate SKIP. Group Strict tests are legitimately excused when `isGroupSupported=false`; in the ISV summary, explain that `/Schemas` does not advertise the SCIM Group resource and the Entra Group mapping is disabled when those facts were verified. Manager tests are legitimately excused when `isManagerAttributeSupported=false`. |
+| `optionalSuccessTestsResult` | `"PASSED"` \| `"WARNING"` | Signals WARNING when any of Delete_User, Delete_Group, Restore_Group, or SCIM_Group_Pagination is not `PASSED` (including illegitimate SKIP). Never causes `overallLogicAppResult="Failed"`. |
+| `authenticationModelResult` | `"PASSED"` \| `"FAILED"` | `"PASSED"` when at least one of `Validate_Credentials_Test` or `Federated_Identity_Test` succeeded. `"FAILED"` when neither passed — also trips `overallLogicAppResult="Failed"`. |
+
 ### Step 6b: Parse each test result
 
-Each entry has:
+Each entry in `Final_TestResults.testResults[]` has:
 ```json
 {
   "testName": "Create_User_Test",
-  "testResult": "success" | "<failure description>",
-  "provisioningErrorDetails": { "errorCode": "...", "reason": "..." }
+  "testCategory": "mandatory" | "optional",
+  "testResult": "success"
+                | "FAILED - <reason>"
+                | "WARNING - <reason>"
+                | "SKIPPED"
+                | "SKIPPED - Group object mapping disabled in Entra sync schema"
+                | "SKIPPED - IsManagerAttributeSupported is false",
+  "provisioningErrorDetails": { "errorCode": "...", "reason": "..." },
+  "recommendationUrl": "<https://... | empty>",
+  "runLink": "<portal URL | empty>",
+  "message": "<hint | empty>"
 }
 ```
+
+Test result semantics:
+- **`"success"`** — the test ran and passed.
+- **`"FAILED - <reason>"`** — a Strict test ran and failed. Contributes to `overallLogicAppResult="Failed"`.
+- **`"WARNING - <reason>"`** — an OptionalSuccess test ran and failed. Contributes to `optionalSuccessTestsResult="WARNING"` only — does not affect `overallLogicAppResult`.
+- **`"SKIPPED"`** — the test was excluded by the `EnabledTests` parameter. Under the mandated `EnabledTests: "All"` this should not appear for Strict tests; if it does, the Strict test is illegitimately skipped and `overallLogicAppResult` will be `"Failed"`.
+- **`"SKIPPED - Group object mapping disabled in Entra sync schema"`** — legitimate skip when `isGroupSupported=false`. Before describing why, verify the Phase 1 `/Schemas` evidence and the current Entra mapping state. When `/Schemas` does not advertise `urn:ietf:params:scim:schemas:core:2.0:Group` and the Entra Group object mapping is disabled, tell the ISV exactly that. Overall run stays `"Succeeded"`.
+- **`"SKIPPED - IsManagerAttributeSupported is false"`** — legitimate skip when `isManagerAttributeSupported=false`. Overall run stays `"Succeeded"`.
+
+**Authentication pair exception:** `Validate_Credentials_Test` and `Federated_Identity_Test` are `Mandatory/StrictOneSuccess`, not independently strict. Evaluate them as a pair using `authenticationModelResult`. When `authenticationModelResult == "PASSED"`, one model succeeded and the other model may be skipped or may contain a diagnostic non-success result such as `"Entra token acquisition failed"`. Do not classify that non-passing counterpart as a failed validation test, do not block submission, and do not include it in `Tests failed`. When `authenticationModelResult == "FAILED"`, authentication fails and submission is blocked.
 
 ### Step 6c: Drill into child workflow actions to find the real error (BEFORE pattern matching)
 
@@ -1227,7 +1260,7 @@ Follow this process for **every** failed test in `Final_TestResults`:
 - `Create_Group_Test`, `Update_Group_Test`, `Delete_Group_Test`, `Group_Update_Add_Member_Test`, `Group_Update_Remove_Member_Test`, `POD_Group_Test`, `Restore_Group_Test` → **GroupTests_Workflow**
 - `Schema_Discoverability_Test`, `SCIM_Null_Update_Test`, `SCIM_User_Create_Test`, `SCIM_User_Update_Test`, `SCIM_Group_Create_Test`, `SCIM_Group_Update_Test`, `SCIM_User_Pagination_Test`, `SCIM_Group_Pagination_Test`, `Validate_Credentials_Test`, `Federated_Identity_Test`, `SCIM_Update_Manager_Test` → **SCIMTests_Workflow**
 
-> **Note:** `Delete_User_Test` is **optional** — a failure produces WARNING (not FAIL) in the overall result. `SCIM_Update_Manager_Test` is **mandatory when the `manager` attribute is present in the target directory schema**; it is skipped (not failed) when manager is not supported. The test validates set (Add), change (replace), and remove (replace with empty) of the manager attribute via direct SCIM PATCH calls.
+> **Note:** `Delete_User_Test` is **Mandatory / OptionalSuccess** — a failure produces WARNING (not FAIL) in the overall result. An illegitimate SKIP (e.g. `EnabledTests` narrowed to exclude it) also trips WARNING via `optionalSuccessTestsResult`. `SCIM_Update_Manager_Test` is **Skippable / Strict** — gated by `isManagerAttributeSupported`. When `isManagerAttributeSupported=false` the test is legitimately skipped (no penalty); otherwise it must pass. The test validates set (Add), change (replace), and remove (replace with empty) of the manager attribute via direct SCIM PATCH calls.
 
 #### 2. List all executed actions in the child workflow
 
@@ -1332,17 +1365,18 @@ All 8 required permissions must be present:
 | 12 | `NO_LOGS` / `PROVISIONING_LOGS_MISSING` **after Step 6c confirms no permission error AND Pattern #14 is ruled out** | Entra sync cycle too slow | ⚠️ Maybe | Re-run once (sync service gets faster on subsequent cycles). If same failure repeats, escalate. |
 | 13 | `Authentication_MSGraphPermissionMissing` | MI missing Graph permission | ✅ Yes | Parse the missing permission name(s) from the error, find the appRoleId from the Graph SP, assign via `appRoleAssignments`. This is NOT a propagation delay — the permission was never assigned. **After assigning, you MUST `az webapp restart` the LA** to force a new MI token that carries the added appRole; without restart the cached token still lacks the permission and the next run will fail identically. Poll `/host/default/properties/status` until `state=Running` (~60s), then re-run. |
 | 14 | `NO_LOGS_FOUND` on **every** UserTests/GroupTests test AND/OR `POD_User_Test`/`POD_Group_Test` returns 401 from `provisionOnDemand` AND/OR `GET /synchronization/jobs/<jobId>.status.code == Quarantine` | Entra sync job quarantined (connectivity parameters missing/rejected) OR LA MI is not an owner of the App + SP (synchronization owner required for `provisionOnDemand`) | ✅ Yes | **Before any re-run of the orchestrator**, GET `/synchronization/jobs/<jobId>` and check `status.code`. If `Quarantine`: re-PATCH `https://graph.microsoft.com/beta/servicePrincipals/<servicePrincipalId>/synchronization/connectivityParameters` with only the supported keys for the auth mode (bearer: `authenticationType` + `baseAddress` + `secretToken`; OAuth: `authenticationType` + `baseAddress` + `oauth2ClientId` + `oauth2ClientSecret` + `oauth2TokenExchangeUri` + `credentialLocationInRequest`). Then `POST /jobs/<jobId>/restart` with `{"criteria":{"resetScope":"Full"}}`, then `POST /jobs/<jobId>/start`, then re-verify `status.code` is `Active` and `lastExecution.error` is `null`. If `provisionOnDemand` still 401s after the job is healthy: add the LA MI's enterprise object id as owner of BOTH the application and the SP — `POST /applications/<appObjectId>/owners/$ref` and `POST /servicePrincipals/<spId>/owners/$ref` with body `{"@odata.id":"https://graph.microsoft.com/v1.0/directoryObjects/<miObjectId>"}` — then `az webapp restart` the LA and re-trigger the orchestrator. |
-| 15 | Entra `/validateConnectivity` behavior (surfaced through Graph `validateCredentials`) returns `SystemForCrossDomainIdentityManagementServiceIncompatible`, `CredentialValidationUnavailable`, or inner HTTP `404` involving Group connectivity **and** Phase 1 found `/Groups` unsupported **and** the job schema has an enabled Group object mapping | Entra processes or probes Group because the synchronization schema enables its Group object mapping, but the SCIM endpoint is user-only | ✅ Yes | Follow the mandatory Pattern #15 procedure below: disable every Group object mapping with a full-schema `PUT`, verify, restart/start the job, and revalidate. |
+| 15 | Entra `/validateConnectivity` behavior (surfaced through Graph `validateCredentials`) returns `SystemForCrossDomainIdentityManagementServiceIncompatible`, `CredentialValidationUnavailable`, or inner HTTP `404` involving Group connectivity **and** Phase 1 found `/Groups` unsupported, `/Schemas` does not advertise the standard Group schema, **and** the job schema has an enabled Group object mapping | Entra processes or probes Group because the synchronization schema enables its Group object mapping, but the SCIM endpoint is user-only | ✅ Yes | Follow the mandatory Pattern #15 procedure below: disable every Group object mapping with a full-schema `PUT`, verify, restart/start the job, and revalidate. |
 | 16 | Any Group test (`Create_Group_Test`, `Update_Group_Test`, `Delete_Group_Test`, `Group_Update_Add_Member_Test`, `Group_Update_Remove_Member_Test`, `SCIM_Group_Create_Test`, `SCIM_Group_Update_Test`, `SCIM_Group_Pagination_Test`, `POD_Group_Test`, `Restore_Group_Test`) fails with `404`, `Not Found`, or SCIM error **and** Phase 1 found `/Groups` unsupported | The Logic App test workflows call `/Groups` directly using the bearer token — Pattern #15 only disables the Entra sync-engine Group mapping, not the LA tests themselves | ❌ No | **Do NOT auto-fix or suppress.** Report to the ISV: *"Your SCIM endpoint does not implement the `/Groups` resource type. The following Group tests failed because your server returned 404 for `/Groups` requests: [list failed tests]. To pass validation and submit to the Entra app gallery, your SCIM server must support the `/Groups` endpoint and return HTTP 200 (even for an empty group list). These failures block submission."* Do NOT allow submission. Do NOT re-run — the same tests will fail identically. Wait for the ISV to confirm they have added `/Groups` support, then re-probe `/Groups` (Phase 1 Step 6) to confirm before re-triggering. |
 
 #### Pattern #15: Disable Group object mappings for a user-only endpoint
 
 This issue is commonly described as `/validateConnectivity` failing. The public Graph calls in this agent use the `validateCredentials` endpoints; the Group probe is part of Entra's underlying connectivity-validation behavior.
 
-Apply this recovery only after all three conditions are confirmed:
+Apply this recovery only after all four conditions are confirmed:
 1. Phase 1 showed that `<scimEndpoint>/Groups?count=1` is unsupported or returns `404`.
-2. The actual inner connectivity error is `SystemForCrossDomainIdentityManagementServiceIncompatible`, `CredentialValidationUnavailable`, or an HTTP `404` involving Group. A generic `401`, `403`, rejected bearer token, or OAuth token-exchange failure does not match.
-3. `GET /servicePrincipals/<servicePrincipalId>/synchronization/jobs/<jobId>/schema` contains at least one object mapping where `sourceObjectName == "Group"` or `targetObjectName == "Group"` and `enabled == true`.
+2. Phase 1 showed that `<scimEndpoint>/Schemas` does not advertise `urn:ietf:params:scim:schemas:core:2.0:Group`.
+3. The actual inner connectivity error is `SystemForCrossDomainIdentityManagementServiceIncompatible`, `CredentialValidationUnavailable`, or an HTTP `404` involving Group. A generic `401`, `403`, rejected bearer token, or OAuth token-exchange failure does not match.
+4. `GET /servicePrincipals/<servicePrincipalId>/synchronization/jobs/<jobId>/schema` contains at least one object mapping where `sourceObjectName == "Group"` or `targetObjectName == "Group"` and `enabled == true`.
 
 If no Group mapping exists or every Group mapping is already disabled, do not write the schema. Pattern #15 is not the root cause; continue diagnosis using the exact inner error.
 
@@ -1362,6 +1396,8 @@ When all conditions match:
 6. `POST /servicePrincipals/<servicePrincipalId>/synchronization/jobs/<jobId>/restart` with `{"criteria":{"resetScope":"Full"}}`, then `POST /jobs/<jobId>/start`.
 7. Re-run saved-credential connectivity validation where applicable, then poll the job until `status.code` is `Active` or `InProgress`, `status.quarantine` is `null`, and `status.lastExecution.error` is `null` (or `lastExecution.state == "Succeeded"`).
 8. Before re-triggering tests, follow the existing Step 5a sync-job health gate and mandatory Step 5a2 Logic App restart. Do not ask the ISV for permission; this pattern is auto-fixable.
+
+> **After Pattern #15 completes**, subsequent LA runs are expected to show every Group test's `testResult` as `"SKIPPED - Group object mapping disabled in Entra sync schema"`. This is the intended post-#15 state — not a failure. `overallLogicAppResult` will remain `"Succeeded"` provided every non-Group Strict test passes and `authenticationModelResult` is `"PASSED"`. In the final ISV summary, state: `Group tests skipped: <count> (legitimate). Reason: the ISV endpoint /Schemas response does not advertise the SCIM Group resource, and the Entra Group object mapping is disabled.`
 
 ### Step 6e: Extract canonical values from schema validation errors
 
@@ -1421,9 +1457,13 @@ Give the ISV a complete, copy-ready submission summary for the exact successful 
 
 ### Steps
 
-1. **Apply the success gate.** Continue only when all of the following are true:
+1. **Apply the success gate.** Continue only when ALL of the following are true:
    - The exact captured orchestrator `<runId>` reached terminal status `Succeeded`.
-   - `Final_TestResults` for that same run has no blocking failures.
+   - `Evaluate_Test_Results.overallLogicAppResult == "Succeeded"` (fetched from the `Evaluate_Test_Results` action inputs on that run).
+   - `Evaluate_Test_Results.authenticationModelResult == "PASSED"` (at least one auth model succeeded — this is a hard requirement).
+  - Every **non-authentication** entry in `Final_TestResults.testResults[]` has `testResult` starting with `"success"`, `"SKIPPED"`, or `"WARNING"` — NEVER `"FAILED"`.
+  - Treat `Validate_Credentials_Test` and `Federated_Identity_Test` as one `Mandatory/StrictOneSuccess` authentication pair. Because `authenticationModelResult == "PASSED"` is already required, a skipped or non-passing counterpart (including a diagnostic result such as `"Entra token acquisition failed"`) is acceptable and does not block submission. Report which authentication model passed, but do not count the counterpart in `Tests failed`.
+   - `optionalSuccessTestsResult == "PASSED"` is preferred; `"WARNING"` is acceptable — call out each warning test explicitly in the summary.
    - No Phase 6 issue remains unresolved.
 
    Do not print submission details for a failed, cancelled, timed-out, running, or stale run. A workflow status of `Succeeded` and the test-result totals are separate facts; verify and print both.
@@ -1459,8 +1499,10 @@ Workflow: Orchestrator_Workflow
 Run ID: <runId>
 Run status: Succeeded
 Tests passed: <passedCount>
-Tests skipped: <skippedCount>
+Tests skipped (legitimate — feature not supported): <legitSkippedCount>
+Tests warning: <warningCount>
 Tests failed: 0
+<If one or more results are exactly "SKIPPED - Group object mapping disabled in Entra sync schema" AND Phase 1 verified that /Schemas does not advertise urn:ietf:params:scim:schemas:core:2.0:Group, print: "Group tests skipped: <groupSkippedCount> (legitimate). Reason: the ISV endpoint /Schemas response does not advertise the SCIM Group resource, and the Entra Group object mapping is disabled.">
 
 Entra application: <entraAppName>
 Service principal object ID: <runServicePrincipalId>
@@ -1473,6 +1515,8 @@ Official submission guide: https://github.com/AzureAD/SCIMReferenceCode/blob/mas
 
 Submission request ID: Enter the request ID supplied separately by the Microsoft team; the Logic App does not generate it.
 ```
+
+The conditional Group explanation is mandatory when its two evidence gates hold. Count only the recognized Group-skip results in `<groupSkippedCount>`; do not use the total skipped count, and do not print this reason for unrelated skips. If the evidence gates do not hold, diagnose the Group outcome under Pattern #15 or Pattern #16 instead of claiming a legitimate schema-based skip.
 
 6. Tell the ISV to review the application details and attestations before submitting because the form cannot be edited after submission. If the app-specific link does not open, use the generic fallback, select the enterprise application matching both `<entraAppName>` and `<runServicePrincipalId>`, then go to **Provisioning > Submit validation results**.
 
