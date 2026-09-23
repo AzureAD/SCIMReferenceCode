@@ -1,0 +1,15 @@
+{
+  "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+  "id":"{{groupid3}}",
+  "displayName": "putName",
+  "members":[
+    {
+      "value": "{{id3}}",
+      "display":"VP"
+    },
+    {
+      "value":"{{id4}}",
+      "display":"SenorVP"
+    }
+  ]
+}

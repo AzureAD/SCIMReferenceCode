@@ -2,32 +2,32 @@
 
 namespace Microsoft.SCIM
 {
+    using Microsoft.AspNetCore.Http;
     using System.Collections.Generic;
-    using System.Net.Http;
     using System.Threading.Tasks;
 
     public interface IProviderAdapter<T> where T : Resource
     {
         string SchemaIdentifier { get; }
 
-        Task<Resource> Create(HttpRequestMessage request, Resource resource, string correlationIdentifier);
-        Task Delete(HttpRequestMessage request, string identifier, string correlationIdentifier);
+        Task<Resource> Create(HttpContext httpContext, Resource resource, string correlationIdentifier);
+        Task<Resource> Delete(HttpContext httpContext, string identifier, string correlationIdentifier);
         Task<QueryResponseBase> Query(
-            HttpRequestMessage request,
+            HttpContext httpContext,
             IReadOnlyCollection<IFilter> filters,
             IReadOnlyCollection<string> requestedAttributePaths,
             IReadOnlyCollection<string> excludedAttributePaths,
             IPaginationParameters paginationParameters,
             string correlationIdentifier);
-        Task<Resource> Replace(HttpRequestMessage request, Resource resource, string correlationIdentifier);
+        Task<Resource> Replace(HttpContext httpContext, Resource resource, string correlationIdentifier);
         Task<Resource> Retrieve(
-            HttpRequestMessage request,
+            HttpContext httpContext,
             string identifier,
             IReadOnlyCollection<string> requestedAttributePaths,
             IReadOnlyCollection<string> excludedAttributePaths,
             string correlationIdentifier);
-        Task Update(
-            HttpRequestMessage request,
+        Task<Resource> Update(
+            HttpContext httpContext,
             string identifier,
             PatchRequestBase patchRequest,
             string correlationIdentifier);

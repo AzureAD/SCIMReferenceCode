@@ -4,20 +4,20 @@ namespace Microsoft.SCIM
 {
     using System;
     using System.Collections.Generic;
-    using System.Net.Http;
+    using Microsoft.AspNetCore.Http;
 
-    public abstract class SystemForCrossDomainIdentityManagementRequest<TPayload> : IRequest<TPayload>
+    public class SystemForCrossDomainIdentityManagementRequest<TPayload> : IRequest<TPayload>
         where TPayload : class
     {
-        protected SystemForCrossDomainIdentityManagementRequest(
-            HttpRequestMessage request,
+        public SystemForCrossDomainIdentityManagementRequest(
+            HttpContext context,
             TPayload payload,
             string correlationIdentifier,
             IReadOnlyCollection<IExtension> extensions)
         {
-            if (null == request)
+            if (null == context)
             {
-                throw new ArgumentNullException(nameof(request));
+                throw new ArgumentNullException(nameof(context));
             }
 
             if (string.IsNullOrWhiteSpace(correlationIdentifier))
@@ -25,8 +25,8 @@ namespace Microsoft.SCIM
                 throw new ArgumentNullException(nameof(extensions));
             }
 
-            this.BaseResourceIdentifier = request.GetBaseResourceIdentifier();
-            this.Request = request;
+            this.BaseResourceIdentifier = context.GetBaseResourceIdentifier();
+            this.HttpContext = context;
             this.Payload = payload ?? throw new ArgumentNullException(nameof(payload));
             this.CorrelationIdentifier = correlationIdentifier;
             this.Extensions = extensions;
@@ -56,7 +56,7 @@ namespace Microsoft.SCIM
             private set;
         }
 
-        public HttpRequestMessage Request
+        public HttpContext HttpContext
         {
             get;
             private set;

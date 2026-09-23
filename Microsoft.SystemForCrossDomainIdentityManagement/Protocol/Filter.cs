@@ -91,6 +91,7 @@ namespace Microsoft.SCIM
             co,
             sw,
             ew,
+            pr,
             ge,
             gt,
             includes,
@@ -200,8 +201,14 @@ namespace Microsoft.SCIM
                 case ComparisonOperator.BitAnd:
                     operatorValue = ComparisonOperatorValue.bitAnd;
                     break;
+                case ComparisonOperator.StartsWith:
+                    operatorValue = ComparisonOperatorValue.sw;
+                    break;
                 case ComparisonOperator.EndsWith:
                     operatorValue = ComparisonOperatorValue.ew;
+                    break;
+                case ComparisonOperator.Present:
+                    operatorValue = ComparisonOperatorValue.pr;
                     break;
                 case ComparisonOperator.Equals:
                     operatorValue = ComparisonOperatorValue.eq;
@@ -217,6 +224,9 @@ namespace Microsoft.SCIM
                     break;
                 case ComparisonOperator.LessThan:
                     operatorValue = ComparisonOperatorValue.lt;
+                    break;
+                case ComparisonOperator.Contains:
+                    operatorValue = ComparisonOperatorValue.co;
                     break;
                 case ComparisonOperator.Includes:
                     operatorValue = ComparisonOperatorValue.includes;
@@ -238,7 +248,8 @@ namespace Microsoft.SCIM
                     break;
                 default:
                     string notSupportedValue = Enum.GetName(typeof(ComparisonOperator), this.FilterOperator);
-                    throw new NotSupportedException(notSupportedValue);
+
+                    throw new ScimTypeException(ErrorType.invalidFilter, string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterOperatorNotSupportedTemplate, notSupportedValue));
             }
 
             string rightHandSide;
@@ -305,7 +316,7 @@ namespace Microsoft.SCIM
                 Filter clone = new Filter(filter);
                 clone.ComparisonValue = placeholder;
                 string currentFilter = clone.Serialize();
-                string encodedFilter = 
+                string encodedFilter =
                     HttpUtility
                     .UrlEncode(currentFilter)
                     .Replace(placeholder, filter.ComparisonValueEncoded, StringComparison.InvariantCulture);

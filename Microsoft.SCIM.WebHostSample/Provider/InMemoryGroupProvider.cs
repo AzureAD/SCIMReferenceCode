@@ -8,7 +8,6 @@ namespace Microsoft.SCIM.WebHostSample.Provider
     using System.Linq.Expressions;
     using System.Net;
     using System.Threading.Tasks;
-    using System.Web.Http;
     using Microsoft.SCIM;
 
     public class InMemoryGroupProvider : ProviderBase
@@ -20,18 +19,18 @@ namespace Microsoft.SCIM.WebHostSample.Provider
             this.storage = InMemoryStorage.Instance;
         }
 
-        public override Task<Resource> CreateAsync(Resource resource, string correlationIdentifier)
+        public override Task<Resource>CreateAsync(Resource resource, string correlationIdentifier)
         {
             if (resource.Identifier != null)
             {
-                throw new HttpResponseException(HttpStatusCode.BadRequest);
+                throw new CustomHttpResponseException(HttpStatusCode.BadRequest);
             }
 
             Core2Group group = resource as Core2Group;
 
             if (string.IsNullOrWhiteSpace(group.DisplayName))
             {
-                throw new HttpResponseException(HttpStatusCode.BadRequest);
+                throw new CustomHttpResponseException(HttpStatusCode.BadRequest);
             }
 
             IEnumerable<Core2Group> exisitingGroups = this.storage.Groups.Values;
@@ -42,7 +41,7 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                         string.Equals(exisitingGroup.DisplayName, group.DisplayName, StringComparison.Ordinal))
             )
             {
-                throw new HttpResponseException(HttpStatusCode.Conflict);
+                throw new CustomHttpResponseException(HttpStatusCode.Conflict);
             }
             //Update Metadata
             DateTime created = DateTime.UtcNow;
@@ -56,21 +55,23 @@ namespace Microsoft.SCIM.WebHostSample.Provider
             return Task.FromResult(resource);
         }
 
-        public override Task DeleteAsync(IResourceIdentifier resourceIdentifier, string correlationIdentifier)
+        public override Task<Resource> DeleteAsync(IResourceIdentifier resourceIdentifier,
+            string correlationIdentifier)
         {
             if (string.IsNullOrWhiteSpace(resourceIdentifier?.Identifier))
             {
-                throw new HttpResponseException(HttpStatusCode.BadRequest);
+                throw new CustomHttpResponseException(HttpStatusCode.BadRequest);
             }
 
             string identifier = resourceIdentifier.Identifier;
 
             if (this.storage.Groups.ContainsKey(identifier))
             {
+                var group = this.storage.Groups[identifier];
                 this.storage.Groups.Remove(identifier);
+                return Task.FromResult(group as Resource);
             }
-
-            return Task.CompletedTask;
+            throw new CustomHttpResponseException(HttpStatusCode.NotFound);
         }
 
         public override Task<Resource[]> QueryAsync(IQueryParameters parameters, string correlationIdentifier)
@@ -121,23 +122,23 @@ namespace Microsoft.SCIM.WebHostSample.Provider
 
                 if (queryFilter.FilterOperator != ComparisonOperator.Equals)
                 {
-                    throw new NotSupportedException(string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterOperatorNotSupportedTemplate, queryFilter.FilterOperator));
+                    throw new ScimTypeException(ErrorType.invalidFilter,string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterOperatorNotSupportedTemplate, queryFilter.FilterOperator));
                 }
 
 
                 if (queryFilter.AttributePath.Equals(AttributeNames.DisplayName))
                 {
-                    
+
                     string displayName = queryFilter.ComparisonValue;
                     predicateAnd = predicateAnd.And(p => string.Equals(p.DisplayName, displayName, StringComparison.OrdinalIgnoreCase));
-                  
+
                 }
                 else
                 {
-                    throw new NotSupportedException(string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterAttributePathNotSupportedTemplate, queryFilter.AttributePath));
+                    throw new ScimTypeException(ErrorType.invalidFilter,string.Format(SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterAttributePathNotSupportedTemplate, queryFilter.AttributePath));
                 }
             }
-            
+
             predicate = predicate.Or(predicateAnd);
             results = this.storage.Groups.Values.Where(predicate.Compile());
 
@@ -148,14 +149,14 @@ namespace Microsoft.SCIM.WebHostSample.Provider
         {
             if (resource.Identifier == null)
             {
-                throw new HttpResponseException(HttpStatusCode.BadRequest);
+                throw new CustomHttpResponseException(HttpStatusCode.BadRequest);
             }
 
             Core2Group group = resource as Core2Group;
 
             if (string.IsNullOrWhiteSpace(group.DisplayName))
             {
-                throw new HttpResponseException(HttpStatusCode.BadRequest);
+                throw new CustomHttpResponseException(HttpStatusCode.BadRequest);
             }
 
             Core2Group exisitingGroups = resource as Core2Group;
@@ -167,12 +168,12 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                         !string.Equals(exisitingUser.Identifier, group.Identifier, StringComparison.OrdinalIgnoreCase))
             )
             {
-                throw new HttpResponseException(HttpStatusCode.Conflict);
+                throw new CustomHttpResponseException(HttpStatusCode.Conflict);
             }
 
             if (!this.storage.Groups.TryGetValue(group.Identifier, out Core2Group _))
             {
-                throw new HttpResponseException(HttpStatusCode.NotFound);
+                throw new CustomHttpResponseException(HttpStatusCode.NotFound);
             }
 
             // Update metadata
@@ -211,11 +212,10 @@ namespace Microsoft.SCIM.WebHostSample.Provider
                     return Task.FromResult(result);
                 }
             }
-
-            throw new HttpResponseException(HttpStatusCode.NotFound);
+            throw new CustomHttpResponseException(HttpStatusCode.NotFound);
         }
 
-        public override Task UpdateAsync(IPatch patch, string correlationIdentifier)
+        public override Task<Resource> UpdateAsync(IPatch patch, string correlationIdentifier)
         {
             if (null == patch)
             {
@@ -254,10 +254,10 @@ namespace Microsoft.SCIM.WebHostSample.Provider
             }
             else
             {
-                throw new HttpResponseException(HttpStatusCode.NotFound);
+                throw new CustomHttpResponseException(HttpStatusCode.NotFound);
             }
 
-            return Task.CompletedTask;
+            return Task.FromResult(group as Resource);
         }
     }
 }
