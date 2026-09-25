@@ -173,6 +173,7 @@ When Entra ID sends the JWT bearer assertion request, the **JWT assertion (clien
 | `iat` (Issued At) | Token issue timestamp | Yes | `1772175916` |
 | `nbf` (Not Before) | Token not valid before | Yes | `1772175916` |
 | `exp` (Expiration) | Token expiry timestamp | Yes | `1772179816` |
+| `uti` (Unique Token Identifier) | Case-sensitive identifier unique to this token | Yes, can be cached for the token lifetime to detect replay and used to correlate token-level activity in logs | `e8OoJya-K0aHwvhUUjISAA` |
 | `ver` | Token version | | `2.0` |
 
 ### Example Token Payload
@@ -184,17 +185,21 @@ When Entra ID sends the JWT bearer assertion request, the **JWT assertion (clien
   "iat": 1772175916,
   "nbf": 1772175916,
   "exp": 1772179816,
+  "aio": "k2NgYJARPR/6rTNMwFRsVQu/9/M1/EVHp+oz1K55Fx3QJZX1SneXvd/+drFD3F5KPaVtNhO7AQ==",
   "azp": "cb1d50fe-8ed0-4944-9e7d-5981aad3bc4b",
   "azpacr": "2",
   "oid": "d2f8ee76-c549-45b8-a143-f5b640669704",
+  "rh": "1.AVkBzyW4c42i8EOPD9u9q2t8EkH8e4_2qK5KpZdHn5PmsmwAAABZAQ.",
   "sub": "<Sync Fabric Workload Identity 1P app object ID>",
   "tid": "ce5f061f-abe6-4e40-9615-301f87bcb7f0",
-  "ver": "2.0"
+  "uti": "e8OoJya-K0aHwvhUUjISAA",
+  "ver": "2.0",
+  "xms_ftd": "WeB2HubAjfPJp4pjME3tmIl6ZguM9hjETQmC8D-CW8cBdXNub3J0aC1kc21z"
 }
 ```
 
 > [!NOTE]
-> The ISV validates `aud`, `iss`, and `azp` against the values provided during the 3-step configuration. The `sub` claim identifies the **Sync Fabric Workload Identity 1P app object**, but validating it is optional because its value is shared by all integrations in the tenant.
+> The ISV validates `aud`, `iss`, and `azp` against the values provided during the 3-step configuration. The `sub` claim identifies the **Sync Fabric Workload Identity 1P app object**, but validating it is optional because its value is shared by all integrations in the tenant. The `uti` claim uniquely identifies an individual token and can be retained for the token lifetime to detect replay or correlate activity in logs.
 
 ### Additional Context Provided
 
