@@ -239,7 +239,6 @@ These values are provided by the Entra portal during Step 1 of the configuration
 After successful JWT validation, the ISV token endpoint should:
 
 - Issue an **access token with a lifetime between 1–6 hours**
-- Scope the token to SCIM operations for the identified customer
 - Return the token in standard OAuth 2.0 format:
 
 ```json
@@ -247,7 +246,6 @@ After successful JWT validation, the ISV token endpoint should:
   "access_token": "eyJhbGciOiJSUzI1NiIs...",
   "token_type": "Bearer",
   "expires_in": 3600,
-  "scope": "scim"
 }
 ```
 
@@ -264,7 +262,6 @@ grant_type=client_credentials
 &client_id={client_id_from_ISV_portal}
 &client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer
 &client_assertion=<signed JWT from Microsoft Entra ID>
-&scope=scim
 ```
 
 > **Note:** This follows **RFC 7523 Section 2.2** — the JWT is used for *client authentication* with the `client_credentials` grant type. The `client_assertion` parameter contains the Entra-issued JWT, and `client_assertion_type` indicates it is a JWT bearer assertion.
@@ -307,7 +304,6 @@ grant_type=client_credentials
 &client_id={client_id_from_ISV_portal}
 &client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3Aclient-assertion-type%3Ajwt-bearer
 &client_assertion=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Ijk...
-&scope=scim.readwrite
 ```
 
 ### Token Response (from ISV to Entra)
@@ -317,7 +313,6 @@ grant_type=client_credentials
   "access_token": "sl.Adf8sHg7jKl3nM...",
   "token_type": "Bearer",
   "expires_in": 3600,
-  "scope": "scim.readwrite"
 }
 ```
 
