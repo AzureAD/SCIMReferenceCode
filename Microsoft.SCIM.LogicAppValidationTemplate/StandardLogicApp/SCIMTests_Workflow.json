@@ -173,6 +173,26 @@
               "name": "flattenedGroupAttrNames",
               "type": "Array",
               "value": []
+            },
+            {
+              "name": "scimDiscoveredGroupBody",
+              "type": "Object",
+              "value": {}
+            },
+            {
+              "name": "scimDiscoveredGroupWritableAttributes",
+              "type": "Array",
+              "value": []
+            },
+            {
+              "name": "scimCurrentGroupComplexBody",
+              "type": "Object",
+              "value": {}
+            },
+            {
+              "name": "scimGroupEmailExtensionUrn",
+              "type": "String",
+              "value": ""
             }
           ]
         }
@@ -392,7 +412,19 @@
                 "type": "Query",
                 "inputs": {
                   "from": "@coalesce(body('SCIM_Get_Schemas')?['Resources'], json('[]'))",
-                  "where": "@and(not(equals(item()?['id'], 'urn:ietf:params:scim:schemas:core:2.0:User')), not(equals(item()?['id'], 'urn:ietf:params:scim:schemas:core:2.0:Group')))"
+                  "where": "@and(and(not(equals(item()?['id'], 'urn:ietf:params:scim:schemas:core:2.0:User')), not(equals(item()?['id'], 'urn:ietf:params:scim:schemas:core:2.0:Group'))), or(endsWith(toLower(coalesce(item()?['id'], '')), 'user'), endsWith(toLower(coalesce(item()?['id'], '')), 'users')))"
+                }
+              },
+              "Filter_All_Group_Extension_Schemas": {
+                "runAfter": {
+                  "SCIM_Get_Schemas": [
+                    "Succeeded"
+                  ]
+                },
+                "type": "Query",
+                "inputs": {
+                  "from": "@coalesce(body('SCIM_Get_Schemas')?['Resources'], json('[]'))",
+                  "where": "@and(and(not(equals(item()?['id'], 'urn:ietf:params:scim:schemas:core:2.0:User')), not(equals(item()?['id'], 'urn:ietf:params:scim:schemas:core:2.0:Group'))), or(endsWith(toLower(coalesce(item()?['id'], '')), 'group'), endsWith(toLower(coalesce(item()?['id'], '')), 'groups')))"
                 }
               },
               "Filter_Group_Schema": {
@@ -424,6 +456,260 @@
                 },
                 "type": "Compose",
                 "inputs": "@coalesce(first(body('Filter_Group_Schema'))?['attributes'], json('[]'))"
+              },
+              "Initialize_Discovered_Group_Body": {
+                "runAfter": {
+                  "Filter_Group_Schema": [
+                    "Succeeded"
+                  ],
+                  "Filter_All_Group_Extension_Schemas": [
+                    "Succeeded"
+                  ]
+                },
+                "type": "SetVariable",
+                "inputs": {
+                  "name": "scimDiscoveredGroupBody",
+                  "value": {
+                    "schemas": []
+                  }
+                }
+              },
+              "ForEach_Discovered_Group_Schema": {
+                "runAfter": {
+                  "Initialize_Discovered_Group_Body": [
+                    "Succeeded"
+                  ]
+                },
+                "type": "Foreach",
+                "foreach": "@union(body('Filter_Group_Schema'), body('Filter_All_Group_Extension_Schemas'))",
+                "actions": {
+                  "Compose_Discovered_Group_Schema": {
+                    "type": "Compose",
+                    "inputs": "@if(equals(items('ForEach_Discovered_Group_Schema')?['id'], 'urn:ietf:params:scim:schemas:core:2.0:Group'), setProperty(variables('scimDiscoveredGroupBody'), 'schemas', union(coalesce(variables('scimDiscoveredGroupBody')?['schemas'], json('[]')), createArray(items('ForEach_Discovered_Group_Schema')?['id']))), union(setProperty(variables('scimDiscoveredGroupBody'), 'schemas', union(coalesce(variables('scimDiscoveredGroupBody')?['schemas'], json('[]')), createArray(items('ForEach_Discovered_Group_Schema')?['id']))), json(concat('{\"', items('ForEach_Discovered_Group_Schema')?['id'], '\":', string(coalesce(variables('scimDiscoveredGroupBody')?[items('ForEach_Discovered_Group_Schema')?['id']], json('{}'))), '}'))))"
+                  },
+                  "Set_Discovered_Group_Schema": {
+                    "runAfter": {
+                      "Compose_Discovered_Group_Schema": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "SetVariable",
+                    "inputs": {
+                      "name": "scimDiscoveredGroupBody",
+                      "value": "@outputs('Compose_Discovered_Group_Schema')"
+                    }
+                  },
+                  "Filter_Discovered_Group_Writable_Attributes": {
+                    "runAfter": {
+                      "Set_Discovered_Group_Schema": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "Query",
+                    "inputs": {
+                      "from": "@coalesce(items('ForEach_Discovered_Group_Schema')?['attributes'], json('[]'))",
+                      "where": "@and(and(and(equals(coalesce(item()?['multiValued'], false), false), not(equals(toLower(coalesce(item()?['type'], 'string')), 'complex'))), or(equals(toLower(coalesce(item()?['mutability'], 'readwrite')), 'readwrite'), equals(toLower(coalesce(item()?['mutability'], 'readwrite')), 'writeonly'))), and(not(contains(toLower(coalesce(item()?['type'], 'string')), 'reference')), not(contains(createArray('id','externalId','members','schemas','meta'), coalesce(item()?['name'], '')))))"
+                    }
+                  },
+                  "ForEach_Discovered_Group_Writable_Attribute": {
+                    "runAfter": {
+                      "Filter_Discovered_Group_Writable_Attributes": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "Foreach",
+                    "foreach": "@body('Filter_Discovered_Group_Writable_Attributes')",
+                    "actions": {
+                      "Append_Discovered_Group_Writable_Attribute": {
+                        "type": "AppendToArrayVariable",
+                        "inputs": {
+                          "name": "scimDiscoveredGroupWritableAttributes",
+                          "value": {
+                            "name": "@if(equals(items('ForEach_Discovered_Group_Schema')?['id'], 'urn:ietf:params:scim:schemas:core:2.0:Group'), items('ForEach_Discovered_Group_Writable_Attribute')?['name'], concat(items('ForEach_Discovered_Group_Schema')?['id'], ':', items('ForEach_Discovered_Group_Writable_Attribute')?['name']))",
+                            "type": "@coalesce(items('ForEach_Discovered_Group_Writable_Attribute')?['type'], 'string')",
+                            "multiValued": "@coalesce(items('ForEach_Discovered_Group_Writable_Attribute')?['multiValued'], false)",
+                            "mutability": "@coalesce(items('ForEach_Discovered_Group_Writable_Attribute')?['mutability'], 'readWrite')"
+                          }
+                        }
+                      }
+                    },
+                    "runtimeConfiguration": {
+                      "concurrency": {
+                        "repetitions": 1
+                      }
+                    }
+                  },
+                  "Filter_Required_Group_Attributes": {
+                    "runAfter": {
+                      "Set_Discovered_Group_Schema": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "Query",
+                    "inputs": {
+                      "from": "@coalesce(items('ForEach_Discovered_Group_Schema')?['attributes'], json('[]'))",
+                      "where": "@and(equals(coalesce(item()?['required'], false), true), not(equals(toLower(coalesce(item()?['mutability'], 'readwrite')), 'readonly')))"
+                    }
+                  },
+                  "ForEach_Required_Group_Attribute": {
+                    "runAfter": {
+                      "Filter_Required_Group_Attributes": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "Foreach",
+                    "foreach": "@body('Filter_Required_Group_Attributes')",
+                    "actions": {
+                      "Reset_Current_Group_Complex_Body": {
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "scimCurrentGroupComplexBody",
+                          "value": {}
+                        }
+                      },
+                      "Filter_Required_Group_Complex_SubAttributes": {
+                        "runAfter": {
+                          "Reset_Current_Group_Complex_Body": [
+                            "Succeeded"
+                          ]
+                        },
+                        "type": "Query",
+                        "inputs": {
+                          "from": "@if(equals(toLower(coalesce(items('ForEach_Required_Group_Attribute')?['type'], 'string')), 'complex'), coalesce(items('ForEach_Required_Group_Attribute')?['subAttributes'], json('[]')), json('[]'))",
+                          "where": "@and(equals(coalesce(item()?['required'], false), true), not(equals(toLower(coalesce(item()?['mutability'], 'readwrite')), 'readonly')))"
+                        }
+                      },
+                      "ForEach_Required_Group_Complex_SubAttribute": {
+                        "runAfter": {
+                          "Filter_Required_Group_Complex_SubAttributes": [
+                            "Succeeded"
+                          ]
+                        },
+                        "type": "Foreach",
+                        "foreach": "@body('Filter_Required_Group_Complex_SubAttributes')",
+                        "actions": {
+                          "Compose_Required_Group_Complex_SubAttribute_Scalar_Value": {
+                            "type": "Compose",
+                            "inputs": "@if(contains(toLower(coalesce(items('ForEach_Required_Group_Complex_SubAttribute')?['name'], '')), 'email'), concat('scim-group-', substring(guid(),0,8), '@', parameters('testUserDomain')), if(greater(length(coalesce(items('ForEach_Required_Group_Complex_SubAttribute')?['canonicalValues'], json('[]'))), 0), first(items('ForEach_Required_Group_Complex_SubAttribute')?['canonicalValues']), if(equals(toLower(coalesce(items('ForEach_Required_Group_Complex_SubAttribute')?['type'], 'string')), 'boolean'), true, if(or(equals(toLower(coalesce(items('ForEach_Required_Group_Complex_SubAttribute')?['type'], 'string')), 'integer'), equals(toLower(coalesce(items('ForEach_Required_Group_Complex_SubAttribute')?['type'], 'string')), 'decimal')), 1, if(equals(toLower(coalesce(items('ForEach_Required_Group_Complex_SubAttribute')?['type'], 'string')), 'datetime'), utcNow(), if(equals(toLower(coalesce(items('ForEach_Required_Group_Complex_SubAttribute')?['type'], 'string')), 'binary'), 'dGVzdA==', if(equals(toLower(coalesce(items('ForEach_Required_Group_Complex_SubAttribute')?['type'], 'string')), 'reference'), parameters('scimEndpoint'), concat('test-', substring(guid(),0,8)))))))))"
+                          },
+                          "Compose_Required_Group_Complex_SubAttribute": {
+                            "runAfter": {
+                              "Compose_Required_Group_Complex_SubAttribute_Scalar_Value": [
+                                "Succeeded"
+                              ]
+                            },
+                            "type": "Compose",
+                            "inputs": "@setProperty(variables('scimCurrentGroupComplexBody'), items('ForEach_Required_Group_Complex_SubAttribute')?['name'], if(coalesce(items('ForEach_Required_Group_Complex_SubAttribute')?['multiValued'], false), createArray(outputs('Compose_Required_Group_Complex_SubAttribute_Scalar_Value')), outputs('Compose_Required_Group_Complex_SubAttribute_Scalar_Value')))"
+                          },
+                          "Set_Required_Group_Complex_SubAttribute": {
+                            "runAfter": {
+                              "Compose_Required_Group_Complex_SubAttribute": [
+                                "Succeeded"
+                              ]
+                            },
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "scimCurrentGroupComplexBody",
+                              "value": "@outputs('Compose_Required_Group_Complex_SubAttribute')"
+                            }
+                          }
+                        },
+                        "runtimeConfiguration": {
+                          "concurrency": {
+                            "repetitions": 1
+                          }
+                        }
+                      },
+                      "Compose_Required_Group_Attribute_Scalar_Value": {
+                        "runAfter": {
+                          "ForEach_Required_Group_Complex_SubAttribute": [
+                            "Succeeded"
+                          ]
+                        },
+                        "type": "Compose",
+                        "inputs": "@if(contains(toLower(coalesce(items('ForEach_Required_Group_Attribute')?['name'], '')), 'email'), concat('scim-group-', substring(guid(),0,8), '@', parameters('testUserDomain')), if(greater(length(coalesce(items('ForEach_Required_Group_Attribute')?['canonicalValues'], json('[]'))), 0), first(items('ForEach_Required_Group_Attribute')?['canonicalValues']), if(equals(toLower(coalesce(items('ForEach_Required_Group_Attribute')?['type'], 'string')), 'boolean'), true, if(or(equals(toLower(coalesce(items('ForEach_Required_Group_Attribute')?['type'], 'string')), 'integer'), equals(toLower(coalesce(items('ForEach_Required_Group_Attribute')?['type'], 'string')), 'decimal')), 1, if(equals(toLower(coalesce(items('ForEach_Required_Group_Attribute')?['type'], 'string')), 'datetime'), utcNow(), if(equals(toLower(coalesce(items('ForEach_Required_Group_Attribute')?['type'], 'string')), 'binary'), 'dGVzdA==', if(equals(toLower(coalesce(items('ForEach_Required_Group_Attribute')?['type'], 'string')), 'reference'), parameters('scimEndpoint'), concat('test-', substring(guid(),0,8)))))))))"
+                      },
+                      "Compose_Required_Group_Attribute_Value": {
+                        "runAfter": {
+                          "Compose_Required_Group_Attribute_Scalar_Value": [
+                            "Succeeded"
+                          ]
+                        },
+                        "type": "Compose",
+                        "inputs": "@if(equals(toLower(coalesce(items('ForEach_Required_Group_Attribute')?['type'], 'string')), 'complex'), if(coalesce(items('ForEach_Required_Group_Attribute')?['multiValued'], false), createArray(variables('scimCurrentGroupComplexBody')), variables('scimCurrentGroupComplexBody')), if(coalesce(items('ForEach_Required_Group_Attribute')?['multiValued'], false), createArray(outputs('Compose_Required_Group_Attribute_Scalar_Value')), outputs('Compose_Required_Group_Attribute_Scalar_Value')))"
+                      },
+                      "Compose_Discovered_Group_Required_Attribute": {
+                        "runAfter": {
+                          "Compose_Required_Group_Attribute_Value": [
+                            "Succeeded"
+                          ]
+                        },
+                        "type": "Compose",
+                        "inputs": "@if(equals(items('ForEach_Discovered_Group_Schema')?['id'], 'urn:ietf:params:scim:schemas:core:2.0:Group'), setProperty(variables('scimDiscoveredGroupBody'), items('ForEach_Required_Group_Attribute')?['name'], outputs('Compose_Required_Group_Attribute_Value')), union(variables('scimDiscoveredGroupBody'), json(concat('{\"', items('ForEach_Discovered_Group_Schema')?['id'], '\":', string(setProperty(coalesce(variables('scimDiscoveredGroupBody')?[items('ForEach_Discovered_Group_Schema')?['id']], json('{}')), items('ForEach_Required_Group_Attribute')?['name'], outputs('Compose_Required_Group_Attribute_Value'))), '}'))))"
+                      },
+                      "Set_Discovered_Group_Required_Attribute": {
+                        "runAfter": {
+                          "Compose_Discovered_Group_Required_Attribute": [
+                            "Succeeded"
+                          ]
+                        },
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "scimDiscoveredGroupBody",
+                          "value": "@outputs('Compose_Discovered_Group_Required_Attribute')"
+                        }
+                      },
+                      "Capture_Group_Email_Extension_Urn": {
+                        "runAfter": {
+                          "Set_Discovered_Group_Required_Attribute": [
+                            "Succeeded"
+                          ]
+                        },
+                        "type": "If",
+                        "expression": {
+                          "and": [
+                            {
+                              "contains": [
+                                "@toLower(coalesce(items('ForEach_Required_Group_Attribute')?['name'], ''))",
+                                "email"
+                              ]
+                            },
+                            {
+                              "not": {
+                                "equals": [
+                                  "@items('ForEach_Discovered_Group_Schema')?['id']",
+                                  "urn:ietf:params:scim:schemas:core:2.0:Group"
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        "actions": {
+                          "Set_Group_Email_Extension_Urn": {
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "scimGroupEmailExtensionUrn",
+                              "value": "@items('ForEach_Discovered_Group_Schema')?['id']"
+                            }
+                          }
+                        },
+                        "else": {
+                          "actions": {}
+                        }
+                      }
+                    },
+                    "runtimeConfiguration": {
+                      "concurrency": {
+                        "repetitions": 1
+                      }
+                    }
+                  }
+                },
+                "runtimeConfiguration": {
+                  "concurrency": {
+                    "repetitions": 1
+                  }
+                }
               },
               "Reset_FlattenedUserAttrNames": {
                 "runAfter": {
@@ -982,6 +1268,9 @@
                 "runAfter": {
                   "Flatten_Group_Attrs_Loop": [
                     "Succeeded"
+                  ],
+                  "ForEach_Group_Extension_Schema": [
+                    "Succeeded"
                   ]
                 },
                 "type": "Compose",
@@ -996,7 +1285,7 @@
                 "type": "Query",
                 "inputs": {
                   "from": "@coalesce(triggerBody()?['initializationData']?['targetDirectoryUserAttributes'], json('[]'))",
-                  "where": "@and(not(equals(item()?['name'], 'id')), not(contains(outputs('Compose_User_Lookup_String'), toLower(concat('|', coalesce(item()?['name'], ''), '|')))))"
+                  "where": "@and(not(or(equals(item()?['name'], 'id'), equals(item()?['name'], 'externalId'))), not(contains(outputs('Compose_User_Lookup_String'), toLower(concat('|', coalesce(item()?['name'], ''), '|')))))"
                 }
               },
               "Select_Missing_User_Attr_Names": {
@@ -1020,7 +1309,7 @@
                 "type": "Query",
                 "inputs": {
                   "from": "@coalesce(triggerBody()?['initializationData']?['targetDirectoryGroupAttributes'], json('[]'))",
-                  "where": "@and(not(equals(item()?['name'], 'id')), not(contains(outputs('Compose_Group_Lookup_String'), toLower(concat('|', coalesce(item()?['name'], ''), '|')))))"
+                  "where": "@and(not(or(equals(item()?['name'], 'id'), equals(item()?['name'], 'externalId'))), not(contains(outputs('Compose_Group_Lookup_String'), toLower(concat('|', coalesce(item()?['name'], ''), '|')))))"
                 }
               },
               "Select_Missing_Group_Attr_Names": {
@@ -1051,7 +1340,8 @@
                   "schemasEndpointStatusCode": "@outputs('SCIM_Get_Schemas')['statusCode']",
                   "discoveredSchemasCount": "@length(coalesce(body('SCIM_Get_Schemas')?['Resources'], json('[]')))",
                   "userSchemaFound": "@greater(length(body('Filter_User_Schema')), 0)",
-                  "extensionSchemasCount": "@length(body('Filter_All_User_Extension_Schemas'))",
+                  "userExtensionSchemasCount": "@length(body('Filter_All_User_Extension_Schemas'))",
+                  "groupExtensionSchemasCount": "@length(body('Filter_All_Group_Extension_Schemas'))",
                   "groupSchemaFound": "@greater(length(body('Filter_Group_Schema')), 0)",
                   "flattenedUserSchemaAttrs": "@variables('flattenedUserAttrNames')",
                   "flattenedGroupSchemaAttrs": "@variables('flattenedGroupAttrNames')",
@@ -1063,7 +1353,7 @@
                   "flattenedGroupSchemaAttrCount": "@length(variables('flattenedGroupAttrNames'))",
                   "missingGroupAttrCount": "@length(body('Filter_Missing_Group_Attrs'))",
                   "missingGroupAttrs": "@body('Select_Missing_Group_Attr_Names')",
-                  "overallResult": "@if(and(equals(outputs('SCIM_Get_Schemas')['statusCode'], 200), greater(length(coalesce(body('SCIM_Get_Schemas')?['Resources'], json('[]'))), 0), equals(length(body('Filter_Missing_User_Attrs')), 0), or(not(coalesce(triggerBody()?['initializationData']?['isGroupSupported'], false)), equals(length(body('Filter_Missing_Group_Attrs')), 0))), 'PASSED', 'FAILED')"
+                  "overallResult": "@if(and(equals(outputs('SCIM_Get_Schemas')['statusCode'], 200), greater(length(coalesce(body('SCIM_Get_Schemas')?['Resources'], json('[]'))), 0), equals(length(body('Filter_Missing_User_Attrs')), 0), equals(length(body('Filter_Missing_Group_Attrs')), 0)), 'PASSED', 'FAILED')"
                 }
               },
               "Set_SchemaDiscoverabilityTestOutputs": {
@@ -1077,11 +1367,11 @@
                   "name": "SchemaDiscoverabilityTestOutputs",
                   "value": {
                     "overallResult": "@coalesce(outputs('Compose_Schema_Discoverability_Summary')?['overallResult'], 'FAILED')",
-                    "result": "@if(equals(coalesce(outputs('Compose_Schema_Discoverability_Summary')?['overallResult'], 'FAILED'), 'PASSED'), 'success', if(not(equals(outputs('SCIM_Get_Schemas')['statusCode'], 200)), concat('FAILED - Action: SCIM_Get_Schemas - HTTP ', string(outputs('SCIM_Get_Schemas')['statusCode'])), if(equals(length(coalesce(body('SCIM_Get_Schemas')?['Resources'], json('[]'))), 0), 'FAILED - Action: SCIM_Get_Schemas - endpoint returned no schemas', concat('FAILED - Action: Compose_Schema_Discoverability_Summary - Missing user attrs: ', string(body('Select_Missing_User_Attr_Names')), if(coalesce(triggerBody()?['initializationData']?['isGroupSupported'], false), concat(' | Missing group attrs: ', string(body('Select_Missing_Group_Attr_Names'))), '')))))",
+                    "result": "@if(equals(coalesce(outputs('Compose_Schema_Discoverability_Summary')?['overallResult'], 'FAILED'), 'PASSED'), 'success', if(not(equals(outputs('SCIM_Get_Schemas')['statusCode'], 200)), concat('FAILED - Action: SCIM_Get_Schemas - HTTP ', string(outputs('SCIM_Get_Schemas')['statusCode'])), if(equals(length(coalesce(body('SCIM_Get_Schemas')?['Resources'], json('[]'))), 0), 'FAILED - Action: SCIM_Get_Schemas - endpoint returned no schemas', concat('FAILED - Action: Compose_Schema_Discoverability_Summary - Missing user attrs: ', string(body('Select_Missing_User_Attr_Names')), ' | Missing group attrs: ', string(body('Select_Missing_Group_Attr_Names'))))))",
                     "summary": "@outputs('Compose_Schema_Discoverability_Summary')",
                     "detailedResults": [],
                     "errorDetails": {
-                      "summary": "@if(equals(coalesce(outputs('Compose_Schema_Discoverability_Summary')?['overallResult'], 'FAILED'), 'PASSED'), null, concat(if(greater(length(body('Filter_Missing_User_Attrs')), 0), concat('Missing user attributes (', string(length(body('Filter_Missing_User_Attrs'))), '): ', string(body('Select_Missing_User_Attr_Names')), '. '), ''), if(and(coalesce(triggerBody()?['initializationData']?['isGroupSupported'], false), greater(length(body('Filter_Missing_Group_Attrs')), 0)), concat('Missing group attributes (', string(length(body('Filter_Missing_Group_Attrs'))), '): ', string(body('Select_Missing_Group_Attr_Names')), '.'), '')))"
+                      "summary": "@if(equals(coalesce(outputs('Compose_Schema_Discoverability_Summary')?['overallResult'], 'FAILED'), 'PASSED'), null, concat(if(greater(length(body('Filter_Missing_User_Attrs')), 0), concat('Missing user attributes (', string(length(body('Filter_Missing_User_Attrs'))), '): ', string(body('Select_Missing_User_Attr_Names')), '. '), ''), if(greater(length(body('Filter_Missing_Group_Attrs')), 0), concat('Missing group attributes (', string(length(body('Filter_Missing_Group_Attrs'))), '): ', string(body('Select_Missing_Group_Attr_Names')), '.'), '')))"
                     }
                   }
                 }
@@ -1122,6 +1412,43 @@
                     "repetitions": 1
                   }
                 }
+              },
+              "ForEach_Group_Extension_Schema": {
+                "runAfter": {
+                  "Filter_All_Group_Extension_Schemas": [
+                    "Succeeded"
+                  ],
+                  "Flatten_Group_Attrs_Loop": [
+                    "Succeeded"
+                  ]
+                },
+                "type": "Foreach",
+                "foreach": "@body('Filter_All_Group_Extension_Schemas')",
+                "actions": {
+                  "ForEach_Group_Extension_Schema_Attr": {
+                    "type": "Foreach",
+                    "foreach": "@coalesce(items('ForEach_Group_Extension_Schema')?['attributes'], json('[]'))",
+                    "actions": {
+                      "Append_Group_Extension_Attr": {
+                        "type": "AppendToArrayVariable",
+                        "inputs": {
+                          "name": "flattenedGroupAttrNames",
+                          "value": "@concat(items('ForEach_Group_Extension_Schema')?['id'], ':', items('ForEach_Group_Extension_Schema_Attr')?['name'])"
+                        }
+                      }
+                    },
+                    "runtimeConfiguration": {
+                      "concurrency": {
+                        "repetitions": 1
+                      }
+                    }
+                  }
+                },
+                "runtimeConfiguration": {
+                  "concurrency": {
+                    "repetitions": 1
+                  }
+                }
               }
             },
             "else": {
@@ -1145,6 +1472,24 @@
                   "equals": [
                     "@triggerBody()?['EnabledTests']",
                     "Schema_Discoverability_Test"
+                  ]
+                },
+                {
+                  "equals": [
+                    "@triggerBody()?['EnabledTests']",
+                    "SCIM_Group_Create_Test"
+                  ]
+                },
+                {
+                  "equals": [
+                    "@triggerBody()?['EnabledTests']",
+                    "SCIM_Group_Update_Test"
+                  ]
+                },
+                {
+                  "equals": [
+                    "@triggerBody()?['EnabledTests']",
+                    "SCIM_Group_Pagination_Test"
                   ]
                 }
               ]
@@ -1245,9 +1590,23 @@
                     "type": "Compose",
                     "inputs": "@coalesce(body('SCIM_Create_Null_Test_User')?['id'], '')"
                   },
-                  "SCIM_Get_User_Before_Null_Update": {
+                  "Delay_Before_SCIM_Get_User": {
                     "runAfter": {
                       "Compose_SCIM_Null_User_Id": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "Wait",
+                    "inputs": {
+                      "interval": {
+                        "count": 7,
+                        "unit": "Second"
+                      }
+                    }
+                  },
+                  "SCIM_Get_User_Before_Null_Update": {
+                    "runAfter": {
+                      "Delay_Before_SCIM_Get_User": [
                         "Succeeded"
                       ]
                     },
@@ -1462,9 +1821,23 @@
                       "body": "@outputs('Compose_SCIM_Null_Patch_Body')"
                     }
                   },
-                  "SCIM_Get_User_After_Null_Update": {
+                  "Delay_After_SCIM_Null_Update": {
                     "runAfter": {
                       "SCIM_Patch_Null_Update": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "Wait",
+                    "inputs": {
+                      "interval": {
+                        "count": 7,
+                        "unit": "Second"
+                      }
+                    }
+                  },
+                  "SCIM_Get_User_After_Null_Update": {
+                    "runAfter": {
+                      "Delay_After_SCIM_Null_Update": [
                         "Succeeded"
                       ]
                     },
@@ -1651,9 +2024,23 @@
                       "body": "@outputs('Compose_Null_Patch_Request_Phase2')"
                     }
                   },
-                  "SCIM_Get_User_After_Null_Phase2": {
+                  "Delay_After_SCIM_Null_Update_Phase2": {
                     "runAfter": {
                       "SCIM_Patch_Null_Update_Phase2": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "Wait",
+                    "inputs": {
+                      "interval": {
+                        "count": 7,
+                        "unit": "Second"
+                      }
+                    }
+                  },
+                  "SCIM_Get_User_After_Null_Phase2": {
+                    "runAfter": {
+                      "Delay_After_SCIM_Null_Update_Phase2": [
                         "Succeeded"
                       ]
                     },
@@ -2185,7 +2572,11 @@
             "type": "If"
           },
           "SCIM_Group_Create_Test": {
-            "runAfter": {},
+            "runAfter": {
+              "Schema_Discoverability_Test": [
+                "Succeeded"
+              ]
+            },
             "actions": {
               "SCIM_Group_Create_Test_Actions": {
                 "actions": {
@@ -2310,7 +2701,7 @@
                       ]
                     },
                     "type": "Compose",
-                    "inputs": "@setProperty(if(contains(string(coalesce(triggerBody()?['initializationData']?['targetDirectoryGroupAttributes'], json('[]'))), 'externalId'), setProperty(coalesce(triggerBody()?['initializationData']?['scimGroupBody'], json('{}')), 'externalId', guid()), coalesce(triggerBody()?['initializationData']?['scimGroupBody'], json('{}'))), 'displayName', outputs('Generate_SCIM_Direct_GroupName'))"
+                    "inputs": "@if(empty(variables('scimGroupEmailExtensionUrn')), setProperty(if(contains(string(coalesce(triggerBody()?['initializationData']?['targetDirectoryGroupAttributes'], json('[]'))), 'externalId'), setProperty(variables('scimDiscoveredGroupBody'), 'externalId', guid()), variables('scimDiscoveredGroupBody')), 'displayName', outputs('Generate_SCIM_Direct_GroupName')), union(setProperty(if(contains(string(coalesce(triggerBody()?['initializationData']?['targetDirectoryGroupAttributes'], json('[]'))), 'externalId'), setProperty(variables('scimDiscoveredGroupBody'), 'externalId', guid()), variables('scimDiscoveredGroupBody')), 'displayName', outputs('Generate_SCIM_Direct_GroupName')), json(concat('{\"', variables('scimGroupEmailExtensionUrn'), '\":', string(setProperty(coalesce(variables('scimDiscoveredGroupBody')?[variables('scimGroupEmailExtensionUrn')], json('{}')), 'email', concat('scim-group-', substring(guid(),0,8), '@', parameters('testUserDomain')))), '}'))))"
                   }
                 },
                 "runAfter": {},
@@ -2321,33 +2712,23 @@
               "actions": {}
             },
             "expression": {
-              "and": [
+              "or": [
                 {
                   "equals": [
-                    "@coalesce(triggerBody()?['initializationData']?['isGroupSupported'], false)",
-                    true
+                    "@triggerBody()?['EnabledTests']",
+                    "All"
                   ]
                 },
                 {
-                  "or": [
-                    {
-                      "equals": [
-                        "@triggerBody()?['EnabledTests']",
-                        "All"
-                      ]
-                    },
-                    {
-                      "equals": [
-                        "@triggerBody()?['EnabledTests']",
-                        "SCIMTests"
-                      ]
-                    },
-                    {
-                      "equals": [
-                        "@triggerBody()?['EnabledTests']",
-                        "SCIM_Group_Create_Test"
-                      ]
-                    }
+                  "equals": [
+                    "@triggerBody()?['EnabledTests']",
+                    "SCIMTests"
+                  ]
+                },
+                {
+                  "equals": [
+                    "@triggerBody()?['EnabledTests']",
+                    "SCIM_Group_Create_Test"
                   ]
                 }
               ]
@@ -2394,9 +2775,23 @@
                       "value": "@{coalesce(body('SCIM_Update_Create_User')?['id'], '')}"
                     }
                   },
-                  "Filter_Update_Eligible_Attributes": {
+                  "Delay_SCIM_Update_User_After_Create": {
                     "runAfter": {
                       "Set_SCIM_Update_UserId": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "Wait",
+                    "inputs": {
+                      "interval": {
+                        "count": 7,
+                        "unit": "Second"
+                      }
+                    }
+                  },
+                  "Filter_Update_Eligible_Attributes": {
+                    "runAfter": {
+                      "Delay_SCIM_Update_User_After_Create": [
                         "Succeeded"
                       ]
                     },
@@ -2542,11 +2937,24 @@
                           "body": "@outputs('Compose_Update_Patch_Body')"
                         }
                       },
-                      "SCIM_Update_Get_User": {
+                      "Delay_SCIM_Update_User_After_Patch": {
                         "runAfter": {
                           "SCIM_Update_Patch_User": [
-                            "Succeeded",
-                            "Failed"
+                            "Succeeded"
+                          ]
+                        },
+                        "type": "Wait",
+                        "inputs": {
+                          "interval": {
+                            "count": 7,
+                            "unit": "Second"
+                          }
+                        }
+                      },
+                      "SCIM_Update_Get_User": {
+                        "runAfter": {
+                          "Delay_SCIM_Update_User_After_Patch": [
+                            "Succeeded"
                           ]
                         },
                         "type": "Http",
@@ -2724,7 +3132,11 @@
             "type": "If"
           },
           "SCIM_Group_Update_Test": {
-            "runAfter": {},
+            "runAfter": {
+              "Schema_Discoverability_Test": [
+                "Succeeded"
+              ]
+            },
             "actions": {
               "SCIM_Group_Update_Test_Actions": {
                 "actions": {
@@ -2761,6 +3173,20 @@
                     "inputs": {
                       "name": "scimDirectUpdateGroupId",
                       "value": "@{coalesce(body('SCIM_GroupUpdate_Create_Group')?['id'], '')}"
+                    }
+                  },
+                  "Delay_SCIM_GroupUpdate_After_Create": {
+                    "runAfter": {
+                      "Set_SCIM_GroupUpdate_GroupId": [
+                        "Succeeded"
+                      ]
+                    },
+                    "type": "Wait",
+                    "inputs": {
+                      "interval": {
+                        "count": 7,
+                        "unit": "Second"
+                      }
                     }
                   },
                   "Compose_SCIM_Group_Update_Summary": {
@@ -2854,17 +3280,17 @@
                       ]
                     },
                     "type": "Compose",
-                    "inputs": "@setProperty(if(contains(string(coalesce(triggerBody()?['initializationData']?['targetDirectoryGroupAttributes'], json('[]'))), 'externalId'), setProperty(coalesce(triggerBody()?['initializationData']?['scimGroupBody'], json('{}')), 'externalId', guid()), coalesce(triggerBody()?['initializationData']?['scimGroupBody'], json('{}'))), 'displayName', outputs('Generate_SCIM_GroupUpdate_GroupName'))"
+                    "inputs": "@if(empty(variables('scimGroupEmailExtensionUrn')), setProperty(if(contains(string(coalesce(triggerBody()?['initializationData']?['targetDirectoryGroupAttributes'], json('[]'))), 'externalId'), setProperty(variables('scimDiscoveredGroupBody'), 'externalId', guid()), variables('scimDiscoveredGroupBody')), 'displayName', outputs('Generate_SCIM_GroupUpdate_GroupName')), union(setProperty(if(contains(string(coalesce(triggerBody()?['initializationData']?['targetDirectoryGroupAttributes'], json('[]'))), 'externalId'), setProperty(variables('scimDiscoveredGroupBody'), 'externalId', guid()), variables('scimDiscoveredGroupBody')), 'displayName', outputs('Generate_SCIM_GroupUpdate_GroupName')), json(concat('{\"', variables('scimGroupEmailExtensionUrn'), '\":', string(setProperty(coalesce(variables('scimDiscoveredGroupBody')?[variables('scimGroupEmailExtensionUrn')], json('{}')), 'email', concat('scim-group-', substring(guid(),0,8), '@', parameters('testUserDomain')))), '}'))))"
                   },
                   "Filter_GroupUpdate_Eligible": {
                     "runAfter": {
-                      "Set_SCIM_GroupUpdate_GroupId": [
+                      "Delay_SCIM_GroupUpdate_After_Create": [
                         "Succeeded"
                       ]
                     },
                     "type": "Query",
                     "inputs": {
-                      "from": "@coalesce(triggerBody()?['initializationData']?['targetDirectoryGroupAttributes'], json('[]'))",
+                      "from": "@variables('scimDiscoveredGroupWritableAttributes')",
                       "where": "@and(and(and(equals(coalesce(item()?['multivalued'], item()?['multiValued'], false), false), or(equals(toLower(coalesce(item()?['mutability'], 'readwrite')), 'readwrite'), equals(toLower(coalesce(item()?['mutability'], 'readwrite')), 'writeonly'))), not(contains(toLower(coalesce(item()?['type'], 'string')), 'reference'))), and(not(equals(coalesce(item()?['name'], ''), 'id')), not(contains(createArray('members','schemas','meta'), coalesce(item()?['name'], '')))))"
                     }
                   },
@@ -2880,7 +3306,7 @@
                       "select": {
                         "op": "replace",
                         "path": "@coalesce(item()?['name'], '')",
-                        "value": "@if(equals(toLower(coalesce(item()?['type'], 'string')), 'integer'), rand(1, 99999), if(equals(toLower(coalesce(item()?['type'], 'string')), 'boolean'), true, if(equals(toLower(coalesce(item()?['type'], 'string')), 'datetime'), utcNow(), concat('upd-', substring(guid(),0,8)))))"
+                        "value": "@if(contains(toLower(coalesce(item()?['name'], '')), 'email'), concat('scim-group-update-', substring(guid(),0,8), '@', parameters('testUserDomain')), if(equals(toLower(coalesce(item()?['type'], 'string')), 'integer'), rand(1, 99999), if(equals(toLower(coalesce(item()?['type'], 'string')), 'boolean'), true, if(equals(toLower(coalesce(item()?['type'], 'string')), 'datetime'), utcNow(), concat('upd-', substring(guid(),0,8))))))"
                       }
                     }
                   },
@@ -2931,11 +3357,24 @@
                           "body": "@outputs('Compose_GroupUpdate_Patch_Body')"
                         }
                       },
-                      "SCIM_GroupUpdate_Get_Group": {
+                      "Delay_SCIM_GroupUpdate_After_Patch": {
                         "runAfter": {
                           "SCIM_GroupUpdate_Patch_Group": [
-                            "Succeeded",
-                            "Failed"
+                            "Succeeded"
+                          ]
+                        },
+                        "type": "Wait",
+                        "inputs": {
+                          "interval": {
+                            "count": 7,
+                            "unit": "Second"
+                          }
+                        }
+                      },
+                      "SCIM_GroupUpdate_Get_Group": {
+                        "runAfter": {
+                          "Delay_SCIM_GroupUpdate_After_Patch": [
+                            "Succeeded"
                           ]
                         },
                         "type": "Http",
@@ -2961,8 +3400,8 @@
                           "select": {
                             "path": "@item()?['path']",
                             "sent": "@item()?['value']",
-                            "got": "@string(coalesce(body('SCIM_GroupUpdate_Get_Group')?[string(item()?['path'])], ''))",
-                            "match": "@equals(string(coalesce(body('SCIM_GroupUpdate_Get_Group')?[string(item()?['path'])], '')), string(item()?['value']))"
+                            "got": "@string(if(startsWith(string(item()?['path']), 'urn:'), coalesce(body('SCIM_GroupUpdate_Get_Group')?[substring(string(item()?['path']), 0, lastIndexOf(string(item()?['path']), ':'))]?[substring(string(item()?['path']), add(lastIndexOf(string(item()?['path']), ':'), 1), sub(length(string(item()?['path'])), add(lastIndexOf(string(item()?['path']), ':'), 1)))], ''), coalesce(body('SCIM_GroupUpdate_Get_Group')?[string(item()?['path'])], '')))",
+                            "match": "@equals(string(if(startsWith(string(item()?['path']), 'urn:'), coalesce(body('SCIM_GroupUpdate_Get_Group')?[substring(string(item()?['path']), 0, lastIndexOf(string(item()?['path']), ':'))]?[substring(string(item()?['path']), add(lastIndexOf(string(item()?['path']), ':'), 1), sub(length(string(item()?['path'])), add(lastIndexOf(string(item()?['path']), ':'), 1)))], ''), coalesce(body('SCIM_GroupUpdate_Get_Group')?[string(item()?['path'])], ''))), string(item()?['value']))"
                           }
                         }
                       },
@@ -2992,33 +3431,23 @@
               "actions": {}
             },
             "expression": {
-              "and": [
+              "or": [
                 {
                   "equals": [
-                    "@coalesce(triggerBody()?['initializationData']?['isGroupSupported'], false)",
-                    true
+                    "@triggerBody()?['EnabledTests']",
+                    "All"
                   ]
                 },
                 {
-                  "or": [
-                    {
-                      "equals": [
-                        "@triggerBody()?['EnabledTests']",
-                        "All"
-                      ]
-                    },
-                    {
-                      "equals": [
-                        "@triggerBody()?['EnabledTests']",
-                        "SCIMTests"
-                      ]
-                    },
-                    {
-                      "equals": [
-                        "@triggerBody()?['EnabledTests']",
-                        "SCIM_Group_Update_Test"
-                      ]
-                    }
+                  "equals": [
+                    "@triggerBody()?['EnabledTests']",
+                    "SCIMTests"
+                  ]
+                },
+                {
+                  "equals": [
+                    "@triggerBody()?['EnabledTests']",
+                    "SCIM_Group_Update_Test"
                   ]
                 }
               ]
@@ -3971,7 +4400,7 @@
                       "value": {
                         "overallResult": "@coalesce(outputs('Compose_SCIM_User_Pagination_Summary')?['overallResult'], 'FAILED')",
                         "result": "@if(equals(coalesce(outputs('Compose_SCIM_User_Pagination_Summary')?['overallResult'], 'FAILED'), 'PASSED'), 'success', if(equals(coalesce(actions('Compose_SCIM_User_Pagination_Summary')?['status'], 'Skipped'), 'Skipped'), concat('FAILED - Action: SCIM_User_Pagination_Create_User - setup failed. Created=', string(length(variables('scimUserPaginationCreatedIds')))), concat('FAILED - Action: Filter_User_Pagination_Failed_Pages - Pages=', string(variables('scimUserPaginationPageCount')), ' failedPages=', string(coalesce(length(body('Filter_User_Pagination_Failed_Pages')), 0)))))",
-                        "summary": "@coalesce(outputs('Compose_SCIM_User_Pagination_Summary'), createObject('error', 'Pagination setup failed', 'Check_User_Pagination_Need_Create', coalesce(actions('Check_User_Pagination_Need_Create')?['status'], 'Unknown'), 'createdIds', length(variables('scimUserPaginationCreatedIds'))))",
+                        "summary": "@coalesce(outputs('Compose_SCIM_User_Pagination_Summary'), json(concat('{\"error\":\"Pagination setup failed\",\"Check_User_Pagination_Need_Create\":\"', coalesce(actions('Check_User_Pagination_Need_Create')?['status'], 'Unknown'), '\",\"createdIds\":', string(length(variables('scimUserPaginationCreatedIds'))), '}')))",
                         "detailedResults": "@variables('scimUserPaginationResults')",
                         "errorDetails": {
                           "summary": "@if(equals(coalesce(outputs('Compose_SCIM_User_Pagination_Summary')?['overallResult'], 'FAILED'), 'PASSED'), null, if(equals(coalesce(actions('Compose_SCIM_User_Pagination_Summary')?['status'], 'Skipped'), 'Skipped'), concat('Pagination user creates failed. Check_User_Pagination_Need_Create status=', coalesce(actions('Check_User_Pagination_Need_Create')?['status'], 'Unknown')), coalesce(string(body('Filter_User_Pagination_Failed_Pages')), 'Unknown error')))"
@@ -4017,30 +4446,46 @@
               "actions": {}
             },
             "expression": {
-              "or": [
+              "and": [
                 {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "All"
-                  ]
+                  "not": {
+                    "contains": [
+                      "@toLower(coalesce(triggerBody()?['initializationData']?['baseAddress'], ''))",
+                      "googleapis.com"
+                    ]
+                  }
                 },
                 {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "SCIMTests"
-                  ]
-                },
-                {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "SCIM_User_Pagination_Test"
+                  "or": [
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "All"
+                      ]
+                    },
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "SCIMTests"
+                      ]
+                    },
+                    {
+                      "equals": [
+                        "@triggerBody()?['EnabledTests']",
+                        "SCIM_User_Pagination_Test"
+                      ]
+                    }
                   ]
                 }
               ]
             }
           },
           "SCIM_Group_Pagination_Test": {
-            "runAfter": {},
+            "runAfter": {
+              "Schema_Discoverability_Test": [
+                "Succeeded"
+              ]
+            },
             "actions": {
               "SCIM_Group_Pagination_Test_Actions": {
                 "actions": {
@@ -4097,7 +4542,7 @@
                                 "Content-Type": "@{parameters('scimContentType')}",
                                 "Accept": "@{parameters('scimContentType')}"
                               },
-                              "body": "@setProperty(if(contains(string(coalesce(triggerBody()?['initializationData']?['targetDirectoryGroupAttributes'], json('[]'))), 'externalId'), setProperty(coalesce(triggerBody()?['initializationData']?['scimGroupBody'], json('{}')), 'externalId', guid()), coalesce(triggerBody()?['initializationData']?['scimGroupBody'], json('{}'))), 'displayName', concat('PagGroup ', substring(guid(),0,8)))"
+                              "body": "@if(empty(variables('scimGroupEmailExtensionUrn')), setProperty(if(contains(string(coalesce(triggerBody()?['initializationData']?['targetDirectoryGroupAttributes'], json('[]'))), 'externalId'), setProperty(variables('scimDiscoveredGroupBody'), 'externalId', guid()), variables('scimDiscoveredGroupBody')), 'displayName', concat('PagGroup ', substring(guid(),0,8))), union(setProperty(if(contains(string(coalesce(triggerBody()?['initializationData']?['targetDirectoryGroupAttributes'], json('[]'))), 'externalId'), setProperty(variables('scimDiscoveredGroupBody'), 'externalId', guid()), variables('scimDiscoveredGroupBody')), 'displayName', concat('PagGroup ', substring(guid(),0,8))), json(concat('{\"', variables('scimGroupEmailExtensionUrn'), '\":', string(setProperty(coalesce(variables('scimDiscoveredGroupBody')?[variables('scimGroupEmailExtensionUrn')], json('{}')), 'email', concat('scim-group-', substring(guid(),0,8), '@', parameters('testUserDomain')))), '}'))))"
                             }
                           },
                           "Append_Group_Pagination_GroupId": {
@@ -4267,7 +4712,7 @@
                       "value": {
                         "overallResult": "@coalesce(outputs('Compose_SCIM_Group_Pagination_Summary')?['overallResult'], 'FAILED')",
                         "result": "@if(equals(coalesce(outputs('Compose_SCIM_Group_Pagination_Summary')?['overallResult'], 'FAILED'), 'PASSED'), 'success', if(equals(coalesce(actions('Compose_SCIM_Group_Pagination_Summary')?['status'], 'Skipped'), 'Skipped'), concat('FAILED - Action: SCIM_Group_Pagination_Create_Group - setup failed. Created=', string(length(variables('scimGroupPaginationCreatedIds')))), concat('FAILED - Action: Filter_Group_Pagination_Failed_Pages - Pages=', string(variables('scimGroupPaginationPageCount')), ' failedPages=', string(coalesce(length(body('Filter_Group_Pagination_Failed_Pages')), 0)))))",
-                        "summary": "@coalesce(outputs('Compose_SCIM_Group_Pagination_Summary'), createObject('error', 'Pagination setup failed', 'Check_Group_Pagination_Need_Create', coalesce(actions('Check_Group_Pagination_Need_Create')?['status'], 'Unknown'), 'createdIds', length(variables('scimGroupPaginationCreatedIds'))))",
+                        "summary": "@coalesce(outputs('Compose_SCIM_Group_Pagination_Summary'), json(concat('{\"error\":\"Pagination setup failed\",\"Check_Group_Pagination_Need_Create\":\"', coalesce(actions('Check_Group_Pagination_Need_Create')?['status'], 'Unknown'), '\",\"createdIds\":', string(length(variables('scimGroupPaginationCreatedIds'))), '}')))",
                         "detailedResults": "@variables('scimGroupPaginationResults')",
                         "errorDetails": {
                           "summary": "@if(equals(coalesce(outputs('Compose_SCIM_Group_Pagination_Summary')?['overallResult'], 'FAILED'), 'PASSED'), null, if(equals(coalesce(actions('Compose_SCIM_Group_Pagination_Summary')?['status'], 'Skipped'), 'Skipped'), concat('Pagination group creates failed. Check_Group_Pagination_Need_Create status=', coalesce(actions('Check_Group_Pagination_Need_Create')?['status'], 'Unknown')), coalesce(string(body('Filter_Group_Pagination_Failed_Pages')), 'Unknown error')))"
@@ -4315,10 +4760,12 @@
             "expression": {
               "and": [
                 {
-                  "equals": [
-                    "@coalesce(triggerBody()?['initializationData']?['isGroupSupported'], false)",
-                    true
-                  ]
+                  "not": {
+                    "contains": [
+                      "@toLower(coalesce(triggerBody()?['initializationData']?['baseAddress'], ''))",
+                      "googleapis.com"
+                    ]
+                  }
                 },
                 {
                   "or": [
@@ -4408,22 +4855,28 @@
                       "body": "@outputs('Compose_Manager_ManagerUser_Body')"
                     }
                   },
-                  "Compose_Manager_Set_Patch_Body": {
+                  "Delay_Manager_Initial_Users_Ready": {
                     "runAfter": {
                       "SCIM_Manager_Create_ManagerUser": [ "Succeeded" ]
+                    },
+                    "type": "Wait",
+                    "inputs": {
+                      "interval": {
+                        "count": 7,
+                        "unit": "Second"
+                      }
+                    }
+                  },
+                  "Compose_Manager_Set_Patch_Body": {
+                    "runAfter": {
+                      "Delay_Manager_Initial_Users_Ready": [ "Succeeded" ]
                     },
                     "type": "Compose",
                     "inputs": {
                       "schemas": [
                         "urn:ietf:params:scim:api:messages:2.0:PatchOp"
                       ],
-                      "Operations": [
-                        {
-                          "op": "Add",
-                          "path": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager",
-                          "value": "@body('SCIM_Manager_Create_ManagerUser')?['id']"
-                        }
-                      ]
+                      "Operations": "@if(coalesce(triggerBody()?['initializationData']?['isVerbosePatchSupported'], true), createArray(json(concat('{\"op\":\"Add\",\"path\":\"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager\",\"value\":{\"value\":\"', body('SCIM_Manager_Create_ManagerUser')?['id'], '\"}}'))), createArray(json(concat('{\"op\":\"Add\",\"value\":{\"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager\":{\"value\":\"', body('SCIM_Manager_Create_ManagerUser')?['id'], '\"}}}'))))"
                     }
                   },
                   "SCIM_Manager_Patch_Set_Manager": {
@@ -4442,9 +4895,21 @@
                       "body": "@outputs('Compose_Manager_Set_Patch_Body')"
                     }
                   },
-                  "SCIM_Manager_Get_After_Set": {
+                  "Delay_Manager_Set_Verification": {
                     "runAfter": {
                       "SCIM_Manager_Patch_Set_Manager": [ "Succeeded" ]
+                    },
+                    "type": "Wait",
+                    "inputs": {
+                      "interval": {
+                        "count": 7,
+                        "unit": "Second"
+                      }
+                    }
+                  },
+                  "SCIM_Manager_Get_After_Set": {
+                    "runAfter": {
+                      "Delay_Manager_Set_Verification": [ "Succeeded" ]
                     },
                     "type": "Http",
                     "inputs": {
@@ -4486,22 +4951,28 @@
                       "body": "@outputs('Compose_Manager_SecondManager_Body')"
                     }
                   },
+                  "Delay_Manager_Second_Manager_Ready": {
+                    "runAfter": {
+                      "SCIM_Manager_Create_SecondManager": [ "Succeeded" ]
+                    },
+                    "type": "Wait",
+                    "inputs": {
+                      "interval": {
+                        "count": 7,
+                        "unit": "Second"
+                      }
+                    }
+                  },
                   "Compose_Manager_Change_Patch_Body": {
                     "runAfter": {
-                      "SCIM_Manager_Create_SecondManager": ["Succeeded"]
+                      "Delay_Manager_Second_Manager_Ready": ["Succeeded"]
                     },
                     "type": "Compose",
                     "inputs": {
                       "schemas": [
                         "urn:ietf:params:scim:api:messages:2.0:PatchOp"
                       ],
-                      "Operations": [
-                        {
-                          "op": "replace",
-                          "path": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager",
-                          "value": "@body('SCIM_Manager_Create_SecondManager')?['id']"
-                        }
-                      ]
+                      "Operations": "@if(coalesce(triggerBody()?['initializationData']?['isVerbosePatchSupported'], true), createArray(json(concat('{\"op\":\"replace\",\"path\":\"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.value\",\"value\":\"', body('SCIM_Manager_Create_SecondManager')?['id'], '\"}'))), createArray(json(concat('{\"op\":\"replace\",\"value\":{\"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager\":{\"value\":\"', body('SCIM_Manager_Create_SecondManager')?['id'], '\"}}}'))))"
                     }
                   },
                   "SCIM_Manager_Patch_Change_Manager": {
@@ -4520,9 +4991,21 @@
                       "body": "@outputs('Compose_Manager_Change_Patch_Body')"
                     }
                   },
+                  "Delay_Manager_Change_Verification": {
+                    "runAfter": {
+                      "SCIM_Manager_Patch_Change_Manager": [ "Succeeded" ]
+                    },
+                    "type": "Wait",
+                    "inputs": {
+                      "interval": {
+                        "count": 7,
+                        "unit": "Second"
+                      }
+                    }
+                  },
                   "SCIM_Manager_Get_After_Change": {
                     "runAfter": {
-                      "SCIM_Manager_Patch_Change_Manager": ["Succeeded"]
+                      "Delay_Manager_Change_Verification": ["Succeeded"]
                     },
                     "type": "Http",
                     "inputs": {
@@ -4545,9 +5028,8 @@
                       ],
                       "Operations": [
                         {
-                          "op": "replace",
-                          "path": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager",
-                          "value": ""
+                          "op": "remove",
+                          "path": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager"
                         }
                       ]
                     }
@@ -4568,9 +5050,21 @@
                       "body": "@outputs('Compose_Manager_Remove_Patch_Body')"
                     }
                   },
-                  "SCIM_Manager_Get_After_Remove": {
+                  "Delay_Manager_Remove_Verification": {
                     "runAfter": {
                       "SCIM_Manager_Patch_Remove_Manager": [ "Succeeded" ]
+                    },
+                    "type": "Wait",
+                    "inputs": {
+                      "interval": {
+                        "count": 7,
+                        "unit": "Second"
+                      }
+                    }
+                  },
+                  "SCIM_Manager_Get_After_Remove": {
+                    "runAfter": {
+                      "Delay_Manager_Remove_Verification": [ "Succeeded" ]
                     },
                     "type": "Http",
                     "inputs": {
@@ -4624,7 +5118,34 @@
                 },
                 "type": "Scope",
                 "actions": {
+                  "SCIM_Manager_Deactivate_TestUser": {
+                    "type": "Http",
+                    "inputs": {
+                      "uri": "@{concat(parameters('scimEndpoint'), '/Users/', coalesce(body('SCIM_Manager_Create_TestUser')?['id'], 'UNKNOWN'))}",
+                      "method": "PATCH",
+                      "headers": {
+                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                        "Content-Type": "@{parameters('scimContentType')}",
+                        "Accept": "@{parameters('scimContentType')}"
+                      },
+                      "body": {
+                        "schemas": [
+                          "urn:ietf:params:scim:api:messages:2.0:PatchOp"
+                        ],
+                        "Operations": [
+                          {
+                            "op": "replace",
+                            "path": "active",
+                            "value": false
+                          }
+                        ]
+                      }
+                    }
+                  },
                   "SCIM_Manager_Delete_TestUser": {
+                    "runAfter": {
+                      "SCIM_Manager_Deactivate_TestUser": [ "Succeeded", "Failed", "Skipped" ]
+                    },
                     "type": "Http",
                     "inputs": {
                       "uri": "@{concat(parameters('scimEndpoint'), '/Users/', coalesce(body('SCIM_Manager_Create_TestUser')?['id'], 'UNKNOWN'))}",
@@ -4635,9 +5156,36 @@
                       }
                     }
                   },
-                  "SCIM_Manager_Delete_ManagerUser": {
+                  "SCIM_Manager_Deactivate_ManagerUser": {
                     "runAfter": {
                       "SCIM_Manager_Delete_TestUser": [ "Succeeded", "Failed", "Skipped" ]
+                    },
+                    "type": "Http",
+                    "inputs": {
+                      "uri": "@{concat(parameters('scimEndpoint'), '/Users/', coalesce(body('SCIM_Manager_Create_ManagerUser')?['id'], 'UNKNOWN'))}",
+                      "method": "PATCH",
+                      "headers": {
+                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                        "Content-Type": "@{parameters('scimContentType')}",
+                        "Accept": "@{parameters('scimContentType')}"
+                      },
+                      "body": {
+                        "schemas": [
+                          "urn:ietf:params:scim:api:messages:2.0:PatchOp"
+                        ],
+                        "Operations": [
+                          {
+                            "op": "replace",
+                            "path": "active",
+                            "value": false
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "SCIM_Manager_Delete_ManagerUser": {
+                    "runAfter": {
+                      "SCIM_Manager_Deactivate_ManagerUser": [ "Succeeded", "Failed", "Skipped" ]
                     },
                     "type": "Http",
                     "inputs": {
@@ -4649,9 +5197,36 @@
                       }
                     }
                   },
-                  "SCIM_Manager_Delete_SecondManager": {
+                  "SCIM_Manager_Deactivate_SecondManager": {
                     "runAfter": {
                       "SCIM_Manager_Delete_ManagerUser": [ "Succeeded", "Failed", "Skipped" ]
+                    },
+                    "type": "Http",
+                    "inputs": {
+                      "uri": "@{concat(parameters('scimEndpoint'), '/Users/', coalesce(body('SCIM_Manager_Create_SecondManager')?['id'], 'UNKNOWN'))}",
+                      "method": "PATCH",
+                      "headers": {
+                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                        "Content-Type": "@{parameters('scimContentType')}",
+                        "Accept": "@{parameters('scimContentType')}"
+                      },
+                      "body": {
+                        "schemas": [
+                          "urn:ietf:params:scim:api:messages:2.0:PatchOp"
+                        ],
+                        "Operations": [
+                          {
+                            "op": "replace",
+                            "path": "active",
+                            "value": false
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "SCIM_Manager_Delete_SecondManager": {
+                    "runAfter": {
+                      "SCIM_Manager_Deactivate_SecondManager": [ "Succeeded", "Failed", "Skipped" ]
                     },
                     "type": "Http",
                     "inputs": {
@@ -4671,12 +5246,6 @@
             },
             "expression": {
               "and": [
-                {
-                  "equals": [
-                    "@coalesce(triggerBody()?['initializationData']?['isManagerAttributeSupported'], false)",
-                    true
-                  ]
-                },
                 {
                   "equals": [
                     "@contains(string(coalesce(triggerBody()?['initializationData']?['targetDirectoryUserAttributes'], json('[]'))), 'manager')",
@@ -4734,9 +5303,8 @@
           "SCIMUserPaginationTestOutputs": "@variables('SCIMUserPaginationTestOutputs')",
           "SCIMGroupPaginationTestOutputs": "@variables('SCIMGroupPaginationTestOutputs')",
           "SCIMUpdateManagerTestOutputs": "@variables('SCIMUpdateManagerTestOutputs')",
-          "authenticationModelResult": "@if(or(equals(variables('ValidateCredentialsTestOutputs')['overallResult'], 'PASSED'), equals(variables('FederatedIdentityTestOutputs')['overallResult'], 'PASSED')), 'PASSED', 'FAILED')",
           "testSuiteName": "SCIMTests",
-          "status": "@if(or(or(or(equals(variables('SchemaDiscoverabilityTestOutputs')['overallResult'], 'FAILED'), equals(variables('SCIMNullUpdateTestOutputs')['overallResult'], 'FAILED')), or(and(not(equals(variables('ValidateCredentialsTestOutputs')['overallResult'], 'PASSED')), not(equals(variables('FederatedIdentityTestOutputs')['overallResult'], 'PASSED'))), equals(variables('SCIMUserCreateTestOutputs')['overallResult'], 'FAILED'))), or(or(or(equals(variables('SCIMGroupCreateTestOutputs')['overallResult'], 'FAILED'), equals(variables('SCIMUserUpdateTestOutputs')['overallResult'], 'FAILED')), equals(variables('SCIMGroupUpdateTestOutputs')['overallResult'], 'FAILED')), and(contains(string(coalesce(triggerBody()?['initializationData']?['targetDirectoryUserAttributes'], json('[]'))), 'manager'), equals(variables('SCIMUpdateManagerTestOutputs')['overallResult'], 'FAILED')))), 'Failed', 'Passed')",
+          "status": "@if(or(or(or(equals(variables('SchemaDiscoverabilityTestOutputs')['overallResult'], 'FAILED'), equals(variables('SCIMNullUpdateTestOutputs')['overallResult'], 'FAILED')), or(or(equals(variables('ValidateCredentialsTestOutputs')['overallResult'], 'FAILED'), equals(variables('FederatedIdentityTestOutputs')['overallResult'], 'FAILED')), equals(variables('SCIMUserCreateTestOutputs')['overallResult'], 'FAILED'))), or(or(or(equals(variables('SCIMGroupCreateTestOutputs')['overallResult'], 'FAILED'), equals(variables('SCIMUserUpdateTestOutputs')['overallResult'], 'FAILED')), equals(variables('SCIMGroupUpdateTestOutputs')['overallResult'], 'FAILED')), and(contains(string(coalesce(triggerBody()?['initializationData']?['targetDirectoryUserAttributes'], json('[]'))), 'manager'), equals(variables('SCIMUpdateManagerTestOutputs')['overallResult'], 'FAILED')))), 'Failed', 'Passed')",
           "workflowRunId": "@workflow().run.name"
         }
       }

@@ -150,11 +150,23 @@
                             }
                         }
                     },
-                    "Compose_Job_Settings_And_Templates": {
+                    "Filter_BaseAddress_Connectivity_Parameter": {
                         "runAfter": {
                             "Get_Connectivity_Parameters": [
                                 "Succeeded",
                                 "Failed"
+                            ]
+                        },
+                        "type": "Query",
+                        "inputs": {
+                            "from": "@coalesce(body('Get_Connectivity_Parameters')?['value'], json('[]'))",
+                            "where": "@equals(toLower(coalesce(item()?['key'], item()?['name'], '')), 'baseaddress')"
+                        }
+                    },
+                    "Compose_Job_Settings_And_Templates": {
+                        "runAfter": {
+                            "Filter_BaseAddress_Connectivity_Parameter": [
+                                "Succeeded"
                             ]
                         },
                         "type": "Compose",
@@ -1234,6 +1246,7 @@
                         "appRoles": "@body('Get_App_Roles')",
                         "userAppRole": "@body('Filter_User_AppRole')",
                         "schema": "@body('Get_Schema')",
+                        "baseAddress": "@if(greater(length(coalesce(body('Filter_BaseAddress_Connectivity_Parameter'), json('[]'))), 0), first(body('Filter_BaseAddress_Connectivity_Parameter'))?['value'], '')",
                         "sourceToTargetLookup": "@variables('sourceToTargetLookup')",
                         "mappedUserTargetAttributes": "@body('Select_Target_Attribute_Names')",
                         "mappedGroupTargetAttributes": "@body('Select_Target_Group_Attribute_Names')",
