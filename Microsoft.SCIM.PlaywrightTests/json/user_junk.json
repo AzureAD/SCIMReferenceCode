@@ -1,0 +1,24 @@
+{
+  "acve": tre,
+  "adadfdresses": [
+    {
+      "coudftry": "Beruda",
+      "formatted": "9132 Jennifer Way Suite 040\nSouth Nancy, MI 55645",
+      "locality": "West Mercedes",
+      "postalCode": "99265",
+      "region": "Montana",
+      "streetAddress": "4939 Hess Fork",
+      "type": "work",
+      "primary": false
+    },
+    {
+      "country": null,
+      "formatted": "18522 Lisa Unions\nEast Gregory, CT 52311",
+      "locality": null,
+      les": [],
+      "title": "Site engineer",
+      "externalId": "22fbc523-6032-4c5f-939d-5d4850cf3e52",
+      "schemas": [
+        "urn:ietf:params:scim:schemas:core:2.0:User"
+      ]
+    }

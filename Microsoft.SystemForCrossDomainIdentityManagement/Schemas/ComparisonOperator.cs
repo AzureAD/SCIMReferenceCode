@@ -7,17 +7,20 @@ namespace Microsoft.SCIM
     public enum ComparisonOperator
     {
         BitAnd,
+        StartsWith,
         EndsWith,
         Equals,
         EqualOrGreaterThan,
         GreaterThan,
         EqualOrLessThan,
         LessThan,
+        Contains,
         Includes,
         IsMemberOf,
         MatchesExpression,
         NotBitAnd,
         NotEquals,
-        NotMatchesExpression
+        NotMatchesExpression,
+        Present
     }
 }

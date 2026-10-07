@@ -49,8 +49,8 @@ namespace Microsoft.SCIM
             }
 
             request =
-                new DeletionRequest(
-                    this.BulkRequest.Request,
+                new SystemForCrossDomainIdentityManagementRequest<IResourceIdentifier>(
+                    this.BulkRequest.HttpContext,
                     resourceIdentifier.Identifier,
                     this.BulkRequest.CorrelationIdentifier,
                     this.BulkRequest.Extensions);

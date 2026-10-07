@@ -5,9 +5,8 @@ namespace Microsoft.SCIM
     using System;
     using System.Collections.Generic;
     using System.Net;
-    using System.Net.Http;
-    using System.Web.Http;
     using Microsoft.AspNetCore.Authorization;
+    using Microsoft.AspNetCore.Http;
     using Microsoft.AspNetCore.Mvc;
 
     [Route(ServiceConstants.RouteSchemas)]
@@ -20,33 +19,33 @@ namespace Microsoft.SCIM
         {
         }
 
-        public QueryResponseBase Get()
+        public ActionResult<QueryResponseBase> Get()
         {
             string correlationIdentifier = null;
 
             try
             {
-                HttpRequestMessage request = this.ConvertRequest();
-                if (!request.TryGetRequestIdentifier(out correlationIdentifier))
+                HttpContext httpContext = this.HttpContext;
+                if (!httpContext.TryGetRequestIdentifier(out correlationIdentifier))
                 {
-                    throw new HttpResponseException(HttpStatusCode.InternalServerError);
+                    return this.StatusCode((int)HttpStatusCode.InternalServerError);
                 }
 
                 IProvider provider = this.provider;
                 if (null == provider)
                 {
-                    throw new HttpResponseException(HttpStatusCode.InternalServerError);
+                    return this.StatusCode((int)HttpStatusCode.InternalServerError);
                 }
 
                 IReadOnlyCollection<Resource> resources = provider.Schema;
                 QueryResponseBase result = new QueryResponse(resources);
-                
+
                 result.TotalResults =
                     result.ItemsPerPage =
                         resources.Count;
                 result.StartIndex = 1;
                 return result;
-                
+
             }
             catch (ArgumentException argumentException)
             {
@@ -60,7 +59,7 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                throw new HttpResponseException(HttpStatusCode.BadRequest);
+                return BadRequest();
             }
             catch (NotImplementedException notImplementedException)
             {
@@ -74,7 +73,7 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                throw new HttpResponseException(HttpStatusCode.NotImplemented);
+                return this.StatusCode((int)HttpStatusCode.NotImplemented);
             }
             catch (NotSupportedException notSupportedException)
             {
@@ -88,7 +87,7 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                throw new HttpResponseException(HttpStatusCode.NotImplemented);
+                return this.StatusCode((int)HttpStatusCode.NotImplemented);
             }
             catch (Exception exception)
             {
@@ -102,7 +101,7 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                throw;
+                return this.StatusCode((int)HttpStatusCode.InternalServerError);
             }
         }
     }

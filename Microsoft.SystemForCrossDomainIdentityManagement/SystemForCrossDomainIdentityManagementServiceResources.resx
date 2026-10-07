@@ -223,4 +223,7 @@ Supplied:
 Received: 
 {1}</value>
   </data>
+  <data name="ExceptionResourceConflict" xml:space="preserve">
+    <value>The specified version number does not match the resource's latest version number, or a service provider refused to create a new, duplicate resource.</value>
+  </data>
 </root>

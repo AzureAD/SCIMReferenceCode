@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.SCIM", "Microsoft
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.SCIM.WebHostSample", "Microsoft.SCIM.WebHostSample\Microsoft.SCIM.WebHostSample.csproj", "{238F1B05-D3EE-4AB4-871E-ADEA0A1665CF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.SCIM.PlaywrightTests", "Microsoft.SCIM.PlaywrightTests\Microsoft.SCIM.PlaywrightTests.csproj", "{48A8DD7E-0D51-4CB4-B889-8D0A7CC2645D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{238F1B05-D3EE-4AB4-871E-ADEA0A1665CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{238F1B05-D3EE-4AB4-871E-ADEA0A1665CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{238F1B05-D3EE-4AB4-871E-ADEA0A1665CF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{48A8DD7E-0D51-4CB4-B889-8D0A7CC2645D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{48A8DD7E-0D51-4CB4-B889-8D0A7CC2645D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{48A8DD7E-0D51-4CB4-B889-8D0A7CC2645D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{48A8DD7E-0D51-4CB4-B889-8D0A7CC2645D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -5,19 +5,11 @@
 namespace Microsoft.SCIM
 {
     using System;
-    using System.Collections;
     using System.Collections.Generic;
-    using System.Globalization;
-    using System.IO;
     using System.Linq;
     using System.Net.Http;
-    using System.Net.Http.Formatting;
-    using System.Text;
     using System.Text.RegularExpressions;
-    using System.Threading.Tasks;
-    using System.Web;
     using Newtonsoft.Json;
-    using Newtonsoft.Json.Linq;
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1506:AvoidExcessiveClassCoupling", Justification = "None")]
     public static class ProtocolExtensions
@@ -40,9 +32,6 @@ namespace Microsoft.SCIM
                     new Regex(ProtocolExtensions.BulkIdentifierPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled));
         private interface IHttpRequestMessageWriter : IDisposable
         {
-            void Close();
-            Task FlushAsync();
-            Task WriteAsync();
         }
 
         public static HttpMethod PatchMethod
@@ -220,35 +209,6 @@ namespace Microsoft.SCIM
             }
         }
 
-        public static HttpRequestMessage ComposeDeleteRequest(this Resource resource, Uri baseResourceIdentifier)
-        {
-            if (null == baseResourceIdentifier)
-            {
-                throw new ArgumentNullException(nameof(baseResourceIdentifier));
-            }
-
-            Uri resourceIdentifier = resource.GetResourceIdentifier(baseResourceIdentifier);
-
-            HttpRequestMessage result = null;
-            try
-            {
-                result = new HttpRequestMessage(HttpMethod.Delete, resourceIdentifier);
-                return result;
-            }
-            catch
-            {
-                if (result != null)
-                {
-                    result.Dispose();
-#pragma warning disable IDE0059 // Unnecessary assignment of a value
-                    result = null;
-#pragma warning restore IDE0059 // Unnecessary assignment of a value
-                }
-
-                throw;
-            }
-        }
-
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "0", Justification = "False analysis of 'this' parameter of an extension method")]
         public static HttpRequestMessage ComposeGetRequest(
             this Schematized schematized,
@@ -307,41 +267,6 @@ namespace Microsoft.SCIM
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "0", Justification = "False analysis of 'this' parameter of an extension method")]
         public static HttpRequestMessage ComposeGetRequest(
-            this Schematized schematized,
-            Uri baseResourceIdentifier,
-            IReadOnlyCollection<IFilter> filters,
-            IReadOnlyCollection<string> requestedAttributePaths,
-            IReadOnlyCollection<string> excludedAttributePaths)
-        {
-            HttpRequestMessage result = null;
-            try
-            {
-                result =
-                    schematized
-                    .ComposeGetRequest(
-                        baseResourceIdentifier,
-                        filters,
-                        requestedAttributePaths,
-                        excludedAttributePaths,
-                        null);
-                return result;
-            }
-            catch
-            {
-                if (result != null)
-                {
-                    result.Dispose();
-#pragma warning disable IDE0059 // Unnecessary assignment of a value
-                    result = null;
-#pragma warning restore IDE0059 // Unnecessary assignment of a value
-                }
-
-                throw;
-            }
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "0", Justification = "False analysis of 'this' parameter of an extension method")]
-        public static HttpRequestMessage ComposeGetRequest(
             this Resource resource,
             Uri baseResourceIdentifier,
             IReadOnlyCollection<string> requestedAttributePaths,
@@ -372,264 +297,6 @@ namespace Microsoft.SCIM
             {
                 result = new HttpRequestMessage(HttpMethod.Get, resourceIdentifier);
                 return result;
-            }
-            catch
-            {
-                if (result != null)
-                {
-                    result.Dispose();
-#pragma warning disable IDE0059 // Unnecessary assignment of a value
-                    result = null;
-#pragma warning restore IDE0059 // Unnecessary assignment of a value
-                }
-
-                throw;
-            }
-        }
-
-        public static HttpRequestMessage ComposeGetRequest(this Resource resource, Uri baseResourceIdentifier)
-        {
-            if (null == baseResourceIdentifier)
-            {
-                throw new ArgumentNullException(nameof(baseResourceIdentifier));
-            }
-
-            HttpRequestMessage result = null;
-            try
-            {
-                IReadOnlyCollection<string> requestedAttributePaths = Array.Empty<string>();
-                IReadOnlyCollection<string> excludedAttributePaths = Array.Empty<string>();
-                result = resource.ComposeGetRequest(baseResourceIdentifier, requestedAttributePaths, excludedAttributePaths);
-                return result;
-            }
-            catch
-            {
-                if (result != null)
-                {
-                    result.Dispose();
-#pragma warning disable IDE0059 // Unnecessary assignment of a value
-                    result = null;
-#pragma warning restore IDE0059 // Unnecessary assignment of a value
-                }
-
-                throw;
-            }
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters", Justification = "The parameter must be a patch for the operation to produce a semantically valid result")]
-        public static HttpRequestMessage ComposePatchRequest(
-            this Resource resource,
-            Uri baseResourceIdentifier,
-            PatchRequestBase patch)
-        {
-            if (null == baseResourceIdentifier)
-            {
-                throw new ArgumentNullException(nameof(baseResourceIdentifier));
-            }
-
-            if (null == patch)
-            {
-                throw new ArgumentNullException(nameof(patch));
-            }
-
-            Dictionary<string, object> json = patch.ToJson();
-
-            Uri resourceIdentifier = resource.GetResourceIdentifier(baseResourceIdentifier);
-
-            HttpRequestMessage result = null;
-            try
-            {
-                HttpContent requestContent = null;
-                try
-                {
-                    string contentType = MediaTypes.Protocol;
-
-                    MediaTypeFormatter contentFormatter = new JsonMediaTypeFormatter();
-                    requestContent =
-                        new ObjectContent<Dictionary<string, object>>(
-                            json,
-                            contentFormatter,
-                            contentType);
-                    result = new HttpRequestMessage(ProtocolExtensions.PatchMethod, resourceIdentifier);
-                    result.Content = requestContent;
-                    requestContent = null;
-                    return result;
-                }
-                finally
-                {
-                    if (requestContent != null)
-                    {
-                        requestContent.Dispose();
-                        requestContent = null;
-                    }
-                }
-            }
-            catch
-            {
-                if (result != null)
-                {
-                    result.Dispose();
-#pragma warning disable IDE0059 // Unnecessary assignment of a value
-                    result = null;
-#pragma warning restore IDE0059 // Unnecessary assignment of a value
-                }
-
-                throw;
-            }
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "0", Justification = "False analysis of 'this' parameter of an extension method")]
-        public static HttpRequestMessage ComposePatchRequest(
-            this Resource patch,
-            Uri baseResourceIdentifier)
-        {
-            if (null == baseResourceIdentifier)
-            {
-                throw new ArgumentNullException(nameof(baseResourceIdentifier));
-            }
-
-            Dictionary<string, object> json = patch.ToJson();
-            json.Trim();
-
-            Uri resourceIdentifier = patch.GetResourceIdentifier(baseResourceIdentifier);
-
-            HttpRequestMessage result = null;
-            try
-            {
-                HttpContent requestContent = null;
-                try
-                {
-                    MediaTypeFormatter contentFormatter = new JsonMediaTypeFormatter();
-                    requestContent =
-                        new ObjectContent<Dictionary<string, object>>(
-                            json,
-                            contentFormatter,
-                            MediaTypes.Json);
-                    result = new HttpRequestMessage(ProtocolExtensions.PatchMethod, resourceIdentifier);
-                    result.Content = requestContent;
-                    requestContent = null;
-                    return result;
-                }
-                finally
-                {
-                    if (requestContent != null)
-                    {
-                        requestContent.Dispose();
-                        requestContent = null;
-                    }
-                }
-            }
-            catch
-            {
-                if (result != null)
-                {
-                    result.Dispose();
-#pragma warning disable IDE0059 // Unnecessary assignment of a value
-                    result = null;
-#pragma warning restore IDE0059 // Unnecessary assignment of a value
-                }
-
-                throw;
-            }
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "0", Justification = "False analysis of extension method")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters", Justification = "Performing the operation on the base type would be invalid")]
-        public static HttpRequestMessage ComposePutRequest(this Resource resource, Uri baseResourceIdentifier)
-        {
-            if (null == baseResourceIdentifier)
-            {
-                throw new ArgumentNullException(nameof(baseResourceIdentifier));
-            }
-
-            string contentType = MediaTypes.Protocol;
-
-            Dictionary<string, object> json = resource.ToJson();
-            json.Trim();
-
-            Uri resourceIdentifier = resource.GetResourceIdentifier(baseResourceIdentifier);
-
-            HttpRequestMessage result = null;
-            try
-            {
-                HttpContent requestContent = null;
-                try
-                {
-                    MediaTypeFormatter contentFormatter = new JsonMediaTypeFormatter();
-                    requestContent =
-                        new ObjectContent<Dictionary<string, object>>(
-                            json,
-                            contentFormatter,
-                            contentType);
-                    result = new HttpRequestMessage(HttpMethod.Put, resourceIdentifier);
-                    result.Content = requestContent;
-                    requestContent = null;
-                    return result;
-                }
-                finally
-                {
-                    if (requestContent != null)
-                    {
-                        requestContent.Dispose();
-                        requestContent = null;
-                    }
-                }
-            }
-            catch
-            {
-                if (result != null)
-                {
-                    result.Dispose();
-#pragma warning disable IDE0059 // Unnecessary assignment of a value
-                    result = null;
-#pragma warning restore IDE0059 // Unnecessary assignment of a value
-                }
-
-                throw;
-            }
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "0", Justification = "False analysis of extension method")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1011:ConsiderPassingBaseTypesAsParameters", Justification = "Performing the operation on the base type would be invalid")]
-        public static HttpRequestMessage ComposePostRequest(this Resource resource, Uri baseResourceIdentifier)
-        {
-            if (null == baseResourceIdentifier)
-            {
-                throw new ArgumentNullException(nameof(baseResourceIdentifier));
-            }
-
-            string contentType = MediaTypes.Protocol;
-
-            Dictionary<string, object> json = resource.ToJson();
-            json.Trim();
-
-            Uri typeResourceIdentifier = resource.GetTypeIdentifier(baseResourceIdentifier);
-
-            HttpRequestMessage result = null;
-            try
-            {
-                HttpContent requestContent = null;
-                try
-                {
-                    MediaTypeFormatter contentFormatter = new JsonMediaTypeFormatter();
-                    requestContent =
-                        new ObjectContent<Dictionary<string, object>>(
-                            json,
-                            contentFormatter,
-                            contentType);
-                    result = new HttpRequestMessage(HttpMethod.Post, typeResourceIdentifier);
-                    result.Content = requestContent;
-                    requestContent = null;
-                    return result;
-                }
-                finally
-                {
-                    if (requestContent != null)
-                    {
-                        requestContent.Dispose();
-                        requestContent = null;
-                    }
-                }
             }
             catch
             {
@@ -823,18 +490,6 @@ namespace Microsoft.SCIM
             return result;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "0", Justification = "False analysis of 'this' parameter of an extension method")]
-        public static IResourceIdentifier GetIdentifier(this Resource resource)
-        {
-            if (!resource.TryGetSchemaIdentifier(out string schemaIdentifier))
-            {
-                schemaIdentifier = resource.GetSchemaIdentifier();
-            }
-
-            IResourceIdentifier result = new ResourceIdentifier(schemaIdentifier, resource.Identifier);
-            return result;
-        }
-
         private static string GetPath(this Schematized schematized)
         {
             if (schematized.TryGetPath(out string path))
@@ -891,7 +546,7 @@ namespace Microsoft.SCIM
             string escapedIdentifier = Uri.EscapeDataString(resource.Identifier);
             string resultValue =
                 typeResource.ToString() +
-                ServiceConstants.SeparatorSegments + 
+                ServiceConstants.SeparatorSegments +
                 escapedIdentifier;
             result = new Uri(resultValue);
             return result;
@@ -1227,126 +882,6 @@ namespace Microsoft.SCIM
             return result;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA1801:ReviewUnusedParameters", MessageId = "resourceIdentifier", Justification = "False analysis of extension method")]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods", MessageId = "0", Justification = "False analysis of 'this' parameter of an extension method")]
-#pragma warning disable IDE0060 // Remove unused parameter
-        public static Uri Serialize(this IResourceIdentifier resourceIdentifier, Resource resource, Uri baseResourceIdentifier)
-#pragma warning restore IDE0060 // Remove unused parameter
-        {
-            if (null == resource)
-            {
-                throw new ArgumentNullException(nameof(resource));
-            }
-
-            if (null == baseResourceIdentifier)
-            {
-                throw new ArgumentNullException(nameof(baseResourceIdentifier));
-            }
-
-            Uri typeResource = resource.GetTypeIdentifier(baseResourceIdentifier);
-            string escapedIdentifier = Uri.EscapeDataString(resource.Identifier);
-            string resultValue =
-                typeResource.ToString() +
-                ServiceConstants.SeparatorSegments +
-                escapedIdentifier;
-
-            Uri result = new Uri(resultValue);
-            return result;
-        }
-
-        public static async Task<string> SerializeAsync(this HttpRequestMessage request, bool acceptLargeObjects)
-        {
-            if (null == request)
-            {
-                throw new ArgumentNullException(nameof(request));
-            }
-
-            StringBuilder buffer = new StringBuilder();
-            TextWriter textWriter = null;
-            try
-            {
-
-#pragma warning disable CA2000 // Dispose objects before losing scope
-                textWriter = new StringWriter(buffer);
-#pragma warning restore CA2000 // Dispose objects before losing scope
-
-                IHttpRequestMessageWriter requestWriter = null;
-                try
-                {
-                    requestWriter = new HttpRequestMessageWriter(request, textWriter, acceptLargeObjects);
-                    textWriter = null;
-                    await requestWriter.WriteAsync().ConfigureAwait(false);
-                    await requestWriter.FlushAsync().ConfigureAwait(false);
-                    string result = buffer.ToString();
-                    return result;
-                }
-                finally
-                {
-                    if (requestWriter != null)
-                    {
-                        requestWriter.Close();
-                        requestWriter = null;
-                    }
-                }
-            }
-            finally
-            {
-                if (textWriter != null)
-                {
-                    textWriter.Flush();
-                    textWriter.Close();
-#pragma warning disable IDE0059 // Unnecessary assignment of a value
-                    textWriter = null;
-#pragma warning restore IDE0059 // Unnecessary assignment of a value
-                }
-            }
-        }
-
-        public static async Task<string> SerializeAsync(this HttpRequestMessage request)
-        {
-            if (null == request)
-            {
-                throw new ArgumentNullException(nameof(request));
-            }
-
-            string result = await request.SerializeAsync(false).ConfigureAwait(false);
-            return result;
-        }
-
-        public static IReadOnlyCollection<T> ToCollection<T>(this IEnumerable enumerable)
-        {
-            if (null == enumerable)
-            {
-                throw new ArgumentNullException(nameof(enumerable));
-            }
-
-            IList<T> list = new List<T>();
-            foreach (object item in enumerable)
-            {
-                T typed = (T)item;
-                list.Add(typed);
-            }
-            IReadOnlyCollection<T> result = list.ToArray();
-            return result;
-        }
-
-        public static IReadOnlyCollection<T> ToCollection<T>(this ArrayList array)
-        {
-            if (null == array)
-            {
-                throw new ArgumentNullException(nameof(array));
-            }
-
-            IList<T> list = new List<T>(array.Count);
-            foreach (object item in array)
-            {
-                T typed = (T)item;
-                list.Add(typed);
-            }
-            IReadOnlyCollection<T> result = list.ToArray();
-            return result;
-        }
-
         public static IReadOnlyCollection<T> ToCollection<T>(this T item)
         {
             IReadOnlyCollection<T> result =
@@ -1535,106 +1070,6 @@ namespace Microsoft.SCIM
 
             bool result = ProtocolExtensions.TryParseBulkIdentifierReferenceValue(value.Value, out bulkIdentifier);
             return result;
-        }
-
-
-        private sealed class HttpRequestMessageWriter : IHttpRequestMessageWriter
-        {
-            private const string TemplateHeader = "{0}: {1}";
-
-            private readonly object thisLock = new object();
-
-            private TextWriter innerWriter;
-
-            public HttpRequestMessageWriter(HttpRequestMessage message, TextWriter writer, bool acceptLargeObjects)
-            {
-                this.Message = message ?? throw new ArgumentNullException(nameof(message));
-                this.innerWriter = writer ?? throw new ArgumentNullException(nameof(writer));
-                this.AcceptLargeObjects = acceptLargeObjects;
-            }
-
-            private bool AcceptLargeObjects
-            {
-                get;
-            }
-
-            private HttpRequestMessage Message
-            {
-                get;
-                set;
-            }
-
-            public void Close()
-            {
-                this.innerWriter.Flush();
-                this.innerWriter.Close();
-            }
-
-            public void Dispose()
-            {
-                if (this.innerWriter != null)
-                {
-                    lock (this.thisLock)
-                    {
-                        if (this.innerWriter != null)
-                        {
-                            this.Close();
-                            this.innerWriter = null;
-                        }
-                    }
-                }
-            }
-
-            public async Task FlushAsync()
-            {
-                await this.innerWriter.FlushAsync().ConfigureAwait(false);
-            }
-
-            public async Task WriteAsync()
-            {
-                if (this.Message.RequestUri != null)
-                {
-                    string line = HttpUtility.UrlDecode(this.Message.RequestUri.AbsoluteUri);
-                    await this.innerWriter.WriteLineAsync(line).ConfigureAwait(false);
-                }
-
-                if (this.Message.Headers != null)
-                {
-                    foreach (KeyValuePair<string, IEnumerable<string>> header in this.Message.Headers)
-                    {
-                        if (!header.Value.Any())
-                        {
-                            continue;
-                        }
-
-                        string value;
-                        if (1 == header.Value.LongCount())
-                        {
-                            value = header.Value.Single();
-                        }
-                        else
-                        {
-                            string[] values = header.Value.ToArray();
-                            value = JsonFactory.Instance.Create(values, this.AcceptLargeObjects);
-                        }
-
-                        string line =
-                            string.Format(
-                                CultureInfo.InvariantCulture,
-                                HttpRequestMessageWriter.TemplateHeader,
-                                header.Key,
-                                value);
-                        await this.innerWriter.WriteLineAsync(line).ConfigureAwait(false);
-                    }
-                }
-
-                if (this.Message.Content != null)
-                {
-                    string line = await this.Message.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    await this.innerWriter.WriteLineAsync(line).ConfigureAwait(false);
-                }
-            }
-
         }
     }
 }

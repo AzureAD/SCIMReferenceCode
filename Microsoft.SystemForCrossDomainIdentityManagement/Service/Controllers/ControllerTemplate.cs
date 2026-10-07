@@ -6,11 +6,9 @@ namespace Microsoft.SCIM
     using System.Collections.Generic;
     using System.Linq;
     using System.Net;
-    using System.Net.Http;
     using System.Threading.Tasks;
-    using System.Web.Http;
     using Microsoft.AspNetCore.Mvc;
-    using Microsoft.AspNetCore.Mvc.WebApiCompatShim;
+    using Microsoft.AspNetCore.Http;
 
     public abstract class ControllerTemplate : ControllerBase
     {
@@ -42,7 +40,7 @@ namespace Microsoft.SCIM
                 this.Response.Headers.Add(ControllerTemplate.HeaderKeyContentType, ProtocolConstants.ContentType);
             }
 
-            Uri baseResourceIdentifier = this.ConvertRequest().GetBaseResourceIdentifier();
+            Uri baseResourceIdentifier = this.HttpContext.GetBaseResourceIdentifier();
             Uri resourceIdentifier = resource.GetResourceIdentifier(baseResourceIdentifier);
             string resourceLocation = resourceIdentifier.AbsoluteUri;
             if (!this.Response.Headers.ContainsKey(ControllerTemplate.HeaderKeyLocation))
@@ -51,16 +49,13 @@ namespace Microsoft.SCIM
             }
         }
 
-        protected HttpRequestMessage ConvertRequest()
-        {
-            HttpRequestMessageFeature hreqmf = new HttpRequestMessageFeature(this.HttpContext);
-            HttpRequestMessage result = hreqmf.HttpRequestMessage;
-            return result;
-        }
-
         protected ObjectResult ScimError(HttpStatusCode httpStatusCode, string message)
         {
             return StatusCode((int)httpStatusCode, new Core2Error(message, (int)httpStatusCode));
+        }
+        protected ObjectResult ScimError(HttpStatusCode httpStatusCode, string message, ErrorType errorType)
+        {
+            return StatusCode((int)httpStatusCode, new Core2Error(message, (int)httpStatusCode, Enum.GetName(errorType)));
         }
 
         protected virtual bool TryGetMonitor(out IMonitor monitor)
@@ -103,14 +98,14 @@ namespace Microsoft.SCIM
                 }
 
                 identifier = Uri.UnescapeDataString(identifier);
-                HttpRequestMessage request = this.ConvertRequest();
-                if (!request.TryGetRequestIdentifier(out correlationIdentifier))
+                HttpContext httpContext = this.HttpContext;
+                if (!httpContext.TryGetRequestIdentifier(out correlationIdentifier))
                 {
-                    throw new HttpResponseException(HttpStatusCode.InternalServerError);
+                    return this.StatusCode((int)HttpStatusCode.NotImplemented);
                 }
 
                 IProviderAdapter<T> provider = this.AdaptProvider();
-                await provider.Delete(request, identifier, correlationIdentifier).ConfigureAwait(false);
+                await provider.Delete(httpContext, identifier, correlationIdentifier).ConfigureAwait(false);
                 return this.NoContent();
             }
             catch (ArgumentException argumentException)
@@ -125,16 +120,25 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                return this.BadRequest();
+                return this.ScimError(HttpStatusCode.BadRequest, argumentException.Message);
             }
-            catch (HttpResponseException responseException)
+            catch (CustomHttpResponseException responseException)
             {
-                if (responseException.Response?.StatusCode == HttpStatusCode.NotFound)
+                if (responseException?.StatusCode == HttpStatusCode.NotFound)
                 {
                     return this.NotFound();
                 }
+                if (this.TryGetMonitor(out IMonitor monitor))
+                {
+                    IExceptionNotification notification =
+                        ExceptionNotificationFactory.Instance.CreateNotification(
+                            responseException.InnerException ?? responseException,
+                            correlationIdentifier,
+                            ServiceNotificationIdentifiers.ControllerTemplateGetException);
+                    monitor.Report(notification);
+                }
 
-                throw;
+                return this.ScimError(HttpStatusCode.InternalServerError, responseException.Message);
             }
             catch (NotImplementedException notImplementedException)
             {
@@ -148,7 +152,7 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                throw new HttpResponseException(HttpStatusCode.NotImplemented);
+                return this.StatusCode((int)HttpStatusCode.NotImplemented);
             }
             catch (NotSupportedException notSupportedException)
             {
@@ -162,7 +166,21 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                throw new HttpResponseException(HttpStatusCode.NotImplemented);
+                return this.StatusCode((int)HttpStatusCode.NotImplemented);
+            }
+            catch (ScimTypeException scimException)
+            {
+                if (this.TryGetMonitor(out IMonitor monitor))
+                {
+                    IExceptionNotification notification =
+                        ExceptionNotificationFactory.Instance.CreateNotification(
+                            scimException,
+                            correlationIdentifier,
+                            ServiceNotificationIdentifiers.ControllerTemplateDeleteNotSupportedException);
+                    monitor.Report(notification);
+                }
+
+                return this.ScimError(HttpStatusCode.BadRequest, scimException.Message, scimException.ErrorType);
             }
             catch (Exception exception)
             {
@@ -176,36 +194,39 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                throw;
+                return this.ScimError(HttpStatusCode.InternalServerError, exception.Message);
             }
         }
 
         [HttpGet]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1716:IdentifiersShouldNotMatchKeywords", MessageId = "Get", Justification = "The names of the methods of a controller must correspond to the names of hypertext markup verbs")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1716:IdentifiersShouldNotMatchKeywords",
+            MessageId = "Get",
+            Justification =
+                "The names of the methods of a controller must correspond to the names of hypertext markup verbs")]
         public virtual async Task<ActionResult<QueryResponseBase>> Get()
         {
             string correlationIdentifier = null;
             try
             {
-                HttpRequestMessage request = this.ConvertRequest();
-                if (!request.TryGetRequestIdentifier(out correlationIdentifier))
+                HttpContext httpContext = this.HttpContext;
+                if (!httpContext.TryGetRequestIdentifier(out correlationIdentifier))
                 {
-                    throw new HttpResponseException(HttpStatusCode.InternalServerError);
+                    return this.StatusCode((int)HttpStatusCode.InternalServerError);
                 }
 
-                IResourceQuery resourceQuery = new ResourceQuery(request.RequestUri);
+                IResourceQuery resourceQuery = new ResourceQuery(HttpContext);
                 IProviderAdapter<T> provider = this.AdaptProvider();
                 QueryResponseBase result =
                     await provider
-                            .Query(
-                                request,
-                                resourceQuery.Filters,
-                                resourceQuery.Attributes,
-                                resourceQuery.ExcludedAttributes,
-                                resourceQuery.PaginationParameters,
-                                correlationIdentifier)
-                            .ConfigureAwait(false);
-                return this.Ok(result);
+                        .Query(
+                            httpContext,
+                            resourceQuery.Filters,
+                            resourceQuery.Attributes,
+                            resourceQuery.ExcludedAttributes,
+                            resourceQuery.PaginationParameters,
+                            correlationIdentifier)
+                        .ConfigureAwait(false);
+                return result;
             }
             catch (ArgumentException argumentException)
             {
@@ -249,9 +270,23 @@ namespace Microsoft.SCIM
 
                 return this.ScimError(HttpStatusCode.BadRequest, notSupportedException.Message);
             }
-            catch (HttpResponseException responseException)
+            catch (ScimTypeException scimException)
             {
-                if (responseException.Response?.StatusCode != HttpStatusCode.NotFound)
+                if (this.TryGetMonitor(out IMonitor monitor))
+                {
+                    IExceptionNotification notification =
+                        ExceptionNotificationFactory.Instance.CreateNotification(
+                            scimException,
+                            correlationIdentifier,
+                            ServiceNotificationIdentifiers.ControllerTemplateDeleteNotSupportedException);
+                    monitor.Report(notification);
+                }
+
+                return this.ScimError(HttpStatusCode.BadRequest, scimException.Message, scimException.ErrorType);
+            }
+            catch (CustomHttpResponseException responseException)
+            {
+                if (responseException?.StatusCode != HttpStatusCode.NotFound)
                 {
                     if (this.TryGetMonitor(out IMonitor monitor))
                     {
@@ -283,38 +318,43 @@ namespace Microsoft.SCIM
         }
 
         [HttpGet(ControllerTemplate.AttributeValueIdentifier)]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1716:IdentifiersShouldNotMatchKeywords", MessageId = "Get", Justification = "The names of the methods of a controller must correspond to the names of hypertext markup verbs")]
-        public virtual async Task<IActionResult> Get([FromUri]string identifier)
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA1716:IdentifiersShouldNotMatchKeywords",
+            MessageId = "Get",
+            Justification =
+                "The names of the methods of a controller must correspond to the names of hypertext markup verbs")]
+        public virtual async Task<ActionResult<Resource>> Get([FromRoute] string identifier)
         {
             string correlationIdentifier = null;
             try
             {
                 if (string.IsNullOrWhiteSpace(identifier))
                 {
-                    return this.ScimError(HttpStatusCode.BadRequest, SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidIdentifier);
+                    return this.ScimError(HttpStatusCode.BadRequest,
+                        SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidIdentifier);
                 }
 
-                HttpRequestMessage request = this.ConvertRequest();
-                if (!request.TryGetRequestIdentifier(out correlationIdentifier))
+                HttpContext httpContext = this.HttpContext;
+                if (!httpContext.TryGetRequestIdentifier(out correlationIdentifier))
                 {
-                    throw new HttpResponseException(HttpStatusCode.InternalServerError);
+                    return this.StatusCode((int)HttpStatusCode.InternalServerError);
                 }
 
-                IResourceQuery resourceQuery = new ResourceQuery(request.RequestUri);
+                IResourceQuery resourceQuery = new ResourceQuery(HttpContext);
                 if (resourceQuery.Filters.Any())
                 {
                     if (resourceQuery.Filters.Count != 1)
                     {
-                        return this.ScimError(HttpStatusCode.BadRequest, SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterCount);
+                        return this.ScimError(HttpStatusCode.BadRequest,
+                            SystemForCrossDomainIdentityManagementServiceResources.ExceptionFilterCount);
                     }
 
                     IFilter filter = new Filter(AttributeNames.Identifier, ComparisonOperator.Equals, identifier);
                     filter.AdditionalFilter = resourceQuery.Filters.Single();
                     IReadOnlyCollection<IFilter> filters =
                         new IFilter[]
-                            {
-                                filter
-                            };
+                        {
+                            filter
+                        };
                     IResourceQuery effectiveQuery =
                         new ResourceQuery(
                             filters,
@@ -324,7 +364,7 @@ namespace Microsoft.SCIM
                     QueryResponseBase queryResponse =
                         await provider
                             .Query(
-                                request,
+                                httpContext,
                                 effectiveQuery.Filters,
                                 effectiveQuery.Attributes,
                                 effectiveQuery.ExcludedAttributes,
@@ -333,7 +373,10 @@ namespace Microsoft.SCIM
                             .ConfigureAwait(false);
                     if (!queryResponse.Resources.Any())
                     {
-                        return this.ScimError(HttpStatusCode.NotFound, string.Format(SystemForCrossDomainIdentityManagementServiceResources.ResourceNotFoundTemplate, identifier));
+                        return this.ScimError(HttpStatusCode.NotFound,
+                            string.Format(
+                                SystemForCrossDomainIdentityManagementServiceResources.ResourceNotFoundTemplate,
+                                identifier));
                     }
 
                     Resource result = queryResponse.Resources.Single();
@@ -345,7 +388,7 @@ namespace Microsoft.SCIM
                     Resource result =
                         await provider
                             .Retrieve(
-                                request,
+                                httpContext,
                                 identifier,
                                 resourceQuery.Attributes,
                                 resourceQuery.ExcludedAttributes,
@@ -353,10 +396,13 @@ namespace Microsoft.SCIM
                             .ConfigureAwait(false);
                     if (null == result)
                     {
-                        return this.ScimError(HttpStatusCode.NotFound, string.Format(SystemForCrossDomainIdentityManagementServiceResources.ResourceNotFoundTemplate, identifier));
+                        return this.ScimError(HttpStatusCode.NotFound,
+                            string.Format(
+                                SystemForCrossDomainIdentityManagementServiceResources.ResourceNotFoundTemplate,
+                                identifier));
                     }
 
-                    return this.Ok(result);
+                    return result;
                 }
             }
             catch (ArgumentException argumentException)
@@ -401,9 +447,23 @@ namespace Microsoft.SCIM
 
                 return this.ScimError(HttpStatusCode.BadRequest, notSupportedException.Message);
             }
-            catch (HttpResponseException responseException)
+            catch (ScimTypeException scimException)
             {
-                if (responseException.Response?.StatusCode != HttpStatusCode.NotFound)
+                if (this.TryGetMonitor(out IMonitor monitor))
+                {
+                    IExceptionNotification notification =
+                        ExceptionNotificationFactory.Instance.CreateNotification(
+                            scimException,
+                            correlationIdentifier,
+                            ServiceNotificationIdentifiers.ControllerTemplateDeleteNotSupportedException);
+                    monitor.Report(notification);
+                }
+
+                return this.ScimError(HttpStatusCode.BadRequest, scimException.Message, scimException.ErrorType);
+            }
+            catch (CustomHttpResponseException responseException)
+            {
+                if (responseException?.StatusCode != HttpStatusCode.NotFound)
                 {
                     if (this.TryGetMonitor(out IMonitor monitor))
                     {
@@ -416,9 +476,11 @@ namespace Microsoft.SCIM
                     }
                 }
 
-                if (responseException.Response?.StatusCode == HttpStatusCode.NotFound)
+                if (responseException?.StatusCode == HttpStatusCode.NotFound)
                 {
-                    return this.ScimError(HttpStatusCode.NotFound, string.Format(SystemForCrossDomainIdentityManagementServiceResources.ResourceNotFoundTemplate, identifier));
+                    return this.ScimError(HttpStatusCode.NotFound,
+                        string.Format(SystemForCrossDomainIdentityManagementServiceResources.ResourceNotFoundTemplate,
+                            identifier));
                 }
 
                 return this.ScimError(HttpStatusCode.InternalServerError, responseException.Message);
@@ -440,7 +502,8 @@ namespace Microsoft.SCIM
         }
 
         [HttpPatch(ControllerTemplate.AttributeValueIdentifier)]
-        public virtual async Task<IActionResult> Patch(string identifier, [FromBody]PatchRequest2 patchRequest)
+        public virtual async Task<ActionResult<Resource>> Patch(string identifier,
+            [FromBody] PatchRequest2 patchRequest)
         {
             string correlationIdentifier = null;
 
@@ -458,14 +521,15 @@ namespace Microsoft.SCIM
                     return this.BadRequest();
                 }
 
-                HttpRequestMessage request = this.ConvertRequest();
-                if (!request.TryGetRequestIdentifier(out correlationIdentifier))
+                HttpContext httpContext = this.HttpContext;
+                if (!httpContext.TryGetRequestIdentifier(out correlationIdentifier))
                 {
-                    throw new HttpResponseException(HttpStatusCode.InternalServerError);
+                    return StatusCode((int)HttpStatusCode.InternalServerError);
                 }
 
                 IProviderAdapter<T> provider = this.AdaptProvider();
-                await provider.Update(request, identifier, patchRequest, correlationIdentifier).ConfigureAwait(false);
+                await provider.Update(httpContext, identifier, patchRequest, correlationIdentifier)
+                    .ConfigureAwait(false);
 
                 // If EnterpriseUser, return HTTP code 200 and user object, otherwise HTTP code 204
                 if (provider.SchemaIdentifier == SchemaIdentifiers.Core2EnterpriseUser)
@@ -487,7 +551,7 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                return this.BadRequest();
+                return this.ScimError(HttpStatusCode.BadRequest, argumentException.Message);
             }
             catch (NotImplementedException notImplementedException)
             {
@@ -501,7 +565,7 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                throw new HttpResponseException(HttpStatusCode.NotImplemented);
+                return StatusCode((int)HttpStatusCode.NotImplemented);
             }
             catch (NotSupportedException notSupportedException)
             {
@@ -515,11 +579,25 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                throw new HttpResponseException(HttpStatusCode.NotImplemented);
+                return this.StatusCode((int)HttpStatusCode.NotImplemented);
             }
-            catch (HttpResponseException responseException)
+            catch (ScimTypeException scimException)
             {
-                if (responseException.Response?.StatusCode == HttpStatusCode.NotFound)
+                if (this.TryGetMonitor(out IMonitor monitor))
+                {
+                    IExceptionNotification notification =
+                        ExceptionNotificationFactory.Instance.CreateNotification(
+                            scimException,
+                            correlationIdentifier,
+                            ServiceNotificationIdentifiers.ControllerTemplateDeleteNotSupportedException);
+                    monitor.Report(notification);
+                }
+
+                return this.ScimError(scimException.ErrorType == ErrorType.uniqueness ? HttpStatusCode.Conflict : HttpStatusCode.BadRequest, scimException.Message, scimException.ErrorType);
+            }
+            catch (CustomHttpResponseException responseException)
+            {
+                if (responseException?.StatusCode == HttpStatusCode.NotFound)
                 {
                     return this.NotFound();
                 }
@@ -536,8 +614,7 @@ namespace Microsoft.SCIM
                     }
                 }
 
-                throw;
-
+                return this.ScimError(responseException.StatusCode, responseException.Message);
             }
             catch (Exception exception)
             {
@@ -551,12 +628,12 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                throw;
+                return this.StatusCode((int)HttpStatusCode.InternalServerError);
             }
         }
 
         [HttpPost]
-        public virtual async Task<ActionResult<Resource>> Post([FromBody]T resource)
+        public virtual async Task<ActionResult<Resource>> Post([FromBody] T resource)
         {
             string correlationIdentifier = null;
 
@@ -567,14 +644,15 @@ namespace Microsoft.SCIM
                     return this.BadRequest();
                 }
 
-                HttpRequestMessage request = this.ConvertRequest();
-                if (!request.TryGetRequestIdentifier(out correlationIdentifier))
+                HttpContext httpContext = this.HttpContext;
+                if (!httpContext.TryGetRequestIdentifier(out correlationIdentifier))
                 {
-                    throw new HttpResponseException(HttpStatusCode.InternalServerError);
+                    return this.StatusCode((int)HttpStatusCode.InternalServerError);
                 }
 
                 IProviderAdapter<T> provider = this.AdaptProvider();
-                Resource result = await provider.Create(request, resource, correlationIdentifier).ConfigureAwait(false);
+                Resource result = await provider.Create(httpContext, resource, correlationIdentifier)
+                    .ConfigureAwait(false);
                 this.ConfigureResponse(result);
                 return this.CreatedAtAction(nameof(Post), result);
             }
@@ -590,7 +668,7 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                return this.BadRequest();
+                return this.ScimError(HttpStatusCode.BadRequest, argumentException.Message);;
             }
             catch (NotImplementedException notImplementedException)
             {
@@ -604,7 +682,7 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                throw new HttpResponseException(HttpStatusCode.NotImplemented);
+                return this.StatusCode((int)HttpStatusCode.NotImplemented);
             }
             catch (NotSupportedException notSupportedException)
             {
@@ -618,9 +696,23 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                throw new HttpResponseException(HttpStatusCode.NotImplemented);
+                return this.StatusCode((int)HttpStatusCode.NotImplemented);
             }
-            catch (HttpResponseException httpResponseException)
+            catch (ScimTypeException scimException)
+            {
+                if (this.TryGetMonitor(out IMonitor monitor))
+                {
+                    IExceptionNotification notification =
+                        ExceptionNotificationFactory.Instance.CreateNotification(
+                            scimException,
+                            correlationIdentifier,
+                            ServiceNotificationIdentifiers.ControllerTemplateDeleteNotSupportedException);
+                    monitor.Report(notification);
+                }
+
+                return this.ScimError(scimException.ErrorType == ErrorType.uniqueness ? HttpStatusCode.Conflict : HttpStatusCode.BadRequest, scimException.Message, scimException.ErrorType);
+            }
+            catch (CustomHttpResponseException httpResponseException)
             {
                 if (this.TryGetMonitor(out IMonitor monitor))
                 {
@@ -632,10 +724,11 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                if (httpResponseException.Response.StatusCode == HttpStatusCode.Conflict)
-                    return this.Conflict();
+                if (httpResponseException.StatusCode == HttpStatusCode.Conflict)
+                    return this.ScimError(HttpStatusCode.Conflict,
+                        SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidRequest);
                 else
-                    return this.BadRequest();
+                    return this.ScimError(HttpStatusCode.BadRequest, httpResponseException.Message);
             }
             catch (Exception exception)
             {
@@ -649,12 +742,12 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                throw;
+                return this.StatusCode((int)HttpStatusCode.InternalServerError);
             }
         }
 
         [HttpPut(ControllerTemplate.AttributeValueIdentifier)]
-        public virtual async Task<ActionResult<Resource>> Put([FromBody]T resource, string identifier)
+        public virtual async Task<ActionResult<Resource>> Put([FromBody] T resource, string identifier)
         {
             string correlationIdentifier = null;
 
@@ -662,22 +755,25 @@ namespace Microsoft.SCIM
             {
                 if (null == resource)
                 {
-                    return this.ScimError(HttpStatusCode.BadRequest, SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidResource);
+                    return this.ScimError(HttpStatusCode.BadRequest,
+                        SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidResource);
                 }
 
                 if (string.IsNullOrEmpty(identifier))
                 {
-                    return this.ScimError(HttpStatusCode.BadRequest, SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidIdentifier);
+                    return this.ScimError(HttpStatusCode.BadRequest,
+                        SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidIdentifier);
                 }
 
-                HttpRequestMessage request = this.ConvertRequest();
-                if (!request.TryGetRequestIdentifier(out correlationIdentifier))
+                HttpContext httpContext = this.HttpContext;
+                if (!httpContext.TryGetRequestIdentifier(out correlationIdentifier))
                 {
-                    throw new HttpResponseException(HttpStatusCode.InternalServerError);
+                    return this.StatusCode((int)HttpStatusCode.InternalServerError);
                 }
 
                 IProviderAdapter<T> provider = this.AdaptProvider();
-                Resource result = await provider.Replace(request, resource, correlationIdentifier).ConfigureAwait(false);
+                Resource result = await provider.Replace(httpContext, resource, correlationIdentifier)
+                    .ConfigureAwait(false);
                 this.ConfigureResponse(result);
                 return this.Ok(result);
             }
@@ -723,7 +819,21 @@ namespace Microsoft.SCIM
 
                 return this.ScimError(HttpStatusCode.BadRequest, notSupportedException.Message);
             }
-            catch (HttpResponseException httpResponseException)
+            catch (ScimTypeException scimException)
+            {
+                if (this.TryGetMonitor(out IMonitor monitor))
+                {
+                    IExceptionNotification notification =
+                        ExceptionNotificationFactory.Instance.CreateNotification(
+                            scimException,
+                            correlationIdentifier,
+                            ServiceNotificationIdentifiers.ControllerTemplateDeleteNotSupportedException);
+                    monitor.Report(notification);
+                }
+
+                return this.ScimError(scimException.ErrorType == ErrorType.uniqueness ? HttpStatusCode.Conflict : HttpStatusCode.BadRequest, scimException.Message, scimException.ErrorType);
+            }
+            catch (CustomHttpResponseException httpResponseException)
             {
                 if (this.TryGetMonitor(out IMonitor monitor))
                 {
@@ -735,10 +845,13 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                if (httpResponseException.Response.StatusCode == HttpStatusCode.NotFound)
-                    return this.ScimError(HttpStatusCode.NotFound, string.Format(SystemForCrossDomainIdentityManagementServiceResources.ResourceNotFoundTemplate, identifier));
-                else if (httpResponseException.Response.StatusCode == HttpStatusCode.Conflict)
-                    return this.ScimError(HttpStatusCode.Conflict, SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidRequest);
+                if (httpResponseException.StatusCode == HttpStatusCode.NotFound)
+                    return this.ScimError(HttpStatusCode.NotFound,
+                        string.Format(SystemForCrossDomainIdentityManagementServiceResources.ResourceNotFoundTemplate,
+                            identifier));
+                else if (httpResponseException.StatusCode == HttpStatusCode.Conflict)
+                    return this.ScimError(HttpStatusCode.Conflict,
+                        SystemForCrossDomainIdentityManagementServiceResources.ExceptionInvalidRequest);
                 else
                     return this.ScimError(HttpStatusCode.BadRequest, httpResponseException.Message);
             }
@@ -754,7 +867,7 @@ namespace Microsoft.SCIM
                     monitor.Report(notification);
                 }
 
-                return this.ScimError(HttpStatusCode.InternalServerError, exception.Message);
+                return this.StatusCode((int)HttpStatusCode.InternalServerError);
             }
         }
     }
