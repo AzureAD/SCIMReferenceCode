@@ -891,7 +891,7 @@ namespace Microsoft.SCIM
             string escapedIdentifier = Uri.EscapeDataString(resource.Identifier);
             string resultValue =
                 typeResource.ToString() +
-                ServiceConstants.SeparatorSegments + 
+                ServiceConstants.SeparatorSegments +
                 escapedIdentifier;
             result = new Uri(resultValue);
             return result;
@@ -1061,10 +1061,12 @@ namespace Microsoft.SCIM
             (
                     value != null
                 && OperationName.Remove == operation.Name
-                && string.Equals(value, electronicMailAddress.Value, StringComparison.OrdinalIgnoreCase)
             )
             {
-                value = null;
+                if (string.Equals(value, electronicMailAddress.Value, StringComparison.OrdinalIgnoreCase))
+                    value = null;
+                else // when the value not match, should skip remove anything, return the original emails
+                    return electronicMailAddresses;
             }
             electronicMailAddress.Value = value;
 
