@@ -3462,10 +3462,8 @@
                 "inputs": {
                   "uri": "@{parameters('scimTokenEndpoint')}",
                   "method": "POST",
-                  "headers": {
-                    "Content-Type": "application/x-www-form-urlencoded"
-                  },
-                  "body": "@{concat('grant_type=client_credentials&client_id=', encodeUriComponent(parameters('scimClientId')), '&client_secret=', encodeUriComponent(parameters('scimClientSecret')), if(empty(coalesce(parameters('scimOAuthScope'), '')), '', concat('&scope=', encodeUriComponent(parameters('scimOAuthScope')))))}"
+                  "headers": "@if(equals(toLower(coalesce(parameters('scimCredentialLocationInRequest'), 'Header')), 'header'), json(concat('{\"Content-Type\":\"application/x-www-form-urlencoded\",\"Authorization\":\"Basic ', base64(concat(parameters('scimClientId'), ':', parameters('scimClientSecret'))), '\"}')), json('{\"Content-Type\":\"application/x-www-form-urlencoded\"}'))",
+                  "body": "@{concat('grant_type=client_credentials', if(equals(toLower(coalesce(parameters('scimCredentialLocationInRequest'), 'Header')), 'body'), concat('&client_id=', encodeUriComponent(parameters('scimClientId')), '&client_secret=', encodeUriComponent(parameters('scimClientSecret'))), ''), if(empty(coalesce(parameters('scimOAuthScope'), '')), '', concat('&scope=', encodeUriComponent(parameters('scimOAuthScope')))))}"
                 }
               },
               "Check_Token_Response": {
