@@ -217,6 +217,13 @@ namespace Microsoft.SCIM
                         }
                     }
                     break;
+                case AttributeNames.ExternalIdentifier:
+
+                    value = operation.Value.SingleOrDefault();
+
+                    group.ExternalIdentifier= value?.Value;
+
+                    break;
             }
         }
 
