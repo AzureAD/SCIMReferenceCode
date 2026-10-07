@@ -488,12 +488,13 @@ namespace Microsoft.SCIM
 
             if
             (
-                    string.IsNullOrWhiteSpace(address.Country)
+                address == null ||
+                    (string.IsNullOrWhiteSpace(address.Country)
                 && string.IsNullOrWhiteSpace(address.Locality)
                 && string.IsNullOrWhiteSpace(address.PostalCode)
                 && string.IsNullOrWhiteSpace(address.Region)
                 && string.IsNullOrWhiteSpace(address.StreetAddress)
-                && string.IsNullOrWhiteSpace(address.Formatted)
+                && string.IsNullOrWhiteSpace(address.Formatted))
             )
             {
                 if (addressExisting != null)
@@ -951,19 +952,23 @@ namespace Microsoft.SCIM
                     };
             }
 
-            string value = operation.Value?.Single().Value;
-            if
-            (
-                    value != null
-                && OperationName.Remove == operation.Name
-                && string.Equals(value, phoneNumber.Value, StringComparison.OrdinalIgnoreCase)
-            )
+            if (phoneNumber != null)
             {
-                value = null;
-            }
-            phoneNumber.Value = value;
+                string value = operation.Value?.Single().Value;
+                if
+                (
+                    value != null
+                    && OperationName.Remove == operation.Name
+                    && string.Equals(value, phoneNumber.Value, StringComparison.OrdinalIgnoreCase)
+                )
+                {
+                    value = null;
+                }
 
-            if (string.IsNullOrWhiteSpace(phoneNumber.Value))
+                phoneNumber.Value = value;
+            }
+
+            if (phoneNumber == null || string.IsNullOrWhiteSpace(phoneNumber.Value))
             {
                 if (phoneNumberExisting != null)
                 {
