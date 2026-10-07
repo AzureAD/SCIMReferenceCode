@@ -813,6 +813,27 @@ namespace Microsoft.SCIM
                 name.FamilyName = value;
             }
 
+            if
+            (
+                string.Equals(
+                    Microsoft.SCIM.AttributeNames.Formatted,
+                    operation.Path.ValuePath.AttributePath,
+                    StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                value = operation.Value?.Single().Value;
+                if
+                (
+                        value != null
+                    && OperationName.Remove == operation.Name
+                    && string.Equals(value, name.Formatted, StringComparison.OrdinalIgnoreCase)
+                )
+                {
+                    value = null;
+                }
+                name.Formatted = value;
+            }
+
             if (string.IsNullOrWhiteSpace(name.FamilyName) && string.IsNullOrWhiteSpace(name.GivenName))
             {
                 if (nameExisting != null)
