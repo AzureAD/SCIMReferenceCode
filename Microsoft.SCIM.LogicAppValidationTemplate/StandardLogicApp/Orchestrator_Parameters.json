@@ -218,6 +218,13 @@
     "type": "String",
     "value": "changeme-oauth"
   },
+  "scimCredentialLocationInRequest": {
+    "metadata": {
+      "description": "Required OAuth2 client credential location: Header or Body (used with OAuth2ClientCredentialsGrant)"
+    },
+    "type": "String",
+    "value": "Header"
+  },
   "scimContentType": {
     "metadata": {
       "description": "Content-Type header for SCIM API calls"
@@ -231,7 +238,7 @@
   },
   "scimOAuthScope": {
     "metadata": {
-      "description": "OAuth2 scope for token acquisition (optional)"
+      "description": "Optional space-delimited OAuth2 scopes for token acquisition"
     },
     "type": "String",
     "value": ""

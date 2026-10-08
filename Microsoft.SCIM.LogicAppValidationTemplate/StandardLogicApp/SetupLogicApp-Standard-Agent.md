@@ -408,12 +408,15 @@ hours.
   will note that `Validate_Credentials_Test` will be skipped (this is
   expected).
 - **OAuth client credentials** — If you choose this, the agent will ask
-  4 follow-up questions:
+  5 follow-up questions:
   - **Client ID** — Your OAuth application’s client ID
   - **Client Secret** — Your OAuth application’s client secret
   - **Token Endpoint URL** — e.g., `https://auth.myapp.com/oauth/token`
-  - **OAuth Scope** — The scope required for SCIM access (leave empty if
-    not applicable)
+  - **How credentials are sent** — Required; select **Header** (the
+    default, using HTTP Basic authentication) or **Body** (`client_id`
+    and `client_secret` form fields)
+  - **OAuth Scope** — Optional; enter multiple scopes as one string
+    separated by spaces, or enter `none`
 
 ### Question 4: Azure Subscription Selection
 
@@ -1002,6 +1005,10 @@ style="width:4.43812in;height:2.54202in" />
 
 <img src="./media/image63.png"
 style="width:4.40686in;height:2.71913in" />
+
+Update `scimCredentialLocationInRequest` with `Header` or `Body`.
+For OAuth endpoints that require scopes, update `scimOAuthScope` with
+the space-delimited scope string.
 
 ## Run the Logic App
 

@@ -54,19 +54,22 @@ Collect the ISV's SCIM endpoint and bearer token, validate their Azure environme
    b. **Bearer token** (must be long-lived — warn if JWT expires within 2 hours)
    
    c. **Authentication method** — ask: "Does your SCIM endpoint use OAuth client credentials or a static bearer token?"
-      - If **OAuth**: ask for all 4 parameters, one at a time:
+      - If **OAuth**: ask for all 5 parameters, one at a time:
         - Client ID
         - Client Secret
         - Token endpoint URL (e.g., `https://auth.example.com/oauth/token`)
+        - How credentials are sent — **MANDATORY:** use `ask_user` with exactly two options: `Header` and `Body`. Set `Header` as the suggested default, but require the customer to confirm their selection.
+          - `Header` sends the client ID and secret using HTTP Basic authentication and omits them from the form body.
+          - `Body` sends `client_id` and `client_secret` in the form body.
         - OAuth scope — **MANDATORY: use this EXACT prompt text in `ask_user`, do NOT paraphrase, do NOT use the words "leave blank", "leave empty", "optional", or "if not required":**
-          > **OAuth scope** (e.g., `https://graph.microsoft.com/.default`).
+          > **OAuth scope** (e.g., `https://graph.microsoft.com/.default`). Enter multiple scopes as one string separated by spaces.
           >
           > ⚠️ If your token endpoint does NOT require a scope, type the word `none` (without quotes) and press Enter.
           >
           > Do NOT submit an empty box — empty submissions are treated as cancellation and the agent will stop.
           
           The agent treats `none` (case-insensitive) as an empty scope when writing `scimOAuthScope` to `parameters.json`.
-      - If **static bearer token**: record `authMethod = bearer`. The 4 OAuth fields (`scimClientId`, `scimClientSecret`, `scimTokenEndpoint`, `scimOAuthScope`) will be written as empty strings in Phase 4. (Logic App test behavior — including `Validate_Credentials_Test` — is out of scope for Phase 1; see Phase 4 for parameter handling and expected test behavior.)
+      - If **static bearer token**: record `authMethod = bearer`. The 5 OAuth fields (`scimClientId`, `scimClientSecret`, `scimTokenEndpoint`, `scimCredentialLocationInRequest`, `scimOAuthScope`) will be written as empty strings in Phase 4. (Logic App test behavior — including `Validate_Credentials_Test` — is out of scope for Phase 1; see Phase 4 for parameter handling and expected test behavior.)
 
       d. **Federated identity test inputs (for `Federated_Identity_Test`)**:
         - Ask: "Do you want to run the federated identity validation test now?"
@@ -216,6 +219,8 @@ Extract from response:
 | Bearer only | A | Bearer | `authenticationType` + `baseAddress` + `secretToken` |
 | Bearer + OAuth | B | OAuth | `authenticationType` + `baseAddress` + `oauth2ClientId` + `oauth2ClientSecret` + `oauth2TokenExchangeUri` + `credentialLocationInRequest` |
 
+For Branch B, also include the optional lower-case `scope` connectivity parameter when the ISV provided scopes. Omit `scope` when the ISV answered `none`.
+
 ---
 
 **Sub-step 2b-1: validateCredentials (bearer — ALWAYS run this)**
@@ -275,7 +280,8 @@ az rest --method PATCH \
 #   {"key":"oauth2ClientId","value":"<clientId>"},
 #   {"key":"oauth2ClientSecret","value":"<clientSecret>"},
 #   {"key":"oauth2TokenExchangeUri","value":"<tokenEndpoint>"},
-#   {"key":"credentialLocationInRequest","value":"Header"}
+#   {"key":"credentialLocationInRequest","value":"<Header-or-Body>"},
+#   {"key":"scope","value":"<space-delimited-scopes>"}
 # ]}
 az rest --method PATCH \
   --url "https://graph.microsoft.com/beta/servicePrincipals/<servicePrincipalId>/synchronization/connectivityParameters" \
@@ -284,6 +290,8 @@ az rest --method PATCH \
 ```
 
 > Note: `authenticationType=OAuth2ClientCredentialsGrant` is required for OAuth — without it, Graph won't attempt OAuth token acquisition from the stored creds.
+>
+> `credentialLocationInRequest` is required for OAuth and must be exactly `Header` or `Body`, matching the ISV's Phase 1 answer. Add the `scope` entry only when the ISV provided one or more scopes; omit it when the ISV answered `none`. Preserve multiple scopes as one space-delimited string.
 >
 > Inline `validateCredentials` with OAuth keys (i.e. `useSavedCredentials: false` + credentials array including OAuth keys) **works**, but do **not** include `CredentialLocationInRequest` in that inline payload — Graph returns `InternalError: Requested value 'CredentialLocationInRequest' was not found.` Keep that key only in the beta `connectivityParameters` PATCH payload.
 
@@ -303,7 +311,7 @@ az rest --method POST \
 |---|---|---|
 | HTTP 200/204 (empty body) | Test Connection succeeded — Entra can reach the ISV's SCIM endpoint using the saved credentials | Proceed to 2b-3 |
 | HTTP 400 `CredentialValidationUnavailable` | **Branch A:** bearer token rejected by the ISV's SCIM server (401/403/5xx). **Branch B:** OAuth token exchange failed — wrong client ID, wrong client secret, bad token endpoint URL, scope issue, or the ISV's token endpoint issued a token that their SCIM server rejected. | Surface the inner error verbatim to the ISV. **ABORT.** Do NOT create the sync job — it will immediately quarantine. Wait for the ISV to provide corrected credentials, then re-PATCH `connectivityParameters` and re-validate. |
-| HTTP 500 `InternalError` — `"Requested value 'X' was not found"` | Inline validation payload included an unsupported key (for example `CredentialLocationInRequest`) or the connectivity parameters used the wrong key casing | Re-run inline validation with only the supported OAuth keys, then re-PATCH `connectivityParameters` using the lower-case portal keys (`authenticationType`, `baseAddress`, `oauth2ClientId`, `oauth2ClientSecret`, `oauth2TokenExchangeUri`, `credentialLocationInRequest`). Then re-validate. |
+| HTTP 500 `InternalError` — `"Requested value 'X' was not found"` | Inline validation payload included an unsupported key (for example `CredentialLocationInRequest`) or the connectivity parameters used the wrong key casing | Re-run inline validation with only the supported OAuth keys, then re-PATCH `connectivityParameters` using the lower-case portal keys (`authenticationType`, `baseAddress`, `oauth2ClientId`, `oauth2ClientSecret`, `oauth2TokenExchangeUri`, `credentialLocationInRequest`, plus `scope` only when provided). Then re-validate. |
 | Any other 4xx/5xx | Unexpected | Surface verbatim and **ABORT**. |
 
 Before aborting or retrying, capture the exact inner error and match it against **Step 6d: Known Issues**. If the response mentions `SystemForCrossDomainIdentityManagementServiceIncompatible`, Group connectivity, or an inner Group `404`, evaluate **Pattern #15**. Do not classify a generic `401`, `403`, rejected bearer token, or OAuth token-exchange failure as Pattern #15.
@@ -356,7 +364,8 @@ else:
 | `scimClientId` | `""` | `<clientId>` |
 | `scimClientSecret` | `""` | `<clientSecret>` |
 | `scimTokenEndpoint` | `""` | `<tokenEndpoint>` |
-| `scimOAuthScope` | `""` | `<scope>` |
+| `scimCredentialLocationInRequest` | `""` | `<Header-or-Body>` |
+| `scimOAuthScope` | `""` | `<space-delimited-scopes-or-empty-string>` |
 
 For federated identity testing, also pass these Phase 4 parameters:
 
@@ -822,7 +831,7 @@ Pass criteria (ALL must hold):
 - `schedule.state` is `Active`
 
 If `status.code == Quarantine` with `lastExecError == SystemForCrossDomainIdentityManagementInvalidCredentials` and `lastExecMsg` mentions `BaseAddress`/`SecretToken`/credential, the Step 2b connectivity parameters were rejected or incomplete. Recovery:
-1. Re-PATCH `https://graph.microsoft.com/beta/servicePrincipals/<servicePrincipalId>/synchronization/connectivityParameters` with ONLY the supported keys for the auth mode (bearer: `authenticationType` + `baseAddress` + `secretToken`; OAuth: `authenticationType` + `baseAddress` + `oauth2ClientId` + `oauth2ClientSecret` + `oauth2TokenExchangeUri` + `credentialLocationInRequest`).
+1. Re-PATCH `https://graph.microsoft.com/beta/servicePrincipals/<servicePrincipalId>/synchronization/connectivityParameters` with ONLY the supported keys for the auth mode (bearer: `authenticationType` + `baseAddress` + `secretToken`; OAuth: `authenticationType` + `baseAddress` + `oauth2ClientId` + `oauth2ClientSecret` + `oauth2TokenExchangeUri` + `credentialLocationInRequest`, plus `scope` only when provided).
 2. `POST /servicePrincipals/<sp>/synchronization/jobs/<jobId>/restart` with body `{"criteria":{"resetScope":"Full"}}`. (Note: `credentials`/`watermark`/`escrows`/`quarantineState` are NOT valid restart criteria properties — schema only allows `resetScope`.)
 3. `POST /jobs/<jobId>/start` again.
 4. Re-run this Step 3h check. If still quarantined, abort and report the exact error.
@@ -907,7 +916,8 @@ Update these parameters in the JSON:
 | `scimClientId` | `<ISV's OAuth client ID>` | From Phase 1 — set if the ISV provided OAuth credentials. Used by the LA's `Validate_Credentials_Test` to exercise the OAuth flow independently. Empty string if not provided. **Note: Entra sync always uses bearer token (Step 2b), NOT these OAuth values.** |
 | `scimClientSecret` | `<ISV's OAuth client secret>` | From Phase 1 — same. Empty string if not provided. |
 | `scimTokenEndpoint` | `<ISV's OAuth token endpoint>` | From Phase 1 — same. Empty string if not provided. |
-| `scimOAuthScope` | `<ISV's OAuth scope>` | From Phase 1 — optional, set if provided (empty string if not). |
+| `scimCredentialLocationInRequest` | `<Header-or-Body>` | From Phase 1 — mandatory when OAuth client credentials are provided. Empty string for static bearer authentication. |
+| `scimOAuthScope` | `<ISV's space-delimited OAuth scopes>` | From Phase 1 — optional; preserve multiple scopes as one space-delimited string. Empty string if the ISV answered `none`. |
 | `federatedEntraTenantId` | `<ISV's Entra tenant ID for federated test>` | From Phase 1 federated inputs — empty string if not provided. |
 | `federatedApplicationId` | `<Entra app client ID used for federated flow>` | From Phase 1 federated inputs — empty string if not provided. |
 | `federatedApplicationClientSecret` | `<Entra app client secret used for federated flow>` | From Phase 1 federated inputs — empty string if not provided. |
@@ -924,7 +934,8 @@ After patching the JSON in memory, assert every key below exists at the top leve
 servicePrincipalId, scimEndpoint, scimBearerToken, scimContentType,
 testUserDomain, EnabledTests, IsSoftDeleted,
 defaultUserProperties, defaultGroupProperties, scimTargetUserValues,
-scimClientId, scimClientSecret, scimTokenEndpoint, scimOAuthScope,
+scimClientId, scimClientSecret, scimTokenEndpoint,
+scimCredentialLocationInRequest, scimOAuthScope,
 federatedEntraTenantId, federatedApplicationId, federatedApplicationClientSecret,
 federatedTokenEndpoint, federatedClientId, federatedBaseAddress, federatedAudience
 ```
@@ -935,7 +946,7 @@ If any key is missing, abort Phase 4 and tell the ISV exactly which key is missi
 
 After the PUT completes, re-GET `parameters.json` and for each key in the patch table above, assert the returned value matches what was sent. If `servicePrincipalId` was supposed to be `aaa-bbb-ccc` but the read-back shows something else (or the key is missing), abort Phase 4 with the specific mismatch. Do NOT proceed to Phase 5.
 
-If the ISV did not provide OAuth credentials, leave `scimClientId`, `scimClientSecret`, `scimTokenEndpoint`, and `scimOAuthScope` as empty strings. The `Validate_Credentials_Test` will be SKIPPED — note this as expected in the final report. This is unrelated to the Entra sync engine, which always uses the bearer token (`SecretToken`) configured in Step 2b.
+If the ISV did not provide OAuth credentials, leave `scimClientId`, `scimClientSecret`, `scimTokenEndpoint`, `scimCredentialLocationInRequest`, and `scimOAuthScope` as empty strings. The `Validate_Credentials_Test` will be SKIPPED — note this as expected in the final report. This is unrelated to the Entra sync engine, which always uses the bearer token (`SecretToken`) configured in Step 2b.
 
 If the ISV did not provide federated identity inputs, leave all federated parameters as empty strings (`federatedEntraTenantId`, `federatedApplicationId`, `federatedApplicationClientSecret`, `federatedTokenEndpoint`, `federatedClientId`, `federatedBaseAddress`, `federatedAudience`).
 
