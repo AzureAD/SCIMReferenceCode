@@ -9,6 +9,9 @@
 *.userosscache
 *.sln.docstates
 
+# Local SCIM onboarding run evidence and deployment overlays
+scimrun-v*/
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 

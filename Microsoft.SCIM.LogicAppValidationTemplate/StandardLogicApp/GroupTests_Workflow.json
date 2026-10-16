@@ -64,154 +64,18 @@
         }
       },
       "Initialize_All_Group_Test_Variables": {
-        "runAfter": {},
+        "runAfter": {
+          "Initialize_All_Group_Test_Variables_Variable_20": [
+            "Succeeded"
+          ]
+        },
         "type": "InitializeVariable",
         "inputs": {
           "variables": [
             {
-              "name": "CreateGroupFailedActionName",
-              "type": "string",
-              "value": ""
-            },
-            {
-              "name": "CreateGroupFailedActionResponse",
+              "name": "SCIMAccessTokenCache",
               "type": "Object",
               "value": {}
-            },
-            {
-              "name": "CreateGroupScopeExecutionStatus",
-              "type": "string",
-              "value": "InProgress"
-            },
-            {
-              "name": "CreateGroupTestOutputs",
-              "type": "Object",
-              "value": {
-                "overallResult": "SKIPPED",
-                "result": "SKIPPED",
-                "provisioningLogsResult": "",
-                "scimCheckResult": "",
-                "errorDetails": {
-                  "provisioningLogs": "",
-                  "scimCheck": ""
-                }
-              }
-            },
-            {
-              "name": "UpdateGroupFailedActionName",
-              "type": "string",
-              "value": ""
-            },
-            {
-              "name": "UpdateGroupFailedActionResponse",
-              "type": "Object",
-              "value": {}
-            },
-            {
-              "name": "UpdateGroupScopeExecutionStatus",
-              "type": "string",
-              "value": "InProgress"
-            },
-            {
-              "name": "UpdateGroupTestOutputs",
-              "type": "Object",
-              "value": {
-                "overallResult": "SKIPPED",
-                "result": "SKIPPED",
-                "provisioningLogsResult": "",
-                "scimCheckResult": "",
-                "errorDetails": {
-                  "provisioningLogs": "",
-                  "scimCheck": ""
-                }
-              }
-            },
-            {
-              "name": "DeleteGroupFailedActionName",
-              "type": "string",
-              "value": ""
-            },
-            {
-              "name": "DeleteGroupFailedActionResponse",
-              "type": "Object",
-              "value": {}
-            },
-            {
-              "name": "DeleteGroupScopeExecutionStatus",
-              "type": "string",
-              "value": "InProgress"
-            },
-            {
-              "name": "DeleteGroupTestOutputs",
-              "type": "Object",
-              "value": {
-                "overallResult": "SKIPPED",
-                "result": "SKIPPED",
-                "provisioningLogsResult": "",
-                "scimCheckResult": "",
-                "errorDetails": {
-                  "provisioningLogs": "",
-                  "scimCheck": ""
-                }
-              }
-            },
-            {
-              "name": "AddMemberFailedActionName",
-              "type": "string",
-              "value": ""
-            },
-            {
-              "name": "AddMemberFailedActionResponse",
-              "type": "Object",
-              "value": {}
-            },
-            {
-              "name": "AddMemberScopeExecutionStatus",
-              "type": "string",
-              "value": "InProgress"
-            },
-            {
-              "name": "AddMemberTestOutputs",
-              "type": "Object",
-              "value": {
-                "overallResult": "SKIPPED",
-                "result": "SKIPPED",
-                "provisioningLogsResult": "",
-                "scimCheckResult": "",
-                "errorDetails": {
-                  "provisioningLogs": "",
-                  "scimCheck": ""
-                }
-              }
-            },
-            {
-              "name": "RemoveMemberFailedActionName",
-              "type": "string",
-              "value": ""
-            },
-            {
-              "name": "RemoveMemberFailedActionResponse",
-              "type": "Object",
-              "value": {}
-            },
-            {
-              "name": "RemoveMemberScopeExecutionStatus",
-              "type": "string",
-              "value": "InProgress"
-            },
-            {
-              "name": "RemoveMemberTestOutputs",
-              "type": "Object",
-              "value": {
-                "overallResult": "SKIPPED",
-                "result": "SKIPPED",
-                "provisioningLogsResult": "",
-                "scimCheckResult": "",
-                "errorDetails": {
-                  "provisioningLogs": "",
-                  "scimCheck": ""
-                }
-              }
             }
           ]
         }
@@ -239,23 +103,13 @@
       },
       "Initialize_RestoreGroupTestVariables": {
         "runAfter": {
-          "Initialize_PODGroupTestOutputs": [
+          "Initialize_RestoreGroupTestVariables_Variable_2": [
             "Succeeded"
           ]
         },
         "type": "InitializeVariable",
         "inputs": {
           "variables": [
-            {
-              "name": "restoreEntraGroupId",
-              "type": "string",
-              "value": ""
-            },
-            {
-              "name": "restoreGroupAppRoleAssignmentId",
-              "type": "string",
-              "value": ""
-            },
             {
               "name": "RestoreGroupTestOutputs",
               "type": "Object",
@@ -335,9 +189,14 @@
                       "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', triggerBody()?['initializationData']?['testGroupNames']?['createGroup'], '%22')}",
                       "method": "GET",
                       "headers": {
-                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                        "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                         "Accept": "@{parameters('scimContentType')}"
                       }
+                    },
+                    "runAfter": {
+                      "Ensure_SCIM_Token_Create_Group_Initial_Verify_Group_Exists": [
+                        "Succeeded"
+                      ]
                     }
                   },
                   "Create_Group_Create_Group_Graph": {
@@ -401,9 +260,14 @@
                           "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', triggerBody()?['initializationData']?['testGroupNames']?['createGroup'], '%22')}",
                           "method": "GET",
                           "headers": {
-                            "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                            "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                             "Accept": "@{parameters('scimContentType')}"
                           }
+                        },
+                        "runAfter": {
+                          "Ensure_SCIM_Token_Create_Group_Query_Create_Group": [
+                            "Succeeded"
+                          ]
                         }
                       },
                       "Delay_Create_Group_15s": {
@@ -420,6 +284,48 @@
                             "unit": "Second"
                           }
                         }
+                      },
+                      "Ensure_SCIM_Token_Create_Group_Query_Create_Group": {
+                        "type": "If",
+                        "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                        "actions": {
+                          "Acquire_Token_IM_Token_Create_Group_Query_Create_Group": {
+                            "type": "Workflow",
+                            "inputs": {
+                              "host": {
+                                "workflow": {
+                                  "id": "SCIMToken_Workflow"
+                                }
+                              },
+                              "body": {}
+                            },
+                            "runtimeConfiguration": {
+                              "secureData": {
+                                "properties": [
+                                  "inputs",
+                                  "outputs"
+                                ]
+                              }
+                            },
+                            "runAfter": {}
+                          },
+                          "Cache_Token_IM_Token_Create_Group_Query_Create_Group": {
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "SCIMAccessTokenCache",
+                              "value": "@body('Acquire_Token_IM_Token_Create_Group_Query_Create_Group')"
+                            },
+                            "runAfter": {
+                              "Acquire_Token_IM_Token_Create_Group_Query_Create_Group": [
+                                "Succeeded"
+                              ]
+                            }
+                          }
+                        },
+                        "else": {
+                          "actions": {}
+                        },
+                        "runAfter": {}
                       }
                     },
                     "runAfter": {
@@ -493,6 +399,48 @@
                         "unit": "Minute"
                       }
                     }
+                  },
+                  "Ensure_SCIM_Token_Create_Group_Initial_Verify_Group_Exists": {
+                    "type": "If",
+                    "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                    "actions": {
+                      "Acquire_Token_Create_Group_Initial_Verify_Group_Exists": {
+                        "type": "Workflow",
+                        "inputs": {
+                          "host": {
+                            "workflow": {
+                              "id": "SCIMToken_Workflow"
+                            }
+                          },
+                          "body": {}
+                        },
+                        "runtimeConfiguration": {
+                          "secureData": {
+                            "properties": [
+                              "inputs",
+                              "outputs"
+                            ]
+                          }
+                        },
+                        "runAfter": {}
+                      },
+                      "Cache_Token_Create_Group_Initial_Verify_Group_Exists": {
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "SCIMAccessTokenCache",
+                          "value": "@body('Acquire_Token_Create_Group_Initial_Verify_Group_Exists')"
+                        },
+                        "runAfter": {
+                          "Acquire_Token_Create_Group_Initial_Verify_Group_Exists": [
+                            "Succeeded"
+                          ]
+                        }
+                      }
+                    },
+                    "else": {
+                      "actions": {}
+                    },
+                    "runAfter": {}
                   }
                 },
                 "type": "Scope"
@@ -694,9 +642,14 @@
                           "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', triggerBody()?['initializationData']?['testGroupNames']?['updateGroup'], '%22')}",
                           "method": "GET",
                           "headers": {
-                            "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                            "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                             "Accept": "@{parameters('scimContentType')}"
                           }
+                        },
+                        "runAfter": {
+                          "Ensure_SCIM_Token_Update_Group_Initial_Verify_Group_Exists": [
+                            "Succeeded"
+                          ]
                         }
                       },
                       "Update_Group_Create_Group_Graph": {
@@ -760,9 +713,14 @@
                               "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', triggerBody()?['initializationData']?['testGroupNames']?['updateGroup'], '%22')}",
                               "method": "GET",
                               "headers": {
-                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                 "Accept": "@{parameters('scimContentType')}"
                               }
+                            },
+                            "runAfter": {
+                              "Ensure_SCIM_Token_Update_Group_Check_Group_Create": [
+                                "Succeeded"
+                              ]
                             }
                           },
                           "Update_Group_Delay_Creation_15s": {
@@ -779,6 +737,48 @@
                                 "unit": "Second"
                               }
                             }
+                          },
+                          "Ensure_SCIM_Token_Update_Group_Check_Group_Create": {
+                            "type": "If",
+                            "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                            "actions": {
+                              "Acquire_Token_IM_Token_Update_Group_Check_Group_Create": {
+                                "type": "Workflow",
+                                "inputs": {
+                                  "host": {
+                                    "workflow": {
+                                      "id": "SCIMToken_Workflow"
+                                    }
+                                  },
+                                  "body": {}
+                                },
+                                "runtimeConfiguration": {
+                                  "secureData": {
+                                    "properties": [
+                                      "inputs",
+                                      "outputs"
+                                    ]
+                                  }
+                                },
+                                "runAfter": {}
+                              },
+                              "Cache_Token_IM_Token_Update_Group_Check_Group_Create": {
+                                "type": "SetVariable",
+                                "inputs": {
+                                  "name": "SCIMAccessTokenCache",
+                                  "value": "@body('Acquire_Token_IM_Token_Update_Group_Check_Group_Create')"
+                                },
+                                "runAfter": {
+                                  "Acquire_Token_IM_Token_Update_Group_Check_Group_Create": [
+                                    "Succeeded"
+                                  ]
+                                }
+                              }
+                            },
+                            "else": {
+                              "actions": {}
+                            },
+                            "runAfter": {}
                           }
                         },
                         "runAfter": {
@@ -850,6 +850,48 @@
                             "unit": "Minute"
                           }
                         }
+                      },
+                      "Ensure_SCIM_Token_Update_Group_Initial_Verify_Group_Exists": {
+                        "type": "If",
+                        "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                        "actions": {
+                          "Acquire_Token_Update_Group_Initial_Verify_Group_Exists": {
+                            "type": "Workflow",
+                            "inputs": {
+                              "host": {
+                                "workflow": {
+                                  "id": "SCIMToken_Workflow"
+                                }
+                              },
+                              "body": {}
+                            },
+                            "runtimeConfiguration": {
+                              "secureData": {
+                                "properties": [
+                                  "inputs",
+                                  "outputs"
+                                ]
+                              }
+                            },
+                            "runAfter": {}
+                          },
+                          "Cache_Token_Update_Group_Initial_Verify_Group_Exists": {
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "SCIMAccessTokenCache",
+                              "value": "@body('Acquire_Token_Update_Group_Initial_Verify_Group_Exists')"
+                            },
+                            "runAfter": {
+                              "Acquire_Token_Update_Group_Initial_Verify_Group_Exists": [
+                                "Succeeded"
+                              ]
+                            }
+                          }
+                        },
+                        "else": {
+                          "actions": {}
+                        },
+                        "runAfter": {}
                       }
                     },
                     "type": "Scope"
@@ -993,9 +1035,14 @@
                               "uri": "@concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', triggerBody()?['initializationData']?['testGroupNames']?['updateGroup'], '%22')",
                               "method": "GET",
                               "headers": {
-                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                 "Accept": "@{parameters('scimContentType')}"
                               }
+                            },
+                            "runAfter": {
+                              "Ensure_SCIM_Token_Update_Group_Query_Group_By_Id": [
+                                "Succeeded"
+                              ]
                             }
                           },
                           "Update_Group_Update_Group_Attributes": {
@@ -1030,9 +1077,14 @@
                                   "uri": "@concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', concat(triggerBody()?['initializationData']?['testGroupNames']?['updateGroup'], '-Modified'), '%22')",
                                   "method": "GET",
                                   "headers": {
-                                    "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                    "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                     "Accept": "@{parameters('scimContentType')}"
                                   }
+                                },
+                                "runAfter": {
+                                  "Ensure_SCIM_Token_Update_Group_Query_Group_By_Id_After_Attributes_Update": [
+                                    "Succeeded"
+                                  ]
                                 }
                               },
                               "Update_Group_Delay_Update_15s": {
@@ -1049,6 +1101,48 @@
                                     "unit": "Second"
                                   }
                                 }
+                              },
+                              "Ensure_SCIM_Token_Update_Group_Query_Group_By_Id_After_Attributes_Update": {
+                                "type": "If",
+                                "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                "actions": {
+                                  "Acquire_Token_uery_Group_By_Id_After_Attributes_Update": {
+                                    "type": "Workflow",
+                                    "inputs": {
+                                      "host": {
+                                        "workflow": {
+                                          "id": "SCIMToken_Workflow"
+                                        }
+                                      },
+                                      "body": {}
+                                    },
+                                    "runtimeConfiguration": {
+                                      "secureData": {
+                                        "properties": [
+                                          "inputs",
+                                          "outputs"
+                                        ]
+                                      }
+                                    },
+                                    "runAfter": {}
+                                  },
+                                  "Cache_Token_uery_Group_By_Id_After_Attributes_Update": {
+                                    "type": "SetVariable",
+                                    "inputs": {
+                                      "name": "SCIMAccessTokenCache",
+                                      "value": "@body('Acquire_Token_uery_Group_By_Id_After_Attributes_Update')"
+                                    },
+                                    "runAfter": {
+                                      "Acquire_Token_uery_Group_By_Id_After_Attributes_Update": [
+                                        "Succeeded"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "else": {
+                                  "actions": {}
+                                },
+                                "runAfter": {}
                               }
                             },
                             "runAfter": {
@@ -1108,6 +1202,48 @@
                               "timeout": "PT15M"
                             },
                             "type": "Until"
+                          },
+                          "Ensure_SCIM_Token_Update_Group_Query_Group_By_Id": {
+                            "type": "If",
+                            "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                            "actions": {
+                              "Acquire_Token_CIM_Token_Update_Group_Query_Group_By_Id": {
+                                "type": "Workflow",
+                                "inputs": {
+                                  "host": {
+                                    "workflow": {
+                                      "id": "SCIMToken_Workflow"
+                                    }
+                                  },
+                                  "body": {}
+                                },
+                                "runtimeConfiguration": {
+                                  "secureData": {
+                                    "properties": [
+                                      "inputs",
+                                      "outputs"
+                                    ]
+                                  }
+                                },
+                                "runAfter": {}
+                              },
+                              "Cache_Token_CIM_Token_Update_Group_Query_Group_By_Id": {
+                                "type": "SetVariable",
+                                "inputs": {
+                                  "name": "SCIMAccessTokenCache",
+                                  "value": "@body('Acquire_Token_CIM_Token_Update_Group_Query_Group_By_Id')"
+                                },
+                                "runAfter": {
+                                  "Acquire_Token_CIM_Token_Update_Group_Query_Group_By_Id": [
+                                    "Succeeded"
+                                  ]
+                                }
+                              }
+                            },
+                            "else": {
+                              "actions": {}
+                            },
+                            "runAfter": {}
                           }
                         },
                         "type": "Scope"
@@ -1336,9 +1472,14 @@
                           "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', triggerBody()?['initializationData']?['testGroupNames']?['deleteGroup'], '%22')}",
                           "method": "GET",
                           "headers": {
-                            "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                            "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                             "Accept": "@{parameters('scimContentType')}"
                           }
+                        },
+                        "runAfter": {
+                          "Ensure_SCIM_Token_Delete_Step1_Check_Group_Exists": [
+                            "Succeeded"
+                          ]
                         }
                       },
                       "Delete_Step2_Create_Group": {
@@ -1399,9 +1540,14 @@
                               "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', triggerBody()?['initializationData']?['testGroupNames']?['deleteGroup'], '%22')}",
                               "method": "GET",
                               "headers": {
-                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                 "Accept": "@{parameters('scimContentType')}"
                               }
+                            },
+                            "runAfter": {
+                              "Ensure_SCIM_Token_Delete_Step3_Fetch_Group_By_Filter": [
+                                "Succeeded"
+                              ]
                             }
                           },
                           "Delete_Group_Delay_Creation_15s": {
@@ -1418,6 +1564,48 @@
                                 "unit": "Second"
                               }
                             }
+                          },
+                          "Ensure_SCIM_Token_Delete_Step3_Fetch_Group_By_Filter": {
+                            "type": "If",
+                            "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                            "actions": {
+                              "Acquire_Token_Token_Delete_Step3_Fetch_Group_By_Filter": {
+                                "type": "Workflow",
+                                "inputs": {
+                                  "host": {
+                                    "workflow": {
+                                      "id": "SCIMToken_Workflow"
+                                    }
+                                  },
+                                  "body": {}
+                                },
+                                "runtimeConfiguration": {
+                                  "secureData": {
+                                    "properties": [
+                                      "inputs",
+                                      "outputs"
+                                    ]
+                                  }
+                                },
+                                "runAfter": {}
+                              },
+                              "Cache_Token_Token_Delete_Step3_Fetch_Group_By_Filter": {
+                                "type": "SetVariable",
+                                "inputs": {
+                                  "name": "SCIMAccessTokenCache",
+                                  "value": "@body('Acquire_Token_Token_Delete_Step3_Fetch_Group_By_Filter')"
+                                },
+                                "runAfter": {
+                                  "Acquire_Token_Token_Delete_Step3_Fetch_Group_By_Filter": [
+                                    "Succeeded"
+                                  ]
+                                }
+                              }
+                            },
+                            "else": {
+                              "actions": {}
+                            },
+                            "runAfter": {}
                           }
                         },
                         "runAfter": {
@@ -1489,6 +1677,48 @@
                             "unit": "Minute"
                           }
                         }
+                      },
+                      "Ensure_SCIM_Token_Delete_Step1_Check_Group_Exists": {
+                        "type": "If",
+                        "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                        "actions": {
+                          "Acquire_Token_IM_Token_Delete_Step1_Check_Group_Exists": {
+                            "type": "Workflow",
+                            "inputs": {
+                              "host": {
+                                "workflow": {
+                                  "id": "SCIMToken_Workflow"
+                                }
+                              },
+                              "body": {}
+                            },
+                            "runtimeConfiguration": {
+                              "secureData": {
+                                "properties": [
+                                  "inputs",
+                                  "outputs"
+                                ]
+                              }
+                            },
+                            "runAfter": {}
+                          },
+                          "Cache_Token_IM_Token_Delete_Step1_Check_Group_Exists": {
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "SCIMAccessTokenCache",
+                              "value": "@body('Acquire_Token_IM_Token_Delete_Step1_Check_Group_Exists')"
+                            },
+                            "runAfter": {
+                              "Acquire_Token_IM_Token_Delete_Step1_Check_Group_Exists": [
+                                "Succeeded"
+                              ]
+                            }
+                          }
+                        },
+                        "else": {
+                          "actions": {}
+                        },
+                        "runAfter": {}
                       }
                     },
                     "type": "Scope"
@@ -1632,9 +1862,14 @@
                               "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', triggerBody()?['initializationData']?['testGroupNames']?['deleteGroup'], '%22')}",
                               "method": "GET",
                               "headers": {
-                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                 "Accept": "@{parameters('scimContentType')}"
                               }
+                            },
+                            "runAfter": {
+                              "Ensure_SCIM_Token_Delete_Step4_Query_Group_By_Id": [
+                                "Succeeded"
+                              ]
                             }
                           },
                           "Delete_Step5_Delete_Group_By_Id": {
@@ -1662,9 +1897,14 @@
                                   "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', triggerBody()?['initializationData']?['testGroupNames']?['deleteGroup'], '%22')}",
                                   "method": "GET",
                                   "headers": {
-                                    "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                    "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                     "Accept": "@{parameters('scimContentType')}"
                                   }
+                                },
+                                "runAfter": {
+                                  "Ensure_SCIM_Token_Delete_Step6_Check_Group_Exists_Final": [
+                                    "Succeeded"
+                                  ]
                                 }
                               },
                               "Delete_Group_Delay_Final_15s": {
@@ -1681,6 +1921,48 @@
                                     "unit": "Second"
                                   }
                                 }
+                              },
+                              "Ensure_SCIM_Token_Delete_Step6_Check_Group_Exists_Final": {
+                                "type": "If",
+                                "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                "actions": {
+                                  "Acquire_Token_en_Delete_Step6_Check_Group_Exists_Final": {
+                                    "type": "Workflow",
+                                    "inputs": {
+                                      "host": {
+                                        "workflow": {
+                                          "id": "SCIMToken_Workflow"
+                                        }
+                                      },
+                                      "body": {}
+                                    },
+                                    "runtimeConfiguration": {
+                                      "secureData": {
+                                        "properties": [
+                                          "inputs",
+                                          "outputs"
+                                        ]
+                                      }
+                                    },
+                                    "runAfter": {}
+                                  },
+                                  "Cache_Token_en_Delete_Step6_Check_Group_Exists_Final": {
+                                    "type": "SetVariable",
+                                    "inputs": {
+                                      "name": "SCIMAccessTokenCache",
+                                      "value": "@body('Acquire_Token_en_Delete_Step6_Check_Group_Exists_Final')"
+                                    },
+                                    "runAfter": {
+                                      "Acquire_Token_en_Delete_Step6_Check_Group_Exists_Final": [
+                                        "Succeeded"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "else": {
+                                  "actions": {}
+                                },
+                                "runAfter": {}
                               }
                             },
                             "runAfter": {
@@ -1740,6 +2022,48 @@
                               "timeout": "PT15M"
                             },
                             "type": "Until"
+                          },
+                          "Ensure_SCIM_Token_Delete_Step4_Query_Group_By_Id": {
+                            "type": "If",
+                            "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                            "actions": {
+                              "Acquire_Token_CIM_Token_Delete_Step4_Query_Group_By_Id": {
+                                "type": "Workflow",
+                                "inputs": {
+                                  "host": {
+                                    "workflow": {
+                                      "id": "SCIMToken_Workflow"
+                                    }
+                                  },
+                                  "body": {}
+                                },
+                                "runtimeConfiguration": {
+                                  "secureData": {
+                                    "properties": [
+                                      "inputs",
+                                      "outputs"
+                                    ]
+                                  }
+                                },
+                                "runAfter": {}
+                              },
+                              "Cache_Token_CIM_Token_Delete_Step4_Query_Group_By_Id": {
+                                "type": "SetVariable",
+                                "inputs": {
+                                  "name": "SCIMAccessTokenCache",
+                                  "value": "@body('Acquire_Token_CIM_Token_Delete_Step4_Query_Group_By_Id')"
+                                },
+                                "runAfter": {
+                                  "Acquire_Token_CIM_Token_Delete_Step4_Query_Group_By_Id": [
+                                    "Succeeded"
+                                  ]
+                                }
+                              }
+                            },
+                            "else": {
+                              "actions": {}
+                            },
+                            "runAfter": {}
                           }
                         },
                         "type": "Scope"
@@ -1950,9 +2274,14 @@
                               "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', triggerBody()?['initializationData']?['testGroupNames']?['memberGroup'], '%22')}",
                               "method": "GET",
                               "headers": {
-                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                 "Accept": "@{parameters('scimContentType')}"
                               }
+                            },
+                            "runAfter": {
+                              "Ensure_SCIM_Token_Add_Step4_Check_Group_And_User": [
+                                "Succeeded"
+                              ]
                             }
                           },
                           "Add_Step4_Check_User": {
@@ -1961,9 +2290,14 @@
                               "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['memberUser1'], ''), '%22')}",
                               "method": "GET",
                               "headers": {
-                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                 "Accept": "@{parameters('scimContentType')}"
                               }
+                            },
+                            "runAfter": {
+                              "Ensure_SCIM_Token_Add_Step4_Check_User": [
+                                "Succeeded"
+                              ]
                             }
                           },
                           "Add_Delay_Initial_15s": {
@@ -1984,6 +2318,90 @@
                                 "unit": "Second"
                               }
                             }
+                          },
+                          "Ensure_SCIM_Token_Add_Step4_Check_Group_And_User": {
+                            "type": "If",
+                            "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                            "actions": {
+                              "Acquire_Token_CIM_Token_Add_Step4_Check_Group_And_User": {
+                                "type": "Workflow",
+                                "inputs": {
+                                  "host": {
+                                    "workflow": {
+                                      "id": "SCIMToken_Workflow"
+                                    }
+                                  },
+                                  "body": {}
+                                },
+                                "runtimeConfiguration": {
+                                  "secureData": {
+                                    "properties": [
+                                      "inputs",
+                                      "outputs"
+                                    ]
+                                  }
+                                },
+                                "runAfter": {}
+                              },
+                              "Cache_Token_CIM_Token_Add_Step4_Check_Group_And_User": {
+                                "type": "SetVariable",
+                                "inputs": {
+                                  "name": "SCIMAccessTokenCache",
+                                  "value": "@body('Acquire_Token_CIM_Token_Add_Step4_Check_Group_And_User')"
+                                },
+                                "runAfter": {
+                                  "Acquire_Token_CIM_Token_Add_Step4_Check_Group_And_User": [
+                                    "Succeeded"
+                                  ]
+                                }
+                              }
+                            },
+                            "else": {
+                              "actions": {}
+                            },
+                            "runAfter": {}
+                          },
+                          "Ensure_SCIM_Token_Add_Step4_Check_User": {
+                            "type": "If",
+                            "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                            "actions": {
+                              "Acquire_Token_Ensure_SCIM_Token_Add_Step4_Check_User": {
+                                "type": "Workflow",
+                                "inputs": {
+                                  "host": {
+                                    "workflow": {
+                                      "id": "SCIMToken_Workflow"
+                                    }
+                                  },
+                                  "body": {}
+                                },
+                                "runtimeConfiguration": {
+                                  "secureData": {
+                                    "properties": [
+                                      "inputs",
+                                      "outputs"
+                                    ]
+                                  }
+                                },
+                                "runAfter": {}
+                              },
+                              "Cache_Token_Ensure_SCIM_Token_Add_Step4_Check_User": {
+                                "type": "SetVariable",
+                                "inputs": {
+                                  "name": "SCIMAccessTokenCache",
+                                  "value": "@body('Acquire_Token_Ensure_SCIM_Token_Add_Step4_Check_User')"
+                                },
+                                "runAfter": {
+                                  "Acquire_Token_Ensure_SCIM_Token_Add_Step4_Check_User": [
+                                    "Succeeded"
+                                  ]
+                                }
+                              }
+                            },
+                            "else": {
+                              "actions": {}
+                            },
+                            "runAfter": {}
                           }
                         },
                         "runAfter": {
@@ -2194,9 +2612,14 @@
                           "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', triggerBody()?['initializationData']?['testGroupNames']?['memberGroup'], '%22')}",
                           "method": "GET",
                           "headers": {
-                            "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                            "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                             "Accept": "@{parameters('scimContentType')}"
                           }
+                        },
+                        "runAfter": {
+                          "Ensure_SCIM_Token_Add_Step1_Check_Group_Exists": [
+                            "Succeeded"
+                          ]
                         }
                       },
                       "Delay_Before_Add_Group_AppRole": {
@@ -2212,6 +2635,48 @@
                             "unit": "Minute"
                           }
                         }
+                      },
+                      "Ensure_SCIM_Token_Add_Step1_Check_Group_Exists": {
+                        "type": "If",
+                        "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                        "actions": {
+                          "Acquire_Token__SCIM_Token_Add_Step1_Check_Group_Exists": {
+                            "type": "Workflow",
+                            "inputs": {
+                              "host": {
+                                "workflow": {
+                                  "id": "SCIMToken_Workflow"
+                                }
+                              },
+                              "body": {}
+                            },
+                            "runtimeConfiguration": {
+                              "secureData": {
+                                "properties": [
+                                  "inputs",
+                                  "outputs"
+                                ]
+                              }
+                            },
+                            "runAfter": {}
+                          },
+                          "Cache_Token__SCIM_Token_Add_Step1_Check_Group_Exists": {
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "SCIMAccessTokenCache",
+                              "value": "@body('Acquire_Token__SCIM_Token_Add_Step1_Check_Group_Exists')"
+                            },
+                            "runAfter": {
+                              "Acquire_Token__SCIM_Token_Add_Step1_Check_Group_Exists": [
+                                "Succeeded"
+                              ]
+                            }
+                          }
+                        },
+                        "else": {
+                          "actions": {}
+                        },
+                        "runAfter": {}
                       }
                     },
                     "type": "Scope"
@@ -2271,9 +2736,14 @@
                                   "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', triggerBody()?['initializationData']?['testGroupNames']?['memberGroup'], '%22')}",
                                   "method": "GET",
                                   "headers": {
-                                    "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                    "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                     "Accept": "@{parameters('scimContentType')}"
                                   }
+                                },
+                                "runAfter": {
+                                  "Ensure_SCIM_Token_Add_Step6_Query_Group_With_Members": [
+                                    "Succeeded"
+                                  ]
                                 }
                               },
                               "Add_Delay_Member_15s": {
@@ -2290,6 +2760,48 @@
                                     "unit": "Second"
                                   }
                                 }
+                              },
+                              "Ensure_SCIM_Token_Add_Step6_Query_Group_With_Members": {
+                                "type": "If",
+                                "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                "actions": {
+                                  "Acquire_Token_Token_Add_Step6_Query_Group_With_Members": {
+                                    "type": "Workflow",
+                                    "inputs": {
+                                      "host": {
+                                        "workflow": {
+                                          "id": "SCIMToken_Workflow"
+                                        }
+                                      },
+                                      "body": {}
+                                    },
+                                    "runtimeConfiguration": {
+                                      "secureData": {
+                                        "properties": [
+                                          "inputs",
+                                          "outputs"
+                                        ]
+                                      }
+                                    },
+                                    "runAfter": {}
+                                  },
+                                  "Cache_Token_Token_Add_Step6_Query_Group_With_Members": {
+                                    "type": "SetVariable",
+                                    "inputs": {
+                                      "name": "SCIMAccessTokenCache",
+                                      "value": "@body('Acquire_Token_Token_Add_Step6_Query_Group_With_Members')"
+                                    },
+                                    "runAfter": {
+                                      "Acquire_Token_Token_Add_Step6_Query_Group_With_Members": [
+                                        "Succeeded"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "else": {
+                                  "actions": {}
+                                },
+                                "runAfter": {}
                               }
                             },
                             "runAfter": {
@@ -2306,10 +2818,8 @@
                           },
                           "Add_Step7_Query_Group_By_Id": {
                             "runAfter": {
-                              "Add_DoUntil_Wait_For_Member_Addition": [
-                                "Succeeded",
-                                "TimedOut",
-                                "Failed"
+                              "Ensure_SCIM_Token_Add_Step7_Query_Group_By_Id": [
+                                "Succeeded"
                               ]
                             },
                             "type": "Http",
@@ -2317,7 +2827,7 @@
                               "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', triggerBody()?['initializationData']?['testGroupNames']?['memberGroup'], '%22')}",
                               "method": "GET",
                               "headers": {
-                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                 "Accept": "@{parameters('scimContentType')}"
                               }
                             }
@@ -2366,6 +2876,54 @@
                               "timeout": "PT15M"
                             },
                             "type": "Until"
+                          },
+                          "Ensure_SCIM_Token_Add_Step7_Query_Group_By_Id": {
+                            "type": "If",
+                            "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                            "actions": {
+                              "Acquire_Token_e_SCIM_Token_Add_Step7_Query_Group_By_Id": {
+                                "type": "Workflow",
+                                "inputs": {
+                                  "host": {
+                                    "workflow": {
+                                      "id": "SCIMToken_Workflow"
+                                    }
+                                  },
+                                  "body": {}
+                                },
+                                "runtimeConfiguration": {
+                                  "secureData": {
+                                    "properties": [
+                                      "inputs",
+                                      "outputs"
+                                    ]
+                                  }
+                                },
+                                "runAfter": {}
+                              },
+                              "Cache_Token_e_SCIM_Token_Add_Step7_Query_Group_By_Id": {
+                                "type": "SetVariable",
+                                "inputs": {
+                                  "name": "SCIMAccessTokenCache",
+                                  "value": "@body('Acquire_Token_e_SCIM_Token_Add_Step7_Query_Group_By_Id')"
+                                },
+                                "runAfter": {
+                                  "Acquire_Token_e_SCIM_Token_Add_Step7_Query_Group_By_Id": [
+                                    "Succeeded"
+                                  ]
+                                }
+                              }
+                            },
+                            "else": {
+                              "actions": {}
+                            },
+                            "runAfter": {
+                              "Add_DoUntil_Wait_For_Member_Addition": [
+                                "Succeeded",
+                                "TimedOut",
+                                "Failed"
+                              ]
+                            }
                           }
                         },
                         "type": "Scope"
@@ -2716,9 +3274,14 @@
                               "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', triggerBody()?['initializationData']?['testGroupNames']?['memberGroup'], '-Remove%22')}",
                               "method": "GET",
                               "headers": {
-                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                 "Accept": "@{parameters('scimContentType')}"
                               }
+                            },
+                            "runAfter": {
+                              "Ensure_SCIM_Token_Remove_Step4a_Check_Group_With_Member": [
+                                "Succeeded"
+                              ]
                             }
                           },
                           "Remove_Step4b_Check_User": {
@@ -2727,9 +3290,14 @@
                               "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['memberUser2'], ''), '%22')}",
                               "method": "GET",
                               "headers": {
-                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                 "Accept": "@{parameters('scimContentType')}"
                               }
+                            },
+                            "runAfter": {
+                              "Ensure_SCIM_Token_Remove_Step4b_Check_User": [
+                                "Succeeded"
+                              ]
                             }
                           },
                           "Remove_Delay_Initial_15s": {
@@ -2750,6 +3318,90 @@
                                 "unit": "Second"
                               }
                             }
+                          },
+                          "Ensure_SCIM_Token_Remove_Step4a_Check_Group_With_Member": {
+                            "type": "If",
+                            "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                            "actions": {
+                              "Acquire_Token_en_Remove_Step4a_Check_Group_With_Member": {
+                                "type": "Workflow",
+                                "inputs": {
+                                  "host": {
+                                    "workflow": {
+                                      "id": "SCIMToken_Workflow"
+                                    }
+                                  },
+                                  "body": {}
+                                },
+                                "runtimeConfiguration": {
+                                  "secureData": {
+                                    "properties": [
+                                      "inputs",
+                                      "outputs"
+                                    ]
+                                  }
+                                },
+                                "runAfter": {}
+                              },
+                              "Cache_Token_en_Remove_Step4a_Check_Group_With_Member": {
+                                "type": "SetVariable",
+                                "inputs": {
+                                  "name": "SCIMAccessTokenCache",
+                                  "value": "@body('Acquire_Token_en_Remove_Step4a_Check_Group_With_Member')"
+                                },
+                                "runAfter": {
+                                  "Acquire_Token_en_Remove_Step4a_Check_Group_With_Member": [
+                                    "Succeeded"
+                                  ]
+                                }
+                              }
+                            },
+                            "else": {
+                              "actions": {}
+                            },
+                            "runAfter": {}
+                          },
+                          "Ensure_SCIM_Token_Remove_Step4b_Check_User": {
+                            "type": "If",
+                            "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                            "actions": {
+                              "Acquire_Token_sure_SCIM_Token_Remove_Step4b_Check_User": {
+                                "type": "Workflow",
+                                "inputs": {
+                                  "host": {
+                                    "workflow": {
+                                      "id": "SCIMToken_Workflow"
+                                    }
+                                  },
+                                  "body": {}
+                                },
+                                "runtimeConfiguration": {
+                                  "secureData": {
+                                    "properties": [
+                                      "inputs",
+                                      "outputs"
+                                    ]
+                                  }
+                                },
+                                "runAfter": {}
+                              },
+                              "Cache_Token_sure_SCIM_Token_Remove_Step4b_Check_User": {
+                                "type": "SetVariable",
+                                "inputs": {
+                                  "name": "SCIMAccessTokenCache",
+                                  "value": "@body('Acquire_Token_sure_SCIM_Token_Remove_Step4b_Check_User')"
+                                },
+                                "runAfter": {
+                                  "Acquire_Token_sure_SCIM_Token_Remove_Step4b_Check_User": [
+                                    "Succeeded"
+                                  ]
+                                }
+                              }
+                            },
+                            "else": {
+                              "actions": {}
+                            },
+                            "runAfter": {}
                           }
                         },
                         "runAfter": {
@@ -2982,9 +3634,14 @@
                           "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', triggerBody()?['initializationData']?['testGroupNames']?['memberGroup'], '-Remove%22')}",
                           "method": "GET",
                           "headers": {
-                            "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                            "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                             "Accept": "@{parameters('scimContentType')}"
                           }
+                        },
+                        "runAfter": {
+                          "Ensure_SCIM_Token_Remove_Step1_Check_Group_Exists": [
+                            "Succeeded"
+                          ]
                         }
                       },
                       "Delay_Before_Remove_Group_AppRole": {
@@ -3000,6 +3657,48 @@
                             "unit": "Minute"
                           }
                         }
+                      },
+                      "Ensure_SCIM_Token_Remove_Step1_Check_Group_Exists": {
+                        "type": "If",
+                        "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                        "actions": {
+                          "Acquire_Token_IM_Token_Remove_Step1_Check_Group_Exists": {
+                            "type": "Workflow",
+                            "inputs": {
+                              "host": {
+                                "workflow": {
+                                  "id": "SCIMToken_Workflow"
+                                }
+                              },
+                              "body": {}
+                            },
+                            "runtimeConfiguration": {
+                              "secureData": {
+                                "properties": [
+                                  "inputs",
+                                  "outputs"
+                                ]
+                              }
+                            },
+                            "runAfter": {}
+                          },
+                          "Cache_Token_IM_Token_Remove_Step1_Check_Group_Exists": {
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "SCIMAccessTokenCache",
+                              "value": "@body('Acquire_Token_IM_Token_Remove_Step1_Check_Group_Exists')"
+                            },
+                            "runAfter": {
+                              "Acquire_Token_IM_Token_Remove_Step1_Check_Group_Exists": [
+                                "Succeeded"
+                              ]
+                            }
+                          }
+                        },
+                        "else": {
+                          "actions": {}
+                        },
+                        "runAfter": {}
                       }
                     },
                     "type": "Scope"
@@ -3053,9 +3752,14 @@
                                   "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', triggerBody()?['initializationData']?['testGroupNames']?['memberGroup'], '-Remove%22')}",
                                   "method": "GET",
                                   "headers": {
-                                    "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                    "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                     "Accept": "@{parameters('scimContentType')}"
                                   }
+                                },
+                                "runAfter": {
+                                  "Ensure_SCIM_Token_Remove_Step6_Query_Group_After_Remove": [
+                                    "Succeeded"
+                                  ]
                                 }
                               },
                               "Remove_Delay_Final_15s": {
@@ -3072,6 +3776,48 @@
                                     "unit": "Second"
                                   }
                                 }
+                              },
+                              "Ensure_SCIM_Token_Remove_Step6_Query_Group_After_Remove": {
+                                "type": "If",
+                                "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                "actions": {
+                                  "Acquire_Token_en_Remove_Step6_Query_Group_After_Remove": {
+                                    "type": "Workflow",
+                                    "inputs": {
+                                      "host": {
+                                        "workflow": {
+                                          "id": "SCIMToken_Workflow"
+                                        }
+                                      },
+                                      "body": {}
+                                    },
+                                    "runtimeConfiguration": {
+                                      "secureData": {
+                                        "properties": [
+                                          "inputs",
+                                          "outputs"
+                                        ]
+                                      }
+                                    },
+                                    "runAfter": {}
+                                  },
+                                  "Cache_Token_en_Remove_Step6_Query_Group_After_Remove": {
+                                    "type": "SetVariable",
+                                    "inputs": {
+                                      "name": "SCIMAccessTokenCache",
+                                      "value": "@body('Acquire_Token_en_Remove_Step6_Query_Group_After_Remove')"
+                                    },
+                                    "runAfter": {
+                                      "Acquire_Token_en_Remove_Step6_Query_Group_After_Remove": [
+                                        "Succeeded"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "else": {
+                                  "actions": {}
+                                },
+                                "runAfter": {}
                               }
                             },
                             "runAfter": {
@@ -3088,10 +3834,8 @@
                           },
                           "Remove_Step7_Query_Group_By_Id": {
                             "runAfter": {
-                              "Remove_DoUntil_Wait_For_Member_Removal": [
-                                "Succeeded",
-                                "TimedOut",
-                                "Failed"
+                              "Ensure_SCIM_Token_Remove_Step7_Query_Group_By_Id": [
+                                "Succeeded"
                               ]
                             },
                             "type": "Http",
@@ -3099,7 +3843,7 @@
                               "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', concat(triggerBody()?['initializationData']?['testGroupNames']?['memberGroup'], '-Remove'), '%22')}",
                               "method": "GET",
                               "headers": {
-                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                 "Accept": "@{parameters('scimContentType')}"
                               }
                             }
@@ -3148,6 +3892,54 @@
                               "timeout": "PT15M"
                             },
                             "type": "Until"
+                          },
+                          "Ensure_SCIM_Token_Remove_Step7_Query_Group_By_Id": {
+                            "type": "If",
+                            "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                            "actions": {
+                              "Acquire_Token_CIM_Token_Remove_Step7_Query_Group_By_Id": {
+                                "type": "Workflow",
+                                "inputs": {
+                                  "host": {
+                                    "workflow": {
+                                      "id": "SCIMToken_Workflow"
+                                    }
+                                  },
+                                  "body": {}
+                                },
+                                "runtimeConfiguration": {
+                                  "secureData": {
+                                    "properties": [
+                                      "inputs",
+                                      "outputs"
+                                    ]
+                                  }
+                                },
+                                "runAfter": {}
+                              },
+                              "Cache_Token_CIM_Token_Remove_Step7_Query_Group_By_Id": {
+                                "type": "SetVariable",
+                                "inputs": {
+                                  "name": "SCIMAccessTokenCache",
+                                  "value": "@body('Acquire_Token_CIM_Token_Remove_Step7_Query_Group_By_Id')"
+                                },
+                                "runAfter": {
+                                  "Acquire_Token_CIM_Token_Remove_Step7_Query_Group_By_Id": [
+                                    "Succeeded"
+                                  ]
+                                }
+                              }
+                            },
+                            "else": {
+                              "actions": {}
+                            },
+                            "runAfter": {
+                              "Remove_DoUntil_Wait_For_Member_Removal": [
+                                "Succeeded",
+                                "TimedOut",
+                                "Failed"
+                              ]
+                            }
                           }
                         },
                         "type": "Scope"
@@ -3514,7 +4306,7 @@
                   },
                   "POD_SCIM_Pre_Check_Group": {
                     "runAfter": {
-                      "POD_Create_Graph_Group": [
+                      "Ensure_SCIM_Token_POD_SCIM_Pre_Check_Group": [
                         "Succeeded"
                       ]
                     },
@@ -3523,7 +4315,7 @@
                       "method": "GET",
                       "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', body('POD_Create_Graph_Group')?['displayName'], '%22')}",
                       "headers": {
-                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                        "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                         "Accept": "@{parameters('scimContentType')}"
                       }
                     }
@@ -3649,7 +4441,7 @@
                   },
                   "POD_SCIM_Get_Group": {
                     "runAfter": {
-                      "POD_Group_Delay_After_Provision": [
+                      "Ensure_SCIM_Token_POD_SCIM_Get_Group": [
                         "Succeeded"
                       ]
                     },
@@ -3658,7 +4450,7 @@
                       "method": "GET",
                       "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', body('POD_Create_Graph_Group')?['displayName'], '%22')}",
                       "headers": {
-                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                        "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                         "Accept": "@{parameters('scimContentType')}"
                       }
                     }
@@ -3706,6 +4498,98 @@
                           }
                         }
                       }
+                    }
+                  },
+                  "Ensure_SCIM_Token_POD_SCIM_Pre_Check_Group": {
+                    "type": "If",
+                    "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                    "actions": {
+                      "Acquire_Token_sure_SCIM_Token_POD_SCIM_Pre_Check_Group": {
+                        "type": "Workflow",
+                        "inputs": {
+                          "host": {
+                            "workflow": {
+                              "id": "SCIMToken_Workflow"
+                            }
+                          },
+                          "body": {}
+                        },
+                        "runtimeConfiguration": {
+                          "secureData": {
+                            "properties": [
+                              "inputs",
+                              "outputs"
+                            ]
+                          }
+                        },
+                        "runAfter": {}
+                      },
+                      "Cache_Token_sure_SCIM_Token_POD_SCIM_Pre_Check_Group": {
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "SCIMAccessTokenCache",
+                          "value": "@body('Acquire_Token_sure_SCIM_Token_POD_SCIM_Pre_Check_Group')"
+                        },
+                        "runAfter": {
+                          "Acquire_Token_sure_SCIM_Token_POD_SCIM_Pre_Check_Group": [
+                            "Succeeded"
+                          ]
+                        }
+                      }
+                    },
+                    "else": {
+                      "actions": {}
+                    },
+                    "runAfter": {
+                      "POD_Create_Graph_Group": [
+                        "Succeeded"
+                      ]
+                    }
+                  },
+                  "Ensure_SCIM_Token_POD_SCIM_Get_Group": {
+                    "type": "If",
+                    "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                    "actions": {
+                      "Acquire_Token_Ensure_SCIM_Token_POD_SCIM_Get_Group": {
+                        "type": "Workflow",
+                        "inputs": {
+                          "host": {
+                            "workflow": {
+                              "id": "SCIMToken_Workflow"
+                            }
+                          },
+                          "body": {}
+                        },
+                        "runtimeConfiguration": {
+                          "secureData": {
+                            "properties": [
+                              "inputs",
+                              "outputs"
+                            ]
+                          }
+                        },
+                        "runAfter": {}
+                      },
+                      "Cache_Token_Ensure_SCIM_Token_POD_SCIM_Get_Group": {
+                        "type": "SetVariable",
+                        "inputs": {
+                          "name": "SCIMAccessTokenCache",
+                          "value": "@body('Acquire_Token_Ensure_SCIM_Token_POD_SCIM_Get_Group')"
+                        },
+                        "runAfter": {
+                          "Acquire_Token_Ensure_SCIM_Token_POD_SCIM_Get_Group": [
+                            "Succeeded"
+                          ]
+                        }
+                      }
+                    },
+                    "else": {
+                      "actions": {}
+                    },
+                    "runAfter": {
+                      "POD_Group_Delay_After_Provision": [
+                        "Succeeded"
+                      ]
                     }
                   }
                 }
@@ -3756,10 +4640,8 @@
               },
               "POD_Group_Cleanup_SCIM_Delete": {
                 "runAfter": {
-                  "Set_PODGroupTestOutputs": [
-                    "Succeeded",
-                    "Failed",
-                    "Skipped"
+                  "Ensure_SCIM_Token_POD_Group_Cleanup_SCIM_Delete": [
+                    "Succeeded"
                   ]
                 },
                 "type": "Http",
@@ -3767,7 +4649,7 @@
                   "method": "DELETE",
                   "uri": "@{concat(parameters('scimEndpoint'), '/Groups/', coalesce(first(body('POD_SCIM_Get_Group')?['Resources'])?['id'], 'not-found'))}",
                   "headers": {
-                    "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                    "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                     "Accept": "@{parameters('scimContentType')}"
                   }
                 }
@@ -3806,6 +4688,54 @@
                     "type": "ManagedServiceIdentity",
                     "audience": "https://graph.microsoft.com/"
                   }
+                }
+              },
+              "Ensure_SCIM_Token_POD_Group_Cleanup_SCIM_Delete": {
+                "type": "If",
+                "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                "actions": {
+                  "Acquire_Token_SCIM_Token_POD_Group_Cleanup_SCIM_Delete": {
+                    "type": "Workflow",
+                    "inputs": {
+                      "host": {
+                        "workflow": {
+                          "id": "SCIMToken_Workflow"
+                        }
+                      },
+                      "body": {}
+                    },
+                    "runtimeConfiguration": {
+                      "secureData": {
+                        "properties": [
+                          "inputs",
+                          "outputs"
+                        ]
+                      }
+                    },
+                    "runAfter": {}
+                  },
+                  "Cache_Token_SCIM_Token_POD_Group_Cleanup_SCIM_Delete": {
+                    "type": "SetVariable",
+                    "inputs": {
+                      "name": "SCIMAccessTokenCache",
+                      "value": "@body('Acquire_Token_SCIM_Token_POD_Group_Cleanup_SCIM_Delete')"
+                    },
+                    "runAfter": {
+                      "Acquire_Token_SCIM_Token_POD_Group_Cleanup_SCIM_Delete": [
+                        "Succeeded"
+                      ]
+                    }
+                  }
+                },
+                "else": {
+                  "actions": {}
+                },
+                "runAfter": {
+                  "Set_PODGroupTestOutputs": [
+                    "Succeeded",
+                    "Failed",
+                    "Skipped"
+                  ]
                 }
               }
             },
@@ -3859,9 +4789,14 @@
                           "method": "GET",
                           "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', encodeUriComponent(coalesce(triggerBody()?['initializationData']?['testGroupNames']?['restoreGroup'], '')), '%22')}",
                           "headers": {
-                            "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                            "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                             "Accept": "@{parameters('scimContentType')}"
                           }
+                        },
+                        "runAfter": {
+                          "Ensure_SCIM_Token_RestoreGroupTest_SCIM_Pre_Check": [
+                            "Succeeded"
+                          ]
                         }
                       },
                       "RestoreGroupTest_Create_Entra_Group": {
@@ -3975,9 +4910,14 @@
                               "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', encodeUriComponent(body('RestoreGroupTest_Create_Entra_Group')?['displayName']), '%22')}",
                               "method": "GET",
                               "headers": {
-                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                 "Accept": "@{parameters('scimContentType')}"
                               }
+                            },
+                            "runAfter": {
+                              "Ensure_SCIM_Token_RestoreGroupTest_SCIM_Check_Created": [
+                                "Succeeded"
+                              ]
                             }
                           },
                           "RestoreGroupTest_Delay_Create_15s": {
@@ -3994,6 +4934,48 @@
                                 "unit": "Second"
                               }
                             }
+                          },
+                          "Ensure_SCIM_Token_RestoreGroupTest_SCIM_Check_Created": {
+                            "type": "If",
+                            "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                            "actions": {
+                              "Acquire_Token_oken_RestoreGroupTest_SCIM_Check_Created": {
+                                "type": "Workflow",
+                                "inputs": {
+                                  "host": {
+                                    "workflow": {
+                                      "id": "SCIMToken_Workflow"
+                                    }
+                                  },
+                                  "body": {}
+                                },
+                                "runtimeConfiguration": {
+                                  "secureData": {
+                                    "properties": [
+                                      "inputs",
+                                      "outputs"
+                                    ]
+                                  }
+                                },
+                                "runAfter": {}
+                              },
+                              "Cache_Token_oken_RestoreGroupTest_SCIM_Check_Created": {
+                                "type": "SetVariable",
+                                "inputs": {
+                                  "name": "SCIMAccessTokenCache",
+                                  "value": "@body('Acquire_Token_oken_RestoreGroupTest_SCIM_Check_Created')"
+                                },
+                                "runAfter": {
+                                  "Acquire_Token_oken_RestoreGroupTest_SCIM_Check_Created": [
+                                    "Succeeded"
+                                  ]
+                                }
+                              }
+                            },
+                            "else": {
+                              "actions": {}
+                            },
+                            "runAfter": {}
                           }
                         }
                       },
@@ -4041,6 +5023,48 @@
                             }
                           }
                         }
+                      },
+                      "Ensure_SCIM_Token_RestoreGroupTest_SCIM_Pre_Check": {
+                        "type": "If",
+                        "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                        "actions": {
+                          "Acquire_Token_IM_Token_RestoreGroupTest_SCIM_Pre_Check": {
+                            "type": "Workflow",
+                            "inputs": {
+                              "host": {
+                                "workflow": {
+                                  "id": "SCIMToken_Workflow"
+                                }
+                              },
+                              "body": {}
+                            },
+                            "runtimeConfiguration": {
+                              "secureData": {
+                                "properties": [
+                                  "inputs",
+                                  "outputs"
+                                ]
+                              }
+                            },
+                            "runAfter": {}
+                          },
+                          "Cache_Token_IM_Token_RestoreGroupTest_SCIM_Pre_Check": {
+                            "type": "SetVariable",
+                            "inputs": {
+                              "name": "SCIMAccessTokenCache",
+                              "value": "@body('Acquire_Token_IM_Token_RestoreGroupTest_SCIM_Pre_Check')"
+                            },
+                            "runAfter": {
+                              "Acquire_Token_IM_Token_RestoreGroupTest_SCIM_Pre_Check": [
+                                "Succeeded"
+                              ]
+                            }
+                          }
+                        },
+                        "else": {
+                          "actions": {}
+                        },
+                        "runAfter": {}
                       }
                     }
                   },
@@ -4207,9 +5231,14 @@
                                   "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', encodeUriComponent(body('RestoreGroupTest_Create_Entra_Group')?['displayName']), '%22')}",
                                   "method": "GET",
                                   "headers": {
-                                    "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                    "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                     "Accept": "@{parameters('scimContentType')}"
                                   }
+                                },
+                                "runAfter": {
+                                  "Ensure_SCIM_Token_RestoreGroupTest_SCIM_Check_Gone": [
+                                    "Succeeded"
+                                  ]
                                 }
                               },
                               "RestoreGroupTest_Delay_Gone_15s": {
@@ -4226,6 +5255,48 @@
                                     "unit": "Second"
                                   }
                                 }
+                              },
+                              "Ensure_SCIM_Token_RestoreGroupTest_SCIM_Check_Gone": {
+                                "type": "If",
+                                "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                "actions": {
+                                  "Acquire_Token_M_Token_RestoreGroupTest_SCIM_Check_Gone": {
+                                    "type": "Workflow",
+                                    "inputs": {
+                                      "host": {
+                                        "workflow": {
+                                          "id": "SCIMToken_Workflow"
+                                        }
+                                      },
+                                      "body": {}
+                                    },
+                                    "runtimeConfiguration": {
+                                      "secureData": {
+                                        "properties": [
+                                          "inputs",
+                                          "outputs"
+                                        ]
+                                      }
+                                    },
+                                    "runAfter": {}
+                                  },
+                                  "Cache_Token_M_Token_RestoreGroupTest_SCIM_Check_Gone": {
+                                    "type": "SetVariable",
+                                    "inputs": {
+                                      "name": "SCIMAccessTokenCache",
+                                      "value": "@body('Acquire_Token_M_Token_RestoreGroupTest_SCIM_Check_Gone')"
+                                    },
+                                    "runAfter": {
+                                      "Acquire_Token_M_Token_RestoreGroupTest_SCIM_Check_Gone": [
+                                        "Succeeded"
+                                      ]
+                                    }
+                                  }
+                                },
+                                "else": {
+                                  "actions": {}
+                                },
+                                "runAfter": {}
                               }
                             }
                           },
@@ -4449,9 +5520,14 @@
                                       "uri": "@{concat(parameters('scimEndpoint'), '/Groups?filter=displayName%20eq%20%22', encodeUriComponent(body('RestoreGroupTest_Create_Entra_Group')?['displayName']), '%22')}",
                                       "method": "GET",
                                       "headers": {
-                                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                        "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                         "Accept": "@{parameters('scimContentType')}"
                                       }
+                                    },
+                                    "runAfter": {
+                                      "Ensure_SCIM_Token_RestoreGroupTest_SCIM_Check_Restored": [
+                                        "Succeeded"
+                                      ]
                                     }
                                   },
                                   "RestoreGroupTest_Delay_Restored_15s": {
@@ -4468,6 +5544,48 @@
                                         "unit": "Second"
                                       }
                                     }
+                                  },
+                                  "Ensure_SCIM_Token_RestoreGroupTest_SCIM_Check_Restored": {
+                                    "type": "If",
+                                    "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                    "actions": {
+                                      "Acquire_Token_ken_RestoreGroupTest_SCIM_Check_Restored": {
+                                        "type": "Workflow",
+                                        "inputs": {
+                                          "host": {
+                                            "workflow": {
+                                              "id": "SCIMToken_Workflow"
+                                            }
+                                          },
+                                          "body": {}
+                                        },
+                                        "runtimeConfiguration": {
+                                          "secureData": {
+                                            "properties": [
+                                              "inputs",
+                                              "outputs"
+                                            ]
+                                          }
+                                        },
+                                        "runAfter": {}
+                                      },
+                                      "Cache_Token_ken_RestoreGroupTest_SCIM_Check_Restored": {
+                                        "type": "SetVariable",
+                                        "inputs": {
+                                          "name": "SCIMAccessTokenCache",
+                                          "value": "@body('Acquire_Token_ken_RestoreGroupTest_SCIM_Check_Restored')"
+                                        },
+                                        "runAfter": {
+                                          "Acquire_Token_ken_RestoreGroupTest_SCIM_Check_Restored": [
+                                            "Succeeded"
+                                          ]
+                                        }
+                                      }
+                                    },
+                                    "else": {
+                                      "actions": {}
+                                    },
+                                    "runAfter": {}
                                   }
                                 }
                               },
@@ -4787,6 +5905,421 @@
           "testSuiteName": "GroupTests",
           "status": "@if(or(or(or(or(or(equals(variables('CreateGroupTestOutputs')['overallResult'], 'FAILED'), equals(variables('UpdateGroupTestOutputs')['overallResult'], 'FAILED')), equals(variables('DeleteGroupTestOutputs')['overallResult'], 'FAILED')), equals(variables('AddMemberTestOutputs')['overallResult'], 'FAILED')), equals(variables('RemoveMemberTestOutputs')['overallResult'], 'FAILED')), equals(variables('PODGroupTestOutputs')['overallResult'], 'FAILED')), 'Failed', 'Passed')",
           "workflowRunId": "@workflow().run.name"
+        }
+      },
+      "Initialize_All_Group_Test_Variables_Variable_1": {
+        "type": "InitializeVariable",
+        "inputs": {
+          "variables": [
+            {
+              "name": "CreateGroupFailedActionName",
+              "type": "string",
+              "value": ""
+            }
+          ]
+        },
+        "runAfter": {}
+      },
+      "Initialize_All_Group_Test_Variables_Variable_2": {
+        "type": "InitializeVariable",
+        "inputs": {
+          "variables": [
+            {
+              "name": "CreateGroupFailedActionResponse",
+              "type": "Object",
+              "value": {}
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_All_Group_Test_Variables_Variable_1": [
+            "Succeeded"
+          ]
+        }
+      },
+      "Initialize_All_Group_Test_Variables_Variable_3": {
+        "type": "InitializeVariable",
+        "inputs": {
+          "variables": [
+            {
+              "name": "CreateGroupScopeExecutionStatus",
+              "type": "string",
+              "value": "InProgress"
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_All_Group_Test_Variables_Variable_2": [
+            "Succeeded"
+          ]
+        }
+      },
+      "Initialize_All_Group_Test_Variables_Variable_4": {
+        "type": "InitializeVariable",
+        "inputs": {
+          "variables": [
+            {
+              "name": "CreateGroupTestOutputs",
+              "type": "Object",
+              "value": {
+                "overallResult": "SKIPPED",
+                "result": "SKIPPED",
+                "provisioningLogsResult": "",
+                "scimCheckResult": "",
+                "errorDetails": {
+                  "provisioningLogs": "",
+                  "scimCheck": ""
+                }
+              }
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_All_Group_Test_Variables_Variable_3": [
+            "Succeeded"
+          ]
+        }
+      },
+      "Initialize_All_Group_Test_Variables_Variable_5": {
+        "type": "InitializeVariable",
+        "inputs": {
+          "variables": [
+            {
+              "name": "UpdateGroupFailedActionName",
+              "type": "string",
+              "value": ""
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_All_Group_Test_Variables_Variable_4": [
+            "Succeeded"
+          ]
+        }
+      },
+      "Initialize_All_Group_Test_Variables_Variable_6": {
+        "type": "InitializeVariable",
+        "inputs": {
+          "variables": [
+            {
+              "name": "UpdateGroupFailedActionResponse",
+              "type": "Object",
+              "value": {}
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_All_Group_Test_Variables_Variable_5": [
+            "Succeeded"
+          ]
+        }
+      },
+      "Initialize_All_Group_Test_Variables_Variable_7": {
+        "type": "InitializeVariable",
+        "inputs": {
+          "variables": [
+            {
+              "name": "UpdateGroupScopeExecutionStatus",
+              "type": "string",
+              "value": "InProgress"
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_All_Group_Test_Variables_Variable_6": [
+            "Succeeded"
+          ]
+        }
+      },
+      "Initialize_All_Group_Test_Variables_Variable_8": {
+        "type": "InitializeVariable",
+        "inputs": {
+          "variables": [
+            {
+              "name": "UpdateGroupTestOutputs",
+              "type": "Object",
+              "value": {
+                "overallResult": "SKIPPED",
+                "result": "SKIPPED",
+                "provisioningLogsResult": "",
+                "scimCheckResult": "",
+                "errorDetails": {
+                  "provisioningLogs": "",
+                  "scimCheck": ""
+                }
+              }
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_All_Group_Test_Variables_Variable_7": [
+            "Succeeded"
+          ]
+        }
+      },
+      "Initialize_All_Group_Test_Variables_Variable_9": {
+        "type": "InitializeVariable",
+        "inputs": {
+          "variables": [
+            {
+              "name": "DeleteGroupFailedActionName",
+              "type": "string",
+              "value": ""
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_All_Group_Test_Variables_Variable_8": [
+            "Succeeded"
+          ]
+        }
+      },
+      "Initialize_All_Group_Test_Variables_Variable_10": {
+        "type": "InitializeVariable",
+        "inputs": {
+          "variables": [
+            {
+              "name": "DeleteGroupFailedActionResponse",
+              "type": "Object",
+              "value": {}
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_All_Group_Test_Variables_Variable_9": [
+            "Succeeded"
+          ]
+        }
+      },
+      "Initialize_All_Group_Test_Variables_Variable_11": {
+        "type": "InitializeVariable",
+        "inputs": {
+          "variables": [
+            {
+              "name": "DeleteGroupScopeExecutionStatus",
+              "type": "string",
+              "value": "InProgress"
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_All_Group_Test_Variables_Variable_10": [
+            "Succeeded"
+          ]
+        }
+      },
+      "Initialize_All_Group_Test_Variables_Variable_12": {
+        "type": "InitializeVariable",
+        "inputs": {
+          "variables": [
+            {
+              "name": "DeleteGroupTestOutputs",
+              "type": "Object",
+              "value": {
+                "overallResult": "SKIPPED",
+                "result": "SKIPPED",
+                "provisioningLogsResult": "",
+                "scimCheckResult": "",
+                "errorDetails": {
+                  "provisioningLogs": "",
+                  "scimCheck": ""
+                }
+              }
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_All_Group_Test_Variables_Variable_11": [
+            "Succeeded"
+          ]
+        }
+      },
+      "Initialize_All_Group_Test_Variables_Variable_13": {
+        "type": "InitializeVariable",
+        "inputs": {
+          "variables": [
+            {
+              "name": "AddMemberFailedActionName",
+              "type": "string",
+              "value": ""
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_All_Group_Test_Variables_Variable_12": [
+            "Succeeded"
+          ]
+        }
+      },
+      "Initialize_All_Group_Test_Variables_Variable_14": {
+        "type": "InitializeVariable",
+        "inputs": {
+          "variables": [
+            {
+              "name": "AddMemberFailedActionResponse",
+              "type": "Object",
+              "value": {}
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_All_Group_Test_Variables_Variable_13": [
+            "Succeeded"
+          ]
+        }
+      },
+      "Initialize_All_Group_Test_Variables_Variable_15": {
+        "type": "InitializeVariable",
+        "inputs": {
+          "variables": [
+            {
+              "name": "AddMemberScopeExecutionStatus",
+              "type": "string",
+              "value": "InProgress"
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_All_Group_Test_Variables_Variable_14": [
+            "Succeeded"
+          ]
+        }
+      },
+      "Initialize_All_Group_Test_Variables_Variable_16": {
+        "type": "InitializeVariable",
+        "inputs": {
+          "variables": [
+            {
+              "name": "AddMemberTestOutputs",
+              "type": "Object",
+              "value": {
+                "overallResult": "SKIPPED",
+                "result": "SKIPPED",
+                "provisioningLogsResult": "",
+                "scimCheckResult": "",
+                "errorDetails": {
+                  "provisioningLogs": "",
+                  "scimCheck": ""
+                }
+              }
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_All_Group_Test_Variables_Variable_15": [
+            "Succeeded"
+          ]
+        }
+      },
+      "Initialize_All_Group_Test_Variables_Variable_17": {
+        "type": "InitializeVariable",
+        "inputs": {
+          "variables": [
+            {
+              "name": "RemoveMemberFailedActionName",
+              "type": "string",
+              "value": ""
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_All_Group_Test_Variables_Variable_16": [
+            "Succeeded"
+          ]
+        }
+      },
+      "Initialize_All_Group_Test_Variables_Variable_18": {
+        "type": "InitializeVariable",
+        "inputs": {
+          "variables": [
+            {
+              "name": "RemoveMemberFailedActionResponse",
+              "type": "Object",
+              "value": {}
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_All_Group_Test_Variables_Variable_17": [
+            "Succeeded"
+          ]
+        }
+      },
+      "Initialize_All_Group_Test_Variables_Variable_19": {
+        "type": "InitializeVariable",
+        "inputs": {
+          "variables": [
+            {
+              "name": "RemoveMemberScopeExecutionStatus",
+              "type": "string",
+              "value": "InProgress"
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_All_Group_Test_Variables_Variable_18": [
+            "Succeeded"
+          ]
+        }
+      },
+      "Initialize_All_Group_Test_Variables_Variable_20": {
+        "type": "InitializeVariable",
+        "inputs": {
+          "variables": [
+            {
+              "name": "RemoveMemberTestOutputs",
+              "type": "Object",
+              "value": {
+                "overallResult": "SKIPPED",
+                "result": "SKIPPED",
+                "provisioningLogsResult": "",
+                "scimCheckResult": "",
+                "errorDetails": {
+                  "provisioningLogs": "",
+                  "scimCheck": ""
+                }
+              }
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_All_Group_Test_Variables_Variable_19": [
+            "Succeeded"
+          ]
+        }
+      },
+      "Initialize_RestoreGroupTestVariables_Variable_1": {
+        "type": "InitializeVariable",
+        "inputs": {
+          "variables": [
+            {
+              "name": "restoreEntraGroupId",
+              "type": "string",
+              "value": ""
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_PODGroupTestOutputs": [
+            "Succeeded"
+          ]
+        }
+      },
+      "Initialize_RestoreGroupTestVariables_Variable_2": {
+        "type": "InitializeVariable",
+        "inputs": {
+          "variables": [
+            {
+              "name": "restoreGroupAppRoleAssignmentId",
+              "type": "string",
+              "value": ""
+            }
+          ]
+        },
+        "runAfter": {
+          "Initialize_RestoreGroupTestVariables_Variable_1": [
+            "Succeeded"
+          ]
         }
       }
     },

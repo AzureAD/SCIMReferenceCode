@@ -34,12 +34,31 @@
     "type": "String",
     "value": "All"
   },
-  "LogicAppVersion": {
+  "supportedAuthenticationMethods": {
     "metadata": {
-      "description": "Version of the Logic App for tracking and deployment purposes"
+      "description": "Authentication methods available for this validation: Bearer, OAuth2ClientCredentials, WorkloadIdentityFederation. The agent must confirm this list. An empty list preserves legacy inference from configured token endpoints."
+    },
+    "type": "Array",
+    "value": []
+  },
+  "scimAuthenticationMethod": {
+    "allowedValues": [
+      "Bearer",
+      "OAuth2ClientCredentials",
+      "WorkloadIdentityFederation"
+    ],
+    "metadata": {
+      "description": "Authentication for direct SCIM requests. OAuth2ClientCredentials and WorkloadIdentityFederation acquire and refresh access tokens at runtime and never fall back to scimBearerToken. Bearer uses a caller-supplied access token."
     },
     "type": "String",
-    "value": "10.0"
+    "value": "Bearer"
+  },
+  "LogicAppVersion": {
+    "metadata": {
+      "description": "Overall bundle and agent version, copied from the same-bundle VERSION file."
+    },
+    "type": "String",
+    "value": "14.0"
   },
   "attributeTransforms": {
     "metadata": {
@@ -251,54 +270,54 @@
     "value": "https://scimserver2.yellowsmoke-af7a3fff.eastus.azurecontainerapps.io/scim/oauth/token"
   },
   "federatedEntraTenantId": {
-        "metadata": {
-            "description": "Entra tenant ID used to construct the token endpoint URL for federated identity token acquisition."
-        },
-        "type": "String",
-        "value": "changeme-tenant-id"
+    "metadata": {
+      "description": "Entra tenant ID used to construct the token endpoint URL for federated identity token acquisition."
     },
-    "federatedApplicationId": {
-        "metadata": {
-            "description": "OAuth2 Application ID for the Entra app registration used in federated identity token acquisition."
-        },
-        "type": "String",
-        "value": "changeme-client-id"
+    "type": "String",
+    "value": "changeme-tenant-id"
+  },
+  "federatedApplicationId": {
+    "metadata": {
+      "description": "OAuth2 Application ID for the Entra app registration used in federated identity token acquisition."
     },
-    "federatedApplicationClientSecret": {
-        "metadata": {
-            "description": "OAuth2 Client Secret for the Entra app registration used in federated identity token acquisition."
-        },
-        "type": "String",
-        "value": "changeme-client-secret"
+    "type": "String",
+    "value": "changeme-client-id"
+  },
+  "federatedApplicationClientSecret": {
+    "metadata": {
+      "description": "OAuth2 Client Secret for the Entra app registration used in federated identity token acquisition."
     },
-    "federatedTokenEndpoint": {
-        "metadata": {
-            "description": "ISV token endpoint URL for federated identity token exchange."
-        },
-        "type": "String",
-        "value": "changeme-federated-endpoint"
+    "type": "String",
+    "value": "changeme-client-secret"
+  },
+  "federatedTokenEndpoint": {
+    "metadata": {
+      "description": "ISV token endpoint URL for federated identity token exchange."
     },
-    "federatedClientId": {
-        "metadata": {
-            "description": "ISV client ID used in federated identity token exchange."
-        },
-        "type": "String",
-        "value": "changeme-federated-app-id"
+    "type": "String",
+    "value": "changeme-federated-endpoint"
+  },
+  "federatedClientId": {
+    "metadata": {
+      "description": "ISV client ID used in federated identity token exchange."
     },
-    "federatedBaseAddress": {
-        "metadata": {
-            "description": "ISV base address sent in the federated identity token exchange request."
-        },
-        "type": "String",
-        "value": "changeme-base-address"
+    "type": "String",
+    "value": "changeme-federated-app-id"
+  },
+  "federatedBaseAddress": {
+    "metadata": {
+      "description": "ISV base address sent in the federated identity token exchange request."
     },
-    "federatedAudience": {
-        "metadata": {
-            "description": "Audience value for federated token exchange."
-        },
-        "type": "String",
-        "value": "changeme-audience"
+    "type": "String",
+    "value": "changeme-base-address"
+  },
+  "federatedAudience": {
+    "metadata": {
+      "description": "Audience value for federated token exchange."
     },
+    "type": "String",
+    "value": "changeme-audience"
+  },
   "servicePrincipalId": {
     "type": "String",
     "value": "3197053d-46d9-4a22-b843-6a9d98ec267e"

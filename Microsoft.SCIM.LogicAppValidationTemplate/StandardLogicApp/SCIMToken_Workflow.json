@@ -1,0 +1,601 @@
+{
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "contentVersion": "1.0.0.0",
+    "triggers": {
+      "manual": {
+        "type": "Request",
+        "kind": "Http",
+        "inputs": {
+          "schema": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "actions": {
+      "Select_SCIM_Authentication": {
+        "type": "If",
+        "expression": "@equals(parameters('scimAuthenticationMethod'), 'OAuth2ClientCredentials')",
+        "actions": {
+          "Acquire_SCIM_OAuth_Token": {
+            "type": "Http",
+            "inputs": {
+              "uri": "@parameters('scimTokenEndpoint')",
+              "method": "POST",
+              "headers": "@if(equals(toLower(coalesce(parameters('scimCredentialLocationInRequest'), 'Header')), 'header'), setProperty(json('{\"Content-Type\":\"application/x-www-form-urlencoded\"}'), 'Authorization', concat('Basic ', base64(concat(encodeUriComponent(parameters('scimClientId')), ':', encodeUriComponent(parameters('scimClientSecret')))))), json('{\"Content-Type\":\"application/x-www-form-urlencoded\"}'))",
+              "body": "@concat('grant_type=client_credentials', if(equals(toLower(coalesce(parameters('scimCredentialLocationInRequest'), 'Header')), 'body'), concat('&client_id=', encodeUriComponent(parameters('scimClientId')), '&client_secret=', encodeUriComponent(parameters('scimClientSecret'))), ''), if(empty(coalesce(parameters('scimOAuthScope'), '')), '', concat('&scope=', encodeUriComponent(parameters('scimOAuthScope')))))",
+              "retryPolicy": {
+                "type": "exponential",
+                "count": 3,
+                "interval": "PT5S"
+              }
+            },
+            "runtimeConfiguration": {
+              "secureData": {
+                "properties": [
+                  "inputs",
+                  "outputs"
+                ]
+              }
+            },
+            "runAfter": {}
+          },
+          "Check_SCIM_OAuth_Response": {
+            "type": "If",
+            "expression": "@and(greaterOrEquals(coalesce(outputs('Acquire_SCIM_OAuth_Token')?['statusCode'], 0), 200), less(coalesce(outputs('Acquire_SCIM_OAuth_Token')?['statusCode'], 0), 300), not(empty(body('Acquire_SCIM_OAuth_Token')?['access_token'])), greater(int(coalesce(body('Acquire_SCIM_OAuth_Token')?['expires_in'], 3600)), 0), equals(toLower(coalesce(body('Acquire_SCIM_OAuth_Token')?['token_type'], 'Bearer')), 'bearer'))",
+            "actions": {
+              "Return_SCIM_OAuth_Token": {
+                "type": "Response",
+                "kind": "Http",
+                "inputs": {
+                  "statusCode": 200,
+                  "body": {
+                    "accessToken": "@body('Acquire_SCIM_OAuth_Token')?['access_token']",
+                    "expiresAt": "@addSeconds(utcNow(), int(coalesce(body('Acquire_SCIM_OAuth_Token')?['expires_in'], 3600)))"
+                  }
+                },
+                "runtimeConfiguration": {
+                  "secureData": {
+                    "properties": [
+                      "inputs"
+                    ]
+                  }
+                }
+              }
+            },
+            "else": {
+              "actions": {
+                "Return_SCIM_OAuth_Error": {
+                  "type": "Response",
+                  "kind": "Http",
+                  "inputs": {
+                    "statusCode": 502,
+                    "body": {
+                      "error": "SCIMTokenAcquisitionFailed",
+                      "message": "OAuth token acquisition failed or returned an invalid token response. No bearer-token fallback was attempted.",
+                      "tokenEndpointStatus": "@coalesce(outputs('Acquire_SCIM_OAuth_Token')?['statusCode'], 0)"
+                    }
+                  }
+                }
+              }
+            },
+            "runAfter": {
+              "Acquire_SCIM_OAuth_Token": [
+                "Succeeded",
+                "Failed",
+                "TimedOut"
+              ]
+            }
+          }
+        },
+        "else": {
+          "actions": {
+            "Select_SCIM_Federation": {
+              "type": "If",
+              "expression": "@equals(parameters('scimAuthenticationMethod'), 'WorkloadIdentityFederation')",
+              "actions": {
+                "Acquire_Entra_Token": {
+                  "type": "Http",
+                  "inputs": {
+                    "uri": "@{concat('https://login.microsoftonline.com/', parameters('federatedEntraTenantId'), '/oauth2/v2.0/token')}",
+                    "method": "POST",
+                    "headers": {
+                      "Content-Type": "application/x-www-form-urlencoded"
+                    },
+                    "body": "@{concat('grant_type=client_credentials&client_id=', encodeUriComponent(parameters('federatedApplicationId')), '&client_secret=', encodeUriComponent(parameters('federatedApplicationClientSecret')), '&scope=', encodeUriComponent(concat('api://', parameters('federatedApplicationId'), '/.default')))}"
+                  },
+                  "runtimeConfiguration": {
+                    "secureData": {
+                      "properties": [
+                        "inputs",
+                        "outputs"
+                      ]
+                    }
+                  },
+                  "runAfter": {}
+                },
+                "Check_Entra_Token_Acquired": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "greaterOrEquals": [
+                          "@coalesce(outputs('Acquire_Entra_Token')?['statusCode'], 0)",
+                          200
+                        ]
+                      },
+                      {
+                        "less": [
+                          "@coalesce(outputs('Acquire_Entra_Token')?['statusCode'], 0)",
+                          300
+                        ]
+                      },
+                      {
+                        "not": {
+                          "equals": [
+                            "@coalesce(body('Acquire_Entra_Token')?['access_token'], '')",
+                            ""
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Check_Is_Google_SA_Flow": {
+                      "type": "If",
+                      "expression": {
+                        "and": [
+                          {
+                            "contains": [
+                              "@parameters('federatedTokenEndpoint')",
+                              "googleapis.com"
+                            ]
+                          },
+                          {
+                            "contains": [
+                              "@parameters('federatedTokenEndpoint')",
+                              "serviceAccounts"
+                            ]
+                          }
+                        ]
+                      },
+                      "actions": {
+                        "Acquire_Google_STS_Token": {
+                          "type": "Http",
+                          "inputs": {
+                            "uri": "https://sts.googleapis.com/v1/token",
+                            "method": "POST",
+                            "headers": {
+                              "Content-Type": "application/json"
+                            },
+                            "body": {
+                              "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+                              "audience": "@{parameters('federatedAudience')}",
+                              "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
+                              "subject_token": "@{body('Acquire_Entra_Token')?['access_token']}",
+                              "subject_token_type": "urn:ietf:params:oauth:token-type:id_token",
+                              "scope": "https://www.googleapis.com/auth/cloud-platform"
+                            }
+                          },
+                          "runtimeConfiguration": {
+                            "secureData": {
+                              "properties": [
+                                "inputs",
+                                "outputs"
+                              ]
+                            }
+                          },
+                          "runAfter": {}
+                        },
+                        "Check_Google_STS_Token": {
+                          "type": "If",
+                          "expression": {
+                            "and": [
+                              {
+                                "greaterOrEquals": [
+                                  "@coalesce(outputs('Acquire_Google_STS_Token')?['statusCode'], 0)",
+                                  200
+                                ]
+                              },
+                              {
+                                "less": [
+                                  "@coalesce(outputs('Acquire_Google_STS_Token')?['statusCode'], 0)",
+                                  300
+                                ]
+                              },
+                              {
+                                "not": {
+                                  "equals": [
+                                    "@coalesce(body('Acquire_Google_STS_Token')?['access_token'], '')",
+                                    ""
+                                  ]
+                                }
+                              }
+                            ]
+                          },
+                          "actions": {
+                            "Acquire_Google_SA_Token": {
+                              "type": "Http",
+                              "inputs": {
+                                "uri": "@{parameters('federatedTokenEndpoint')}",
+                                "method": "POST",
+                                "headers": {
+                                  "Content-Type": "application/json",
+                                  "Authorization": "@{concat('Bearer ', body('Acquire_Google_STS_Token')?['access_token'])}"
+                                },
+                                "body": {
+                                  "scope": [
+                                    "https://www.googleapis.com/auth/cloud-platform"
+                                  ]
+                                }
+                              },
+                              "runtimeConfiguration": {
+                                "secureData": {
+                                  "properties": [
+                                    "inputs",
+                                    "outputs"
+                                  ]
+                                }
+                              },
+                              "runAfter": {}
+                            },
+                            "Check_Google_SA_Token": {
+                              "type": "If",
+                              "expression": {
+                                "and": [
+                                  {
+                                    "greaterOrEquals": [
+                                      "@coalesce(outputs('Acquire_Google_SA_Token')?['statusCode'], 0)",
+                                      200
+                                    ]
+                                  },
+                                  {
+                                    "less": [
+                                      "@coalesce(outputs('Acquire_Google_SA_Token')?['statusCode'], 0)",
+                                      300
+                                    ]
+                                  },
+                                  {
+                                    "not": {
+                                      "equals": [
+                                        "@coalesce(body('Acquire_Google_SA_Token')?['accessToken'], '')",
+                                        ""
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              "actions": {
+                                "Return_Google_SA_Token": {
+                                  "type": "Response",
+                                  "kind": "Http",
+                                  "inputs": {
+                                    "statusCode": 200,
+                                    "body": {
+                                      "accessToken": "@body('Acquire_Google_SA_Token')?['accessToken']",
+                                      "expiresAt": "@coalesce(body('Acquire_Google_SA_Token')?['expireTime'], addSeconds(utcNow(), 3600))"
+                                    }
+                                  },
+                                  "runtimeConfiguration": {
+                                    "secureData": {
+                                      "properties": [
+                                        "inputs"
+                                      ]
+                                    }
+                                  }
+                                }
+                              },
+                              "else": {
+                                "actions": {
+                                  "Return_Check_Google_SA_Token_Error": {
+                                    "type": "Response",
+                                    "kind": "Http",
+                                    "inputs": {
+                                      "statusCode": 502,
+                                      "body": {
+                                        "error": "SCIMTokenAcquisitionFailed",
+                                        "stage": "Check_Google_SA_Token",
+                                        "message": "The selected authentication flow failed. No alternative or static token was used."
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "runAfter": {
+                                "Acquire_Google_SA_Token": [
+                                  "Succeeded",
+                                  "Failed",
+                                  "TimedOut"
+                                ]
+                              }
+                            }
+                          },
+                          "else": {
+                            "actions": {
+                              "Return_Check_Google_STS_Token_Error": {
+                                "type": "Response",
+                                "kind": "Http",
+                                "inputs": {
+                                  "statusCode": 502,
+                                  "body": {
+                                    "error": "SCIMTokenAcquisitionFailed",
+                                    "stage": "Check_Google_STS_Token",
+                                    "message": "The selected authentication flow failed. No alternative or static token was used."
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "runAfter": {
+                            "Acquire_Google_STS_Token": [
+                              "Succeeded",
+                              "Failed",
+                              "TimedOut"
+                            ]
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Check_Is_Google_STS_Flow": {
+                            "type": "If",
+                            "expression": {
+                              "and": [
+                                {
+                                  "contains": [
+                                    "@parameters('federatedTokenEndpoint')",
+                                    "googleapis.com"
+                                  ]
+                                }
+                              ]
+                            },
+                            "actions": {
+                              "Acquire_Google_STS_Token_Only": {
+                                "type": "Http",
+                                "inputs": {
+                                  "uri": "@{parameters('federatedTokenEndpoint')}",
+                                  "method": "POST",
+                                  "headers": {
+                                    "Content-Type": "application/json"
+                                  },
+                                  "body": {
+                                    "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+                                    "audience": "@{parameters('federatedAudience')}",
+                                    "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
+                                    "subject_token": "@{body('Acquire_Entra_Token')?['access_token']}",
+                                    "subject_token_type": "urn:ietf:params:oauth:token-type:id_token",
+                                    "scope": "https://www.googleapis.com/auth/cloud-platform"
+                                  }
+                                },
+                                "runtimeConfiguration": {
+                                  "secureData": {
+                                    "properties": [
+                                      "inputs",
+                                      "outputs"
+                                    ]
+                                  }
+                                },
+                                "runAfter": {}
+                              },
+                              "Check_Google_STS_Only_Token": {
+                                "type": "If",
+                                "expression": {
+                                  "and": [
+                                    {
+                                      "greaterOrEquals": [
+                                        "@coalesce(outputs('Acquire_Google_STS_Token_Only')?['statusCode'], 0)",
+                                        200
+                                      ]
+                                    },
+                                    {
+                                      "less": [
+                                        "@coalesce(outputs('Acquire_Google_STS_Token_Only')?['statusCode'], 0)",
+                                        300
+                                      ]
+                                    },
+                                    {
+                                      "not": {
+                                        "equals": [
+                                          "@coalesce(body('Acquire_Google_STS_Token_Only')?['access_token'], '')",
+                                          ""
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                },
+                                "actions": {
+                                  "Return_Google_STS_Token": {
+                                    "type": "Response",
+                                    "kind": "Http",
+                                    "inputs": {
+                                      "statusCode": 200,
+                                      "body": {
+                                        "accessToken": "@body('Acquire_Google_STS_Token_Only')?['access_token']",
+                                        "expiresAt": "@addSeconds(utcNow(), int(coalesce(body('Acquire_Google_STS_Token_Only')?['expires_in'], 3600)))"
+                                      }
+                                    },
+                                    "runtimeConfiguration": {
+                                      "secureData": {
+                                        "properties": [
+                                          "inputs"
+                                        ]
+                                      }
+                                    }
+                                  }
+                                },
+                                "else": {
+                                  "actions": {
+                                    "Return_Check_Google_STS_Only_Token_Error": {
+                                      "type": "Response",
+                                      "kind": "Http",
+                                      "inputs": {
+                                        "statusCode": 502,
+                                        "body": {
+                                          "error": "SCIMTokenAcquisitionFailed",
+                                          "stage": "Check_Google_STS_Only_Token",
+                                          "message": "The selected authentication flow failed. No alternative or static token was used."
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "runAfter": {
+                                  "Acquire_Google_STS_Token_Only": [
+                                    "Succeeded",
+                                    "Failed",
+                                    "TimedOut"
+                                  ]
+                                }
+                              }
+                            },
+                            "else": {
+                              "actions": {
+                                "Acquire_Federated_Token": {
+                                  "type": "Http",
+                                  "inputs": {
+                                    "uri": "@{parameters('federatedTokenEndpoint')}",
+                                    "method": "POST",
+                                    "headers": {
+                                      "Content-Type": "application/x-www-form-urlencoded"
+                                    },
+                                    "body": "@{concat('grant_type=client_credentials&client_id=', encodeUriComponent(parameters('federatedClientId')), '&client_assertion=', encodeUriComponent(body('Acquire_Entra_Token')?['access_token']), '&client_assertion_type=', encodeUriComponent('urn:ietf:params:oauth:client-assertion-type:jwt-bearer'), '&baseAddress=', encodeUriComponent(parameters('federatedBaseAddress')))}"
+                                  },
+                                  "runtimeConfiguration": {
+                                    "secureData": {
+                                      "properties": [
+                                        "inputs",
+                                        "outputs"
+                                      ]
+                                    }
+                                  },
+                                  "runAfter": {}
+                                },
+                                "Check_Federated_Token_Acquired": {
+                                  "type": "If",
+                                  "expression": {
+                                    "and": [
+                                      {
+                                        "greaterOrEquals": [
+                                          "@coalesce(outputs('Acquire_Federated_Token')?['statusCode'], 0)",
+                                          200
+                                        ]
+                                      },
+                                      {
+                                        "less": [
+                                          "@coalesce(outputs('Acquire_Federated_Token')?['statusCode'], 0)",
+                                          300
+                                        ]
+                                      },
+                                      {
+                                        "not": {
+                                          "equals": [
+                                            "@coalesce(body('Acquire_Federated_Token')?['access_token'], '')",
+                                            ""
+                                          ]
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  "actions": {
+                                    "Return_Federated_Token": {
+                                      "type": "Response",
+                                      "kind": "Http",
+                                      "inputs": {
+                                        "statusCode": 200,
+                                        "body": {
+                                          "accessToken": "@body('Acquire_Federated_Token')?['access_token']",
+                                          "expiresAt": "@addSeconds(utcNow(), int(coalesce(body('Acquire_Federated_Token')?['expires_in'], 3600)))"
+                                        }
+                                      },
+                                      "runtimeConfiguration": {
+                                        "secureData": {
+                                          "properties": [
+                                            "inputs"
+                                          ]
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "else": {
+                                    "actions": {
+                                      "Return_Check_Federated_Token_Acquired_Error": {
+                                        "type": "Response",
+                                        "kind": "Http",
+                                        "inputs": {
+                                          "statusCode": 502,
+                                          "body": {
+                                            "error": "SCIMTokenAcquisitionFailed",
+                                            "stage": "Check_Federated_Token_Acquired",
+                                            "message": "The selected authentication flow failed. No alternative or static token was used."
+                                          }
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "runAfter": {
+                                    "Acquire_Federated_Token": [
+                                      "Succeeded",
+                                      "Failed",
+                                      "TimedOut"
+                                    ]
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "Return_Check_Entra_Token_Acquired_Error": {
+                        "type": "Response",
+                        "kind": "Http",
+                        "inputs": {
+                          "statusCode": 502,
+                          "body": {
+                            "error": "SCIMTokenAcquisitionFailed",
+                            "stage": "Check_Entra_Token_Acquired",
+                            "message": "The selected authentication flow failed. No alternative or static token was used."
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Acquire_Entra_Token": [
+                      "Succeeded",
+                      "Failed",
+                      "TimedOut"
+                    ]
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Reject_Unsupported_Transport": {
+                    "type": "Response",
+                    "kind": "Http",
+                    "inputs": {
+                      "statusCode": 502,
+                      "body": {
+                        "error": "SCIMTokenAcquisitionFailed",
+                        "stage": "Select_SCIM_Authentication",
+                        "message": "The selected authentication flow failed. No alternative or static token was used."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "runAfter": {}
+      }
+    },
+    "outputs": {}
+  },
+  "kind": "Stateful"
+}

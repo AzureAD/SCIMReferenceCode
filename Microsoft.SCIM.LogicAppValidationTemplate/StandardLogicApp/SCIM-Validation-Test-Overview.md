@@ -4,7 +4,7 @@
 
 The SCIM Validation Logic App runs **25 automated tests** against an ISV's SCIM 2.0 endpoint to verify it is ready for publication in the Microsoft Entra app gallery. Tests cover the full provisioning lifecycle — user and group CRUD, attribute mappings, soft delete, provision-on-demand, direct SCIM compliance, credential validation, and federated identity.
 
-The Logic App is deployed as a Standard Azure Logic App with 5 workflows that execute in parallel, completing a full validation run in 30–60 minutes.
+The Logic App is deployed as a Standard Azure Logic App with **seven workflows**. The three test suites execute in parallel after initialization. A full run commonly takes 30–90 minutes because provisioning schedules and consistency waits dominate elapsed time. The same-bundle [VERSION](VERSION) file supplies the overall and agent version; `LogicAppVersion` must match it.
 
 ---
 
@@ -15,9 +15,22 @@ Orchestrator_Workflow (entry point)
  ├── Initialization_Workflow     — reads sync schema, builds dynamic test bodies
  ├── UserTests_Workflow          — 7 tests (parallel with Group/SCIM)
  ├── GroupTests_Workflow         — 7 tests (parallel with User/SCIM)
- └── SCIMTests_Workflow          — 11 tests (parallel with User/Group)
-      └── Final_TestResults      — aggregates 25 results, determines pass/fail
+ └── SCIMTests_Workflow          — 11 results (parallel with User/Group)
+      └── Authentication_Workflow — selected OAuth/WIF checks and optional static-token probe
+Final_TestResults               — Orchestrator aggregates 25 results
+SCIMToken_Workflow              — shared refreshable OAuth/WIF transport
+                                  called by User/Group/SCIM suites
 ```
+
+Authentication is declared before credential collection. The selected transport authenticates direct SCIM requests; the declared methods determine which authentication tests apply:
+
+```text
+Declared capabilities -> Selected auth tests   -> Every selected method passes?
+Selected transport   -> Core SCIM tests        -> Mandatory checks pass?
+                         Both results         -> Readiness + sanitized report
+```
+
+Deploy `Authentication_Workflow.json` and `SCIMToken_Workflow.json` alongside the other five workflows and the complete `Orchestrator_Parameters.json`. Authentication is a synchronous child called once by SCIMTests; its OAuth/WIF results retain their existing test names. The helpers do not add a 26th test. A selected static-token probe is a separate prerequisite result. Each suite caches the selected OAuth/WIF token and refreshes it when empty or within five minutes of expiry. Token acquisition failures do not fall back to a static token. Entra's provisioning credentials are configured separately and must use a supported method too.
 
 **Dynamic capability detection:** The Initialization workflow reads the provisioning schema and automatically determines which tests apply based on the ISV's attribute mappings:
 
@@ -93,21 +106,32 @@ Tests that don't apply are reported as **SKIPPED** (not failures). However, grou
 
 The Orchestrator's `Evaluate_Test_Results` action computes `overallLogicAppResult` as follows:
 
-- **`Succeeded`** — ALL mandatory tests returned `PASSED` or `SKIPPED`, AND at least one authentication test passed (see below).
-- **`Failed`** — ANY mandatory test returned `FAILED`, OR both authentication tests failed.
+- **`Succeeded`** — all applicable mandatory functional tests passed, every selected authentication method passed, and at least one gallery method was selected. Only documented capability skips are acceptable.
+- **`Failed`** — any applicable mandatory functional test failed, any selected authentication method failed or did not execute, or no gallery method was selected. Missing authentication output fails closed.
 
-### Authentication Model (OR logic)
+### Authentication Model (AND across selected methods)
 
-The authentication result uses **OR logic** across two tests:
+`Authentication_Workflow` evaluates all selected methods and returns `authenticationPolicy: "AllSelected"`. `SCIMTests_Workflow.Compose_Final_Results` explicitly forwards `authenticationModelResult`. With both gallery methods selected, the rule is:
 
 | Validate_Credentials_Test | Federated_Identity_Test | Auth Model Result |
 |---------------------------|------------------------|-------------------|
 | PASSED | PASSED | **PASSED** |
-| PASSED | FAILED/SKIPPED | **PASSED** |
-| FAILED/SKIPPED | PASSED | **PASSED** |
+| PASSED | FAILED/SKIPPED/missing | **FAILED** |
+| FAILED/SKIPPED/missing | PASSED | **FAILED** |
 | FAILED/SKIPPED | FAILED/SKIPPED | **FAILED** — blocks overall `Succeeded` |
 
-This means an ISV only needs to pass **one** of the two authentication tests. If they configured OAuth only, a `Federated_Identity_Test` failure does not block submission.
+Every selected method must pass. An undeclared method is **NOT_APPLICABLE**, issues no token requests, and does not participate in the AND check. If both are selected and one fails, authentication fails. A selected but unexecuted method is not a success. Invalid method names fail closed. The SCIM adapter normalizes duplicate declarations to a distinct set; direct calls to the authentication child reject duplicates. A selected static-token method must also pass its connectivity probe, but cannot satisfy gallery readiness by itself.
+
+| Environment | Declaration | Direct transport | Authentication result |
+|-------------|-------------|------------------|-----------------------|
+| OAuth only | `["OAuth2ClientCredentials"]` | `OAuth2ClientCredentials` | OAuth pass is sufficient; WIF Not applicable |
+| WIF only | `["WorkloadIdentityFederation"]` | `WorkloadIdentityFederation` | WIF pass is sufficient; OAuth Not applicable |
+| Both | Both gallery values | Ask which to use for core requests | Both must pass |
+| Static token only | `["Bearer"]` | `Bearer` | `NOT_GALLERY_READY`; functional testing only |
+
+Set `scimAuthenticationMethod` separately from `supportedAuthenticationMethods`. OAuth access tokens travel in an HTTP Bearer header; this does **not** declare support for a caller-supplied static bearer token. Set `scimBearerToken` to `""` for OAuth-only or WIF-only runs and clear undeclared credentials.
+
+For older manual deployments only, an empty declaration array infers OAuth/WIF from nonempty token endpoints, or Bearer when neither endpoint is configured and a static token is supplied. New agent-driven runs always record an explicit declaration.
 
 ### Optional Tests (WARNING, not FAIL)
 
@@ -126,8 +150,10 @@ These 4 tests are `testCategory: optional`. When they fail, the `testResult` fie
 |------|---------------|------------|
 | User_Update_Manager_Test | `isManagerAttributeSupported = false` | SKIPPED (pass) |
 | SCIM_Update_Manager_Test | `manager` not in target directory attributes | SKIPPED (pass) |
-| Validate_Credentials_Test | `scimTokenEndpoint` is empty (static bearer token) | SKIPPED — ok if Federated_Identity passes |
-| Federated_Identity_Test | Federated parameters are empty | SKIPPED — ok if Validate_Credentials passes |
+| Validate_Credentials_Test | OAuth is not declared | NOT_APPLICABLE — no OAuth token request |
+| Federated_Identity_Test | WIF is not declared | NOT_APPLICABLE — no federation token requests |
+
+Missing inputs for a **declared** method must be supplied or reported as blocked/failed, not silently converted to Not applicable.
 
 ### Group Tests Are Mandatory
 
@@ -143,16 +169,25 @@ This applies to: Create_Group, Update_Group, Group_Update_Add_Member, Group_Upda
 |----------|---------------|--------|
 | All 25 tests: `success` | **Succeeded** | Ready for gallery submission |
 | All mandatory pass, optional tests show `WARNING` | **Succeeded** | Ready — warnings are informational |
-| OAuth configured + Validate_Credentials passes, Federated_Identity fails (no federated params) | **Succeeded** | Ready — only one auth test needed |
-| Federated configured + Federated_Identity passes, Validate_Credentials skipped | **Succeeded** | Ready — only one auth test needed |
-| Both Validate_Credentials AND Federated_Identity fail/skip | **Failed** | Must fix — at least one auth test must pass |
+| OAuth declared + Validate_Credentials passes, federation undeclared | **Succeeded** | Ready — federation Not applicable |
+| Only federation declared + Federated_Identity passes, OAuth Not applicable | **Succeeded** | Ready when other mandatory checks pass |
+| Both declared, either authentication test fails/skips | **Failed** | Fix every selected method; never silently remove one |
 | Manager tests `SKIPPED` (no manager mapping) | **Succeeded** | Ready — ISV should document no manager support |
 | Disable_User_Test `FAILED` | **Failed** | Must implement soft-delete (`active: false`) on SCIM endpoint |
 | Group tests `FAILED` (no Group schema) | **Failed** | Must add Group support to SCIM endpoint |
 | Any mandatory test `FAILED` | **Failed** | Must fix failing test(s) before submission |
 
----
+## Authentication regression checks
 
+Run `.\Test-Authentication.ps1` after changing authentication behavior.
+The suite evaluates the actual workflow expressions and direct-request
+token-cache wiring. Live federation still requires a federation-capable
+environment; offline exchange parity is not a live authentication result.
+
+See [Authentication-Changes.md](Authentication-Changes.md) for the design
+and the boundary between authentication readiness and functional readiness.
+
+---
 ## How to Run
 
 ### Method A: AI Agent (Automated, 30–60 min)
@@ -176,4 +211,4 @@ Both methods produce the same output: a `validation-result-<RunId>.json` file to
 
 ---
 
-*Document version: August 2026 — Covers Logic App validation template v5 with 25 tests across 5 workflows. Includes User & Group Pagination, Restore tests, Schema_Discoverability_Test v2, SCIM_Update_Manager_Test, Federated_Identity_Test, Validate_Credentials_Test, scimTargetUserValues, and Provision on Demand.*
+*Bundle and agent version: see [VERSION](VERSION). Covers 25 reportable tests across seven workflows. Includes User & Group Pagination, Restore tests, Schema_Discoverability_Test, SCIM_Update_Manager_Test, Federated_Identity_Test, Validate_Credentials_Test, scimTargetUserValues, and Provision on Demand.*

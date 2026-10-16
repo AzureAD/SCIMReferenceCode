@@ -60,23 +60,21 @@ requirements:
 - Support a SCIM 2.0 user or group endpoint (only one is required, but
   supporting both a user and group endpoint is recommended)
 
-- Support the OAuth 2.0 Client Credentials grant as your primary
-  authentication method
+- Support at least one gallery authentication method tested by this
+  bundle: **OAuth 2.0 client credentials** or **workload identity
+  federation (WIF)**. Declare which methods are actually available in
+  the validation environment; an unsupported alternative is Not
+  applicable, not a failed requirement.
 
-  - Note: Client Credentials is not required to participate in this
-    pilot (i.e. you need to use ***long lived* bearer token** to test
-    the Logic app). However, Client Credentials will be required to
-    onboard to the Microsoft Entra app gallery
-
-  - Currently, Client Credentials is the only authentication method we
-    support for requests to onboard new provisioning integrations to the
-    Microsoft Entra app gallery
-
-  - Requirements for Client Credentials: An admin portal where a
-    customer can generate a client ID and secret
-
-  - Best practices: Support the ability to rotate secrets and delete old
-    secrets
+  - OAuth integrations need a client ID, secret, token endpoint,
+    credential location (Header or Body), and optional scope.
+  - WIF integrations supply the parameters in the
+    [federation setup guide](SCIMTests_WorkloadIdentityFederation_Setup.md).
+    Preserve and validate the application's supported federated
+    provisioning configuration rather than inventing connectivity keys.
+  - Static-token-only environments can run functional tests but do
+    **not** meet gallery authentication readiness.
+  - Support secret rotation and removal of old secrets where applicable.
 
 - Support updating multiple group memberships with a single PATCH
   request
@@ -303,7 +301,7 @@ Before using the agent, ensure you have:
 
 ####  Validate my SCIM integration for Entra app gallery onboarding
 
-#### The agent will ask for your SCIM endpoint, bearer token, OAuth credentials (if applicable), and guide you through the entire validation workflow.
+#### The agent accepts initial parameters, asks which authentication methods are available, collects only applicable credentials, and guides you through validation and report export.
 
 When the agent requests to run commands, review and approve them
 
@@ -315,11 +313,13 @@ what to expect:
     Agent: What is your SCIM endpoint URL?
     You:   https://api.myapp.com/scim/v2
 
-    Agent: What is your bearer token?
-    You:   eyJhbGciOiJSUzI1NiIs...
+    Agent: Which authentication methods are available in your validation environment?
+    You:   OAuth 2.0 client credentials only
 
-    Agent: Does your SCIM endpoint use OAuth client credentials or a static bearer token?
-    You:   Static bearer token
+    Agent: What is your OAuth client ID?
+    You:   <client-id>
+
+    Agent: I'll collect the remaining OAuth settings. No static token or WIF credentials are needed.
 
     Agent: ✅ Azure CLI — Logged in as admin@contoso.onmicrosoft.com
            ✅ SCIM endpoint — HTTP 200
@@ -387,26 +387,20 @@ Microsoft Entra ID will send provisioning requests to.
 this URL. If your endpoint requires this flag, it should only be
 configured in the Entra portal’s Tenant URL field, not here.
 
-### Question 2: Bearer Token
+### Question 2: Available Authentication Methods
 
-> “What is your bearer token for the SCIM endpoint?”
+Choose **OAuth only**, **WIF only**, **both**, or **static token only
+(functional validation, not gallery-ready)**. You may instead supply
+`supportedAuthenticationMethods` initially, using
+`OAuth2ClientCredentials`, `WorkloadIdentityFederation`, and/or `Bearer`.
+If both gallery methods are available, choose which should authenticate
+the core SCIM requests using `scimAuthenticationMethod`.
 
-Provide a long-lived bearer token that the Logic App will use to
-authenticate against your SCIM endpoint.
+### Question 3: Applicable Credentials
 
-**Important:** The token must remain valid for at least 2 hours (the
-test run can take 60–90 minutes). If your token is a short-lived JWT,
-the tests will fail partway through. Use a token that lasts at least 24
-hours.
-
-### Question 3: Authentication Method
-
-> “Does your SCIM endpoint use OAuth client credentials or a static
-> bearer token?”
-
-- **Static bearer token** — Most common for pilot testing. The agent
-  will note that `Validate_Credentials_Test` will be skipped (this is
-  expected).
+- **Static bearer token** — Collect a token only for selected Bearer
+  transport. It must remain valid for the complete run. Neither gallery
+  method is satisfied merely by successful static-token connectivity.
 - **OAuth client credentials** — If you choose this, the agent will ask
   5 follow-up questions:
   - **Client ID** — Your OAuth application’s client ID
@@ -418,6 +412,41 @@ hours.
   - **OAuth Scope** — Optional; enter multiple scopes as one string
     separated by spaces, or enter `none`
 
+- **Workload identity federation** — Collect only the applicable
+  federation parameters from the setup guide. No OAuth token endpoint
+  is required merely to keep the parameter contract complete.
+
+OAuth-only and WIF-only runs set `scimBearerToken` to `""`.
+`SCIMToken_Workflow` acquires tokens at runtime, and each core suite
+refreshes its cache before expiry. It never falls back to a static
+token. Entra provisioning credentials are configured and validated
+separately using the selected supported method.
+
+If an OAuth probe succeeds but Entra's saved-credential Test Connection
+fails, the agent distinguishes invalid credentials from a persistence
+problem. An inline OAuth success is diagnostic only. The agent can
+persist that same validated OAuth credential array through
+`/synchronization/secrets`, then must revalidate the **saved** credentials
+before starting provisioning. It never substitutes a static token.
+
+The agent clears undeclared credentials and reports those tests as
+**Not applicable** without token requests. Missing credentials for a
+declared method must be supplied or reported as blocked; they are not
+silently treated as an unsupported method.
+
+### Authentication readiness
+
+Every selected authentication method must pass its own test (AND).
+Selecting both OAuth and WIF requires both to pass; a selected failure,
+skip, or missing result blocks authentication readiness. An undeclared
+method is Not applicable and issues no authentication requests.
+Other mandatory functional failures remain independent readiness gates.
+
+Use one coherent bundle: seven workflows, the complete parameters file,
+the canonical agent, authentication tests, and [VERSION](VERSION).
+Keep `LogicAppVersion` synchronized with VERSION. This change does not
+require a portable report exporter; reporting is a separate follow-up.
+See [Authentication-Changes.md](Authentication-Changes.md).
 ### Question 4: Azure Subscription Selection
 
 > “Which Azure subscription would you like to use?”
@@ -820,9 +849,13 @@ necessary roles to the managed identity of your Logic app.
 ### Logic App Explanation:
 
 The Logic App is built on Azure Logic Apps Standard and is divided into
-separate sections. It consists of 5 workflows that work together using a
+separate sections. It consists of 7 workflows that work together using a
 nested workflow architecture. The Orchestrator workflow is the entry
-point, and it calls the other workflows as child workflows.
+point, and it calls the initialization and test workflows as children.
+SCIMTests calls Authentication to run the selected authentication checks
+without approaching the 500-action per-workflow limit. The test suites
+call the shared SCIMToken workflow when the selected OAuth/WIF token cache
+needs refreshing; neither helper increases the 25-test inventory.
 Initialization workflow initializes the required steps to run the tests
 in the Logic App. <img src="./media/image47.png"
 style="width:2.89624in;height:5.76122in" />
@@ -1244,9 +1277,10 @@ automatically and tells you the root cause and fix.
 To proceed with gallery onboarding, all applicable tests must pass. The
 following are acceptable exceptions: -
 
-- Validate_Credentials_Test or Federated_Identity_Test failing when
-  using a static bearer token (OAuth or WIF will be required for
-  production). At least one of these two must PASS.
+- An undeclared OAuth or WIF method is Not applicable. Every selected
+  method must pass; at least one gallery method must be selected.
+  A static-token-only run is not gallery-ready even when connectivity
+  and functional tests pass.
 
 - User_Update_Manager_Test and SCIM_Update_Manager_Test being SKIPPED
   when the manager attribute is not present in the target directory

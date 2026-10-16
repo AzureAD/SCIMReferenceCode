@@ -6,6 +6,29 @@ This document explains:
 1. Input parameters and what values are expected.
 2. Each test: what it does, key steps, wait times, and how success/failure is determined.
 
+## Standard Logic App agent: authentication-aware validation
+
+Use the canonical [SCIM onboarding agent](StandardLogicApp/scim-onboarding.agent.md) and its complete, same-revision bundle. The Standard implementation deploys **seven workflows**: Orchestrator, Initialization, UserTests, GroupTests, SCIMTests, Authentication, and the shared SCIMToken provider. There are still **25 reportable tests**. [VERSION](StandardLogicApp/VERSION) is the sole overall and agent version; bump it for every bundle change and synchronize `LogicAppVersion`.
+
+At startup, declare the authentication methods actually supported by the endpoint and available in the validation environment:
+
+| Environment | `supportedAuthenticationMethods` | `scimAuthenticationMethod` |
+|-------------|----------------------------------|----------------------------|
+| OAuth only | `["OAuth2ClientCredentials"]` | `OAuth2ClientCredentials` |
+| Federation only | `["WorkloadIdentityFederation"]` | `WorkloadIdentityFederation` |
+| Both | Both gallery method values | Choose which authenticates core SCIM requests |
+| Static token only | `["Bearer"]` | `Bearer` |
+
+The agent accepts initial parameters or asks a specific multiple-choice question, then collects only applicable credentials. Undeclared authentication tests are **Not applicable** and make no token requests. A declared method with missing credentials is blocked/failed, not silently excluded.
+
+The authentication readiness policy is **AND across selected methods**: every declared method must pass its test. An undeclared method is Not applicable; a selected failure cannot be hidden by another success. `Authentication_Workflow` isolates these checks to keep SCIMTests below the 500-action limit. `SCIMTests_Workflow` explicitly forwards `authenticationModelResult`; a missing result fails closed in the Orchestrator. Other mandatory functional failures still block readiness. Static-token-only functional testing produces `NOT_GALLERY_READY`.
+
+For OAuth-only or federation-only runs, set `scimBearerToken` to `""`. The shared token workflow acquires access tokens, and each test suite refreshes its cache before expiry. There is no static-token fallback. Sending an OAuth access token in an HTTP Bearer header does not mean the endpoint supports caller-supplied static tokens. Entra provisioning connectivity is configured and validated separately with the supported method.
+
+See the [Standard setup walkthrough](StandardLogicApp/SetupLogicApp-Standard-Agent.md) and [test overview](StandardLogicApp/SCIM-Validation-Test-Overview.md) for the current behavior. The generic legacy test descriptions below do not override the Standard authentication contract.
+
+The [authentication change guide](StandardLogicApp/Authentication-Changes.md) explains capability selection, token transport, workflow limits, and verification boundaries. Portable reporting is a separate follow-up change.
+
 ---
 
 ## 1. Input Parameters

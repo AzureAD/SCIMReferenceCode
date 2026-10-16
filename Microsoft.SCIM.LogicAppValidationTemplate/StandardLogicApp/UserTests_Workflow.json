@@ -90,14 +90,18 @@
                 }
             },
             "Initialize_AttributeMatchExcludeList": {
-                "runAfter": {},
+                "runAfter": {
+                    "Initialize_AttributeMatchExcludeList_Variable_1": [
+                        "Succeeded"
+                    ]
+                },
                 "type": "InitializeVariable",
                 "inputs": {
                     "variables": [
                         {
-                            "name": "attributeMatchExcludeList",
-                            "type": "Array",
-                            "value": "@triggerBody()?['initializationData']?['updateTestExcludeList']"
+                            "name": "SCIMAccessTokenCache",
+                            "type": "Object",
+                            "value": {}
                         }
                     ]
                 }
@@ -114,9 +118,14 @@
                                             "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['createUser'], ''), '%22')}",
                                             "method": "GET",
                                             "headers": {
-                                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                 "Accept": "@{parameters('scimContentType')}"
                                             }
+                                        },
+                                        "runAfter": {
+                                            "Ensure_SCIM_Token_Create_User_Initial_Verify_User_Exists": [
+                                                "Succeeded"
+                                            ]
                                         }
                                     },
                                     "Compose_CreateUser_Body": {
@@ -180,9 +189,14 @@
                                                     "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['createUser'], ''), '%22')}",
                                                     "method": "GET",
                                                     "headers": {
-                                                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                        "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                         "Accept": "@{parameters('scimContentType')}"
                                                     }
+                                                },
+                                                "runAfter": {
+                                                    "Ensure_SCIM_Token_SCIM_Query_Created_User": [
+                                                        "Succeeded"
+                                                    ]
                                                 }
                                             },
                                             "Delay_Create_User_15s": {
@@ -199,6 +213,48 @@
                                                         "unit": "Second"
                                                     }
                                                 }
+                                            },
+                                            "Ensure_SCIM_Token_SCIM_Query_Created_User": {
+                                                "type": "If",
+                                                "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                "actions": {
+                                                    "Acquire_Token_nsure_SCIM_Token_SCIM_Query_Created_User": {
+                                                        "type": "Workflow",
+                                                        "inputs": {
+                                                            "host": {
+                                                                "workflow": {
+                                                                    "id": "SCIMToken_Workflow"
+                                                                }
+                                                            },
+                                                            "body": {}
+                                                        },
+                                                        "runtimeConfiguration": {
+                                                            "secureData": {
+                                                                "properties": [
+                                                                    "inputs",
+                                                                    "outputs"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "runAfter": {}
+                                                    },
+                                                    "Cache_Token_nsure_SCIM_Token_SCIM_Query_Created_User": {
+                                                        "type": "SetVariable",
+                                                        "inputs": {
+                                                            "name": "SCIMAccessTokenCache",
+                                                            "value": "@body('Acquire_Token_nsure_SCIM_Token_SCIM_Query_Created_User')"
+                                                        },
+                                                        "runAfter": {
+                                                            "Acquire_Token_nsure_SCIM_Token_SCIM_Query_Created_User": [
+                                                                "Succeeded"
+                                                            ]
+                                                        }
+                                                    }
+                                                },
+                                                "else": {
+                                                    "actions": {}
+                                                },
+                                                "runAfter": {}
                                             }
                                         },
                                         "runAfter": {
@@ -258,6 +314,48 @@
                                             "timeout": "PT15M"
                                         },
                                         "type": "Until"
+                                    },
+                                    "Ensure_SCIM_Token_Create_User_Initial_Verify_User_Exists": {
+                                        "type": "If",
+                                        "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                        "actions": {
+                                            "Acquire_Token_n_Create_User_Initial_Verify_User_Exists": {
+                                                "type": "Workflow",
+                                                "inputs": {
+                                                    "host": {
+                                                        "workflow": {
+                                                            "id": "SCIMToken_Workflow"
+                                                        }
+                                                    },
+                                                    "body": {}
+                                                },
+                                                "runtimeConfiguration": {
+                                                    "secureData": {
+                                                        "properties": [
+                                                            "inputs",
+                                                            "outputs"
+                                                        ]
+                                                    }
+                                                },
+                                                "runAfter": {}
+                                            },
+                                            "Cache_Token_n_Create_User_Initial_Verify_User_Exists": {
+                                                "type": "SetVariable",
+                                                "inputs": {
+                                                    "name": "SCIMAccessTokenCache",
+                                                    "value": "@body('Acquire_Token_n_Create_User_Initial_Verify_User_Exists')"
+                                                },
+                                                "runAfter": {
+                                                    "Acquire_Token_n_Create_User_Initial_Verify_User_Exists": [
+                                                        "Succeeded"
+                                                    ]
+                                                }
+                                            }
+                                        },
+                                        "else": {
+                                            "actions": {}
+                                        },
+                                        "runAfter": {}
                                     }
                                 },
                                 "type": "Scope"
@@ -449,9 +547,14 @@
                                                     "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['updateUser'], ''), '%22')}",
                                                     "method": "GET",
                                                     "headers": {
-                                                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                        "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                         "Accept": "@{parameters('scimContentType')}"
                                                     }
+                                                },
+                                                "runAfter": {
+                                                    "Ensure_SCIM_Token_Update_User_-_Initial_Verify_User_Exists": [
+                                                        "Succeeded"
+                                                    ]
                                                 }
                                             },
                                             "Update_User_-_Create_User_Graph": {
@@ -506,10 +609,15 @@
                                                             "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['updateUser'], ''), '%22')}",
                                                             "method": "GET",
                                                             "headers": {
-                                                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                                 "Accept": "@{parameters('scimContentType')}",
                                                                 "Content-Type": "@{parameters('scimContentType')}"
                                                             }
+                                                        },
+                                                        "runAfter": {
+                                                            "Ensure_SCIM_Token_Update_User_Verify_User_Created": [
+                                                                "Succeeded"
+                                                            ]
                                                         }
                                                     },
                                                     "Update_Delay_Creation_15s": {
@@ -526,6 +634,48 @@
                                                                 "unit": "Second"
                                                             }
                                                         }
+                                                    },
+                                                    "Ensure_SCIM_Token_Update_User_Verify_User_Created": {
+                                                        "type": "If",
+                                                        "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                        "actions": {
+                                                            "Acquire_Token_IM_Token_Update_User_Verify_User_Created": {
+                                                                "type": "Workflow",
+                                                                "inputs": {
+                                                                    "host": {
+                                                                        "workflow": {
+                                                                            "id": "SCIMToken_Workflow"
+                                                                        }
+                                                                    },
+                                                                    "body": {}
+                                                                },
+                                                                "runtimeConfiguration": {
+                                                                    "secureData": {
+                                                                        "properties": [
+                                                                            "inputs",
+                                                                            "outputs"
+                                                                        ]
+                                                                    }
+                                                                },
+                                                                "runAfter": {}
+                                                            },
+                                                            "Cache_Token_IM_Token_Update_User_Verify_User_Created": {
+                                                                "type": "SetVariable",
+                                                                "inputs": {
+                                                                    "name": "SCIMAccessTokenCache",
+                                                                    "value": "@body('Acquire_Token_IM_Token_Update_User_Verify_User_Created')"
+                                                                },
+                                                                "runAfter": {
+                                                                    "Acquire_Token_IM_Token_Update_User_Verify_User_Created": [
+                                                                        "Succeeded"
+                                                                    ]
+                                                                }
+                                                            }
+                                                        },
+                                                        "else": {
+                                                            "actions": {}
+                                                        },
+                                                        "runAfter": {}
                                                     }
                                                 },
                                                 "runAfter": {
@@ -583,6 +733,48 @@
                                                     "timeout": "PT15M"
                                                 },
                                                 "type": "Until"
+                                            },
+                                            "Ensure_SCIM_Token_Update_User_-_Initial_Verify_User_Exists": {
+                                                "type": "If",
+                                                "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                "actions": {
+                                                    "Acquire_Token_Update_User_-_Initial_Verify_User_Exists": {
+                                                        "type": "Workflow",
+                                                        "inputs": {
+                                                            "host": {
+                                                                "workflow": {
+                                                                    "id": "SCIMToken_Workflow"
+                                                                }
+                                                            },
+                                                            "body": {}
+                                                        },
+                                                        "runtimeConfiguration": {
+                                                            "secureData": {
+                                                                "properties": [
+                                                                    "inputs",
+                                                                    "outputs"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "runAfter": {}
+                                                    },
+                                                    "Cache_Token_Update_User_-_Initial_Verify_User_Exists": {
+                                                        "type": "SetVariable",
+                                                        "inputs": {
+                                                            "name": "SCIMAccessTokenCache",
+                                                            "value": "@body('Acquire_Token_Update_User_-_Initial_Verify_User_Exists')"
+                                                        },
+                                                        "runAfter": {
+                                                            "Acquire_Token_Update_User_-_Initial_Verify_User_Exists": [
+                                                                "Succeeded"
+                                                            ]
+                                                        }
+                                                    }
+                                                },
+                                                "else": {
+                                                    "actions": {}
+                                                },
+                                                "runAfter": {}
                                             }
                                         },
                                         "type": "Scope"
@@ -620,13 +812,17 @@
                                             "Update_User_Verify_Update_And_Provisioning": {
                                                 "actions": {
                                                     "Update_User_Query_User_By_Id": {
-                                                        "runAfter": {},
+                                                        "runAfter": {
+                                                            "Ensure_SCIM_Token_Update_User_Query_User_By_Id": [
+                                                                "Succeeded"
+                                                            ]
+                                                        },
                                                         "type": "Http",
                                                         "inputs": {
                                                             "uri": "@concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['updateUser'], ''), '%22')",
                                                             "method": "GET",
                                                             "headers": {
-                                                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                                 "Accept": "@{parameters('scimContentType')}"
                                                             }
                                                         }
@@ -660,9 +856,14 @@
                                                                     "uri": "@concat(parameters('scimEndpoint'), '/Users/', coalesce(first(body('Update_User_Query_User_By_Id')?['Resources'])?['id'], ''))",
                                                                     "method": "GET",
                                                                     "headers": {
-                                                                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                                        "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                                         "Accept": "@{parameters('scimContentType')}"
                                                                     }
+                                                                },
+                                                                "runAfter": {
+                                                                    "Ensure_SCIM_Token_Update_User_-_Query_User_By_Id_After_Attributes_Update": [
+                                                                        "Succeeded"
+                                                                    ]
                                                                 }
                                                             },
                                                             "Update_Delay_Final_15s": {
@@ -679,6 +880,48 @@
                                                                         "unit": "Second"
                                                                     }
                                                                 }
+                                                            },
+                                                            "Ensure_SCIM_Token_Update_User_-_Query_User_By_Id_After_Attributes_Update": {
+                                                                "type": "If",
+                                                                "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                                "actions": {
+                                                                    "Acquire_Token_Query_User_By_Id_After_Attributes_Update": {
+                                                                        "type": "Workflow",
+                                                                        "inputs": {
+                                                                            "host": {
+                                                                                "workflow": {
+                                                                                    "id": "SCIMToken_Workflow"
+                                                                                }
+                                                                            },
+                                                                            "body": {}
+                                                                        },
+                                                                        "runtimeConfiguration": {
+                                                                            "secureData": {
+                                                                                "properties": [
+                                                                                    "inputs",
+                                                                                    "outputs"
+                                                                                ]
+                                                                            }
+                                                                        },
+                                                                        "runAfter": {}
+                                                                    },
+                                                                    "Cache_Token_Query_User_By_Id_After_Attributes_Update": {
+                                                                        "type": "SetVariable",
+                                                                        "inputs": {
+                                                                            "name": "SCIMAccessTokenCache",
+                                                                            "value": "@body('Acquire_Token_Query_User_By_Id_After_Attributes_Update')"
+                                                                        },
+                                                                        "runAfter": {
+                                                                            "Acquire_Token_Query_User_By_Id_After_Attributes_Update": [
+                                                                                "Succeeded"
+                                                                            ]
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "else": {
+                                                                    "actions": {}
+                                                                },
+                                                                "runAfter": {}
                                                             }
                                                         },
                                                         "runAfter": {
@@ -883,6 +1126,48 @@
                                                             "timeout": "PT15M"
                                                         },
                                                         "type": "Until"
+                                                    },
+                                                    "Ensure_SCIM_Token_Update_User_Query_User_By_Id": {
+                                                        "type": "If",
+                                                        "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                        "actions": {
+                                                            "Acquire_Token__SCIM_Token_Update_User_Query_User_By_Id": {
+                                                                "type": "Workflow",
+                                                                "inputs": {
+                                                                    "host": {
+                                                                        "workflow": {
+                                                                            "id": "SCIMToken_Workflow"
+                                                                        }
+                                                                    },
+                                                                    "body": {}
+                                                                },
+                                                                "runtimeConfiguration": {
+                                                                    "secureData": {
+                                                                        "properties": [
+                                                                            "inputs",
+                                                                            "outputs"
+                                                                        ]
+                                                                    }
+                                                                },
+                                                                "runAfter": {}
+                                                            },
+                                                            "Cache_Token__SCIM_Token_Update_User_Query_User_By_Id": {
+                                                                "type": "SetVariable",
+                                                                "inputs": {
+                                                                    "name": "SCIMAccessTokenCache",
+                                                                    "value": "@body('Acquire_Token__SCIM_Token_Update_User_Query_User_By_Id')"
+                                                                },
+                                                                "runAfter": {
+                                                                    "Acquire_Token__SCIM_Token_Update_User_Query_User_By_Id": [
+                                                                        "Succeeded"
+                                                                    ]
+                                                                }
+                                                            }
+                                                        },
+                                                        "else": {
+                                                            "actions": {}
+                                                        },
+                                                        "runAfter": {}
                                                     }
                                                 },
                                                 "type": "Scope"
@@ -1225,9 +1510,14 @@
                                                     "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['deleteUser'], ''), '%22')}",
                                                     "method": "GET",
                                                     "headers": {
-                                                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                        "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                         "Accept": "@{parameters('scimContentType')}"
                                                     }
+                                                },
+                                                "runAfter": {
+                                                    "Ensure_SCIM_Token_DeleteUser_Check_Delete_User_Exists_Initial": [
+                                                        "Succeeded"
+                                                    ]
                                                 }
                                             },
                                             "Compose_DeleteUser_Body": {
@@ -1291,9 +1581,14 @@
                                                             "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['deleteUser'], ''), '%22')}",
                                                             "method": "GET",
                                                             "headers": {
-                                                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                                 "Accept": "@{parameters('scimContentType')}"
                                                             }
+                                                        },
+                                                        "runAfter": {
+                                                            "Ensure_SCIM_Token_DeleteUser_Check_User_Synced": [
+                                                                "Succeeded"
+                                                            ]
                                                         }
                                                     },
                                                     "DeleteUser_Delay_Creation_15s": {
@@ -1310,6 +1605,48 @@
                                                                 "unit": "Second"
                                                             }
                                                         }
+                                                    },
+                                                    "Ensure_SCIM_Token_DeleteUser_Check_User_Synced": {
+                                                        "type": "If",
+                                                        "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                        "actions": {
+                                                            "Acquire_Token__SCIM_Token_DeleteUser_Check_User_Synced": {
+                                                                "type": "Workflow",
+                                                                "inputs": {
+                                                                    "host": {
+                                                                        "workflow": {
+                                                                            "id": "SCIMToken_Workflow"
+                                                                        }
+                                                                    },
+                                                                    "body": {}
+                                                                },
+                                                                "runtimeConfiguration": {
+                                                                    "secureData": {
+                                                                        "properties": [
+                                                                            "inputs",
+                                                                            "outputs"
+                                                                        ]
+                                                                    }
+                                                                },
+                                                                "runAfter": {}
+                                                            },
+                                                            "Cache_Token__SCIM_Token_DeleteUser_Check_User_Synced": {
+                                                                "type": "SetVariable",
+                                                                "inputs": {
+                                                                    "name": "SCIMAccessTokenCache",
+                                                                    "value": "@body('Acquire_Token__SCIM_Token_DeleteUser_Check_User_Synced')"
+                                                                },
+                                                                "runAfter": {
+                                                                    "Acquire_Token__SCIM_Token_DeleteUser_Check_User_Synced": [
+                                                                        "Succeeded"
+                                                                    ]
+                                                                }
+                                                            }
+                                                        },
+                                                        "else": {
+                                                            "actions": {}
+                                                        },
+                                                        "runAfter": {}
                                                     }
                                                 },
                                                 "runAfter": {
@@ -1369,6 +1706,48 @@
                                                     "timeout": "PT15M"
                                                 },
                                                 "type": "Until"
+                                            },
+                                            "Ensure_SCIM_Token_DeleteUser_Check_Delete_User_Exists_Initial": {
+                                                "type": "If",
+                                                "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                "actions": {
+                                                    "Acquire_Token_eteUser_Check_Delete_User_Exists_Initial": {
+                                                        "type": "Workflow",
+                                                        "inputs": {
+                                                            "host": {
+                                                                "workflow": {
+                                                                    "id": "SCIMToken_Workflow"
+                                                                }
+                                                            },
+                                                            "body": {}
+                                                        },
+                                                        "runtimeConfiguration": {
+                                                            "secureData": {
+                                                                "properties": [
+                                                                    "inputs",
+                                                                    "outputs"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "runAfter": {}
+                                                    },
+                                                    "Cache_Token_eteUser_Check_Delete_User_Exists_Initial": {
+                                                        "type": "SetVariable",
+                                                        "inputs": {
+                                                            "name": "SCIMAccessTokenCache",
+                                                            "value": "@body('Acquire_Token_eteUser_Check_Delete_User_Exists_Initial')"
+                                                        },
+                                                        "runAfter": {
+                                                            "Acquire_Token_eteUser_Check_Delete_User_Exists_Initial": [
+                                                                "Succeeded"
+                                                            ]
+                                                        }
+                                                    }
+                                                },
+                                                "else": {
+                                                    "actions": {}
+                                                },
+                                                "runAfter": {}
                                             }
                                         },
                                         "type": "Scope"
@@ -1512,9 +1891,14 @@
                                                             "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['deleteUser'], ''), '%22')}",
                                                             "method": "GET",
                                                             "headers": {
-                                                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                                 "Accept": "@{parameters('scimContentType')}"
                                                             }
+                                                        },
+                                                        "runAfter": {
+                                                            "Ensure_SCIM_Token_DeleteUser_Query_User_By_Id": [
+                                                                "Succeeded"
+                                                            ]
                                                         }
                                                     },
                                                     "DeleteUser_Delete_User_From_Graph": {
@@ -1558,9 +1942,14 @@
                                                                     "uri": "@{concat(parameters('scimEndpoint'), '/Users/', coalesce(first(body('DeleteUser_Query_User_By_Id')?['Resources'])?['id'], ''))}",
                                                                     "method": "GET",
                                                                     "headers": {
-                                                                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                                        "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                                         "Accept": "@{parameters('scimContentType')}"
                                                                     }
+                                                                },
+                                                                "runAfter": {
+                                                                    "Ensure_SCIM_Token_DeleteUser_Check_User_Deleted": [
+                                                                        "Succeeded"
+                                                                    ]
                                                                 }
                                                             },
                                                             "DeleteUser_Delay_Deletion_15s": {
@@ -1577,6 +1966,48 @@
                                                                         "unit": "Second"
                                                                     }
                                                                 }
+                                                            },
+                                                            "Ensure_SCIM_Token_DeleteUser_Check_User_Deleted": {
+                                                                "type": "If",
+                                                                "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                                "actions": {
+                                                                    "Acquire_Token_SCIM_Token_DeleteUser_Check_User_Deleted": {
+                                                                        "type": "Workflow",
+                                                                        "inputs": {
+                                                                            "host": {
+                                                                                "workflow": {
+                                                                                    "id": "SCIMToken_Workflow"
+                                                                                }
+                                                                            },
+                                                                            "body": {}
+                                                                        },
+                                                                        "runtimeConfiguration": {
+                                                                            "secureData": {
+                                                                                "properties": [
+                                                                                    "inputs",
+                                                                                    "outputs"
+                                                                                ]
+                                                                            }
+                                                                        },
+                                                                        "runAfter": {}
+                                                                    },
+                                                                    "Cache_Token_SCIM_Token_DeleteUser_Check_User_Deleted": {
+                                                                        "type": "SetVariable",
+                                                                        "inputs": {
+                                                                            "name": "SCIMAccessTokenCache",
+                                                                            "value": "@body('Acquire_Token_SCIM_Token_DeleteUser_Check_User_Deleted')"
+                                                                        },
+                                                                        "runAfter": {
+                                                                            "Acquire_Token_SCIM_Token_DeleteUser_Check_User_Deleted": [
+                                                                                "Succeeded"
+                                                                            ]
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "else": {
+                                                                    "actions": {}
+                                                                },
+                                                                "runAfter": {}
                                                             }
                                                         },
                                                         "runAfter": {
@@ -1651,6 +2082,48 @@
                                                                 "Succeeded"
                                                             ]
                                                         }
+                                                    },
+                                                    "Ensure_SCIM_Token_DeleteUser_Query_User_By_Id": {
+                                                        "type": "If",
+                                                        "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                        "actions": {
+                                                            "Acquire_Token_e_SCIM_Token_DeleteUser_Query_User_By_Id": {
+                                                                "type": "Workflow",
+                                                                "inputs": {
+                                                                    "host": {
+                                                                        "workflow": {
+                                                                            "id": "SCIMToken_Workflow"
+                                                                        }
+                                                                    },
+                                                                    "body": {}
+                                                                },
+                                                                "runtimeConfiguration": {
+                                                                    "secureData": {
+                                                                        "properties": [
+                                                                            "inputs",
+                                                                            "outputs"
+                                                                        ]
+                                                                    }
+                                                                },
+                                                                "runAfter": {}
+                                                            },
+                                                            "Cache_Token_e_SCIM_Token_DeleteUser_Query_User_By_Id": {
+                                                                "type": "SetVariable",
+                                                                "inputs": {
+                                                                    "name": "SCIMAccessTokenCache",
+                                                                    "value": "@body('Acquire_Token_e_SCIM_Token_DeleteUser_Query_User_By_Id')"
+                                                                },
+                                                                "runAfter": {
+                                                                    "Acquire_Token_e_SCIM_Token_DeleteUser_Query_User_By_Id": [
+                                                                        "Succeeded"
+                                                                    ]
+                                                                }
+                                                            }
+                                                        },
+                                                        "else": {
+                                                            "actions": {}
+                                                        },
+                                                        "runAfter": {}
                                                     }
                                                 },
                                                 "type": "Scope"
@@ -1854,9 +2327,14 @@
                                                     "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['managerUser'], ''), '%22')}",
                                                     "method": "GET",
                                                     "headers": {
-                                                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                        "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                         "Accept": "@{parameters('scimContentType')}"
                                                     }
+                                                },
+                                                "runAfter": {
+                                                    "Ensure_SCIM_Token_Step1_Check_User_Exists": [
+                                                        "Succeeded"
+                                                    ]
                                                 }
                                             },
                                             "Compose_ManagerTest_UserBody": {
@@ -2026,9 +2504,14 @@
                                                             "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['managerUser'], ''), '%22')}",
                                                             "method": "GET",
                                                             "headers": {
-                                                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                                 "Accept": "@{parameters('scimContentType')}"
                                                             }
+                                                        },
+                                                        "runAfter": {
+                                                            "Ensure_SCIM_Token_SCIM_Query_Test_User": [
+                                                                "Succeeded"
+                                                            ]
                                                         }
                                                     },
                                                     "SCIM_Query_Initial_Manager": {
@@ -2037,9 +2520,14 @@
                                                             "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['managerUserInitial'], ''), '%22')}",
                                                             "method": "GET",
                                                             "headers": {
-                                                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                                 "Accept": "@{parameters('scimContentType')}"
                                                             }
+                                                        },
+                                                        "runAfter": {
+                                                            "Ensure_SCIM_Token_SCIM_Query_Initial_Manager": [
+                                                                "Succeeded"
+                                                            ]
                                                         }
                                                     },
                                                     "SCIM_Query_New_Manager": {
@@ -2048,9 +2536,14 @@
                                                             "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['managerUserNew'], ''), '%22')}",
                                                             "method": "GET",
                                                             "headers": {
-                                                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                                 "Accept": "@{parameters('scimContentType')}"
                                                             }
+                                                        },
+                                                        "runAfter": {
+                                                            "Ensure_SCIM_Token_SCIM_Query_New_Manager": [
+                                                                "Succeeded"
+                                                            ]
                                                         }
                                                     },
                                                     "Delay_15s": {
@@ -2075,6 +2568,132 @@
                                                                 "unit": "Second"
                                                             }
                                                         }
+                                                    },
+                                                    "Ensure_SCIM_Token_SCIM_Query_Test_User": {
+                                                        "type": "If",
+                                                        "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                        "actions": {
+                                                            "Acquire_Token_Ensure_SCIM_Token_SCIM_Query_Test_User": {
+                                                                "type": "Workflow",
+                                                                "inputs": {
+                                                                    "host": {
+                                                                        "workflow": {
+                                                                            "id": "SCIMToken_Workflow"
+                                                                        }
+                                                                    },
+                                                                    "body": {}
+                                                                },
+                                                                "runtimeConfiguration": {
+                                                                    "secureData": {
+                                                                        "properties": [
+                                                                            "inputs",
+                                                                            "outputs"
+                                                                        ]
+                                                                    }
+                                                                },
+                                                                "runAfter": {}
+                                                            },
+                                                            "Cache_Token_Ensure_SCIM_Token_SCIM_Query_Test_User": {
+                                                                "type": "SetVariable",
+                                                                "inputs": {
+                                                                    "name": "SCIMAccessTokenCache",
+                                                                    "value": "@body('Acquire_Token_Ensure_SCIM_Token_SCIM_Query_Test_User')"
+                                                                },
+                                                                "runAfter": {
+                                                                    "Acquire_Token_Ensure_SCIM_Token_SCIM_Query_Test_User": [
+                                                                        "Succeeded"
+                                                                    ]
+                                                                }
+                                                            }
+                                                        },
+                                                        "else": {
+                                                            "actions": {}
+                                                        },
+                                                        "runAfter": {}
+                                                    },
+                                                    "Ensure_SCIM_Token_SCIM_Query_Initial_Manager": {
+                                                        "type": "If",
+                                                        "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                        "actions": {
+                                                            "Acquire_Token_re_SCIM_Token_SCIM_Query_Initial_Manager": {
+                                                                "type": "Workflow",
+                                                                "inputs": {
+                                                                    "host": {
+                                                                        "workflow": {
+                                                                            "id": "SCIMToken_Workflow"
+                                                                        }
+                                                                    },
+                                                                    "body": {}
+                                                                },
+                                                                "runtimeConfiguration": {
+                                                                    "secureData": {
+                                                                        "properties": [
+                                                                            "inputs",
+                                                                            "outputs"
+                                                                        ]
+                                                                    }
+                                                                },
+                                                                "runAfter": {}
+                                                            },
+                                                            "Cache_Token_re_SCIM_Token_SCIM_Query_Initial_Manager": {
+                                                                "type": "SetVariable",
+                                                                "inputs": {
+                                                                    "name": "SCIMAccessTokenCache",
+                                                                    "value": "@body('Acquire_Token_re_SCIM_Token_SCIM_Query_Initial_Manager')"
+                                                                },
+                                                                "runAfter": {
+                                                                    "Acquire_Token_re_SCIM_Token_SCIM_Query_Initial_Manager": [
+                                                                        "Succeeded"
+                                                                    ]
+                                                                }
+                                                            }
+                                                        },
+                                                        "else": {
+                                                            "actions": {}
+                                                        },
+                                                        "runAfter": {}
+                                                    },
+                                                    "Ensure_SCIM_Token_SCIM_Query_New_Manager": {
+                                                        "type": "If",
+                                                        "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                        "actions": {
+                                                            "Acquire_Token_Ensure_SCIM_Token_SCIM_Query_New_Manager": {
+                                                                "type": "Workflow",
+                                                                "inputs": {
+                                                                    "host": {
+                                                                        "workflow": {
+                                                                            "id": "SCIMToken_Workflow"
+                                                                        }
+                                                                    },
+                                                                    "body": {}
+                                                                },
+                                                                "runtimeConfiguration": {
+                                                                    "secureData": {
+                                                                        "properties": [
+                                                                            "inputs",
+                                                                            "outputs"
+                                                                        ]
+                                                                    }
+                                                                },
+                                                                "runAfter": {}
+                                                            },
+                                                            "Cache_Token_Ensure_SCIM_Token_SCIM_Query_New_Manager": {
+                                                                "type": "SetVariable",
+                                                                "inputs": {
+                                                                    "name": "SCIMAccessTokenCache",
+                                                                    "value": "@body('Acquire_Token_Ensure_SCIM_Token_SCIM_Query_New_Manager')"
+                                                                },
+                                                                "runAfter": {
+                                                                    "Acquire_Token_Ensure_SCIM_Token_SCIM_Query_New_Manager": [
+                                                                        "Succeeded"
+                                                                    ]
+                                                                }
+                                                            }
+                                                        },
+                                                        "else": {
+                                                            "actions": {}
+                                                        },
+                                                        "runAfter": {}
                                                     }
                                                 },
                                                 "runAfter": {
@@ -2170,6 +2789,48 @@
                                                     "timeout": "PT15M"
                                                 },
                                                 "type": "Until"
+                                            },
+                                            "Ensure_SCIM_Token_Step1_Check_User_Exists": {
+                                                "type": "If",
+                                                "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                "actions": {
+                                                    "Acquire_Token_nsure_SCIM_Token_Step1_Check_User_Exists": {
+                                                        "type": "Workflow",
+                                                        "inputs": {
+                                                            "host": {
+                                                                "workflow": {
+                                                                    "id": "SCIMToken_Workflow"
+                                                                }
+                                                            },
+                                                            "body": {}
+                                                        },
+                                                        "runtimeConfiguration": {
+                                                            "secureData": {
+                                                                "properties": [
+                                                                    "inputs",
+                                                                    "outputs"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "runAfter": {}
+                                                    },
+                                                    "Cache_Token_nsure_SCIM_Token_Step1_Check_User_Exists": {
+                                                        "type": "SetVariable",
+                                                        "inputs": {
+                                                            "name": "SCIMAccessTokenCache",
+                                                            "value": "@body('Acquire_Token_nsure_SCIM_Token_Step1_Check_User_Exists')"
+                                                        },
+                                                        "runAfter": {
+                                                            "Acquire_Token_nsure_SCIM_Token_Step1_Check_User_Exists": [
+                                                                "Succeeded"
+                                                            ]
+                                                        }
+                                                    }
+                                                },
+                                                "else": {
+                                                    "actions": {}
+                                                },
+                                                "runAfter": {}
                                             }
                                         },
                                         "type": "Scope"
@@ -2391,9 +3052,14 @@
                                                                     "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['managerUser'], ''), '%22')}",
                                                                     "method": "GET",
                                                                     "headers": {
-                                                                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                                        "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                                         "Accept": "@{parameters('scimContentType')}"
                                                                     }
+                                                                },
+                                                                "runAfter": {
+                                                                    "Ensure_SCIM_Token_SCIM_Verify_Manager_Set": [
+                                                                        "Succeeded"
+                                                                    ]
                                                                 }
                                                             },
                                                             "Delay_Manager_Set_15s": {
@@ -2410,6 +3076,48 @@
                                                                         "unit": "Second"
                                                                     }
                                                                 }
+                                                            },
+                                                            "Ensure_SCIM_Token_SCIM_Verify_Manager_Set": {
+                                                                "type": "If",
+                                                                "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                                "actions": {
+                                                                    "Acquire_Token_nsure_SCIM_Token_SCIM_Verify_Manager_Set": {
+                                                                        "type": "Workflow",
+                                                                        "inputs": {
+                                                                            "host": {
+                                                                                "workflow": {
+                                                                                    "id": "SCIMToken_Workflow"
+                                                                                }
+                                                                            },
+                                                                            "body": {}
+                                                                        },
+                                                                        "runtimeConfiguration": {
+                                                                            "secureData": {
+                                                                                "properties": [
+                                                                                    "inputs",
+                                                                                    "outputs"
+                                                                                ]
+                                                                            }
+                                                                        },
+                                                                        "runAfter": {}
+                                                                    },
+                                                                    "Cache_Token_nsure_SCIM_Token_SCIM_Verify_Manager_Set": {
+                                                                        "type": "SetVariable",
+                                                                        "inputs": {
+                                                                            "name": "SCIMAccessTokenCache",
+                                                                            "value": "@body('Acquire_Token_nsure_SCIM_Token_SCIM_Verify_Manager_Set')"
+                                                                        },
+                                                                        "runAfter": {
+                                                                            "Acquire_Token_nsure_SCIM_Token_SCIM_Verify_Manager_Set": [
+                                                                                "Succeeded"
+                                                                            ]
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "else": {
+                                                                    "actions": {}
+                                                                },
+                                                                "runAfter": {}
                                                             }
                                                         },
                                                         "runAfter": {
@@ -2665,9 +3373,14 @@
                                                                     "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['managerUser'], ''), '%22')}",
                                                                     "method": "GET",
                                                                     "headers": {
-                                                                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                                        "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                                         "Accept": "@{parameters('scimContentType')}"
                                                                     }
+                                                                },
+                                                                "runAfter": {
+                                                                    "Ensure_SCIM_Token_SCIM_Verify_Manager_Change": [
+                                                                        "Succeeded"
+                                                                    ]
                                                                 }
                                                             },
                                                             "Delay_Manager_Change_15s": {
@@ -2684,6 +3397,48 @@
                                                                         "unit": "Second"
                                                                     }
                                                                 }
+                                                            },
+                                                            "Ensure_SCIM_Token_SCIM_Verify_Manager_Change": {
+                                                                "type": "If",
+                                                                "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                                "actions": {
+                                                                    "Acquire_Token_re_SCIM_Token_SCIM_Verify_Manager_Change": {
+                                                                        "type": "Workflow",
+                                                                        "inputs": {
+                                                                            "host": {
+                                                                                "workflow": {
+                                                                                    "id": "SCIMToken_Workflow"
+                                                                                }
+                                                                            },
+                                                                            "body": {}
+                                                                        },
+                                                                        "runtimeConfiguration": {
+                                                                            "secureData": {
+                                                                                "properties": [
+                                                                                    "inputs",
+                                                                                    "outputs"
+                                                                                ]
+                                                                            }
+                                                                        },
+                                                                        "runAfter": {}
+                                                                    },
+                                                                    "Cache_Token_re_SCIM_Token_SCIM_Verify_Manager_Change": {
+                                                                        "type": "SetVariable",
+                                                                        "inputs": {
+                                                                            "name": "SCIMAccessTokenCache",
+                                                                            "value": "@body('Acquire_Token_re_SCIM_Token_SCIM_Verify_Manager_Change')"
+                                                                        },
+                                                                        "runAfter": {
+                                                                            "Acquire_Token_re_SCIM_Token_SCIM_Verify_Manager_Change": [
+                                                                                "Succeeded"
+                                                                            ]
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "else": {
+                                                                    "actions": {}
+                                                                },
+                                                                "runAfter": {}
                                                             }
                                                         },
                                                         "runAfter": {
@@ -2936,9 +3691,14 @@
                                                                     "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['managerUser'], ''), '%22')}",
                                                                     "method": "GET",
                                                                     "headers": {
-                                                                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                                        "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                                         "Accept": "@{parameters('scimContentType')}"
                                                                     }
+                                                                },
+                                                                "runAfter": {
+                                                                    "Ensure_SCIM_Token_SCIM_Verify_Manager_Remove": [
+                                                                        "Succeeded"
+                                                                    ]
                                                                 }
                                                             },
                                                             "Delay_Manager_Remove_15s": {
@@ -2955,6 +3715,48 @@
                                                                         "unit": "Second"
                                                                     }
                                                                 }
+                                                            },
+                                                            "Ensure_SCIM_Token_SCIM_Verify_Manager_Remove": {
+                                                                "type": "If",
+                                                                "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                                "actions": {
+                                                                    "Acquire_Token_re_SCIM_Token_SCIM_Verify_Manager_Remove": {
+                                                                        "type": "Workflow",
+                                                                        "inputs": {
+                                                                            "host": {
+                                                                                "workflow": {
+                                                                                    "id": "SCIMToken_Workflow"
+                                                                                }
+                                                                            },
+                                                                            "body": {}
+                                                                        },
+                                                                        "runtimeConfiguration": {
+                                                                            "secureData": {
+                                                                                "properties": [
+                                                                                    "inputs",
+                                                                                    "outputs"
+                                                                                ]
+                                                                            }
+                                                                        },
+                                                                        "runAfter": {}
+                                                                    },
+                                                                    "Cache_Token_re_SCIM_Token_SCIM_Verify_Manager_Remove": {
+                                                                        "type": "SetVariable",
+                                                                        "inputs": {
+                                                                            "name": "SCIMAccessTokenCache",
+                                                                            "value": "@body('Acquire_Token_re_SCIM_Token_SCIM_Verify_Manager_Remove')"
+                                                                        },
+                                                                        "runAfter": {
+                                                                            "Acquire_Token_re_SCIM_Token_SCIM_Verify_Manager_Remove": [
+                                                                                "Succeeded"
+                                                                            ]
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "else": {
+                                                                    "actions": {}
+                                                                },
+                                                                "runAfter": {}
                                                             }
                                                         },
                                                         "runAfter": {
@@ -3183,10 +3985,15 @@
                                                     "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['disableUser'], ''), '%22')}",
                                                     "method": "GET",
                                                     "headers": {
-                                                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                        "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                         "Accept": "@{parameters('scimContentType')}",
                                                         "Content-Type": "@{parameters('scimContentType')}"
                                                     }
+                                                },
+                                                "runAfter": {
+                                                    "Ensure_SCIM_Token_DisableUserTest_Disable_Step1_Check_User_Exists": [
+                                                        "Succeeded"
+                                                    ]
                                                 }
                                             },
                                             "Compose_DisableUser_Body": {
@@ -3250,9 +4057,14 @@
                                                             "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['disableUser'], ''), '%22')}",
                                                             "method": "GET",
                                                             "headers": {
-                                                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                                 "Accept": "@{parameters('scimContentType')}"
                                                             }
+                                                        },
+                                                        "runAfter": {
+                                                            "Ensure_SCIM_Token_DisableUserTest_Disable_Step3_Fetch_User_By_Filter": [
+                                                                "Succeeded"
+                                                            ]
                                                         }
                                                     },
                                                     "DisableUserTest_Disable_Delay_Creation_15s": {
@@ -3269,6 +4081,48 @@
                                                                 "unit": "Second"
                                                             }
                                                         }
+                                                    },
+                                                    "Ensure_SCIM_Token_DisableUserTest_Disable_Step3_Fetch_User_By_Filter": {
+                                                        "type": "If",
+                                                        "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                        "actions": {
+                                                            "Acquire_Token_rTest_Disable_Step3_Fetch_User_By_Filter": {
+                                                                "type": "Workflow",
+                                                                "inputs": {
+                                                                    "host": {
+                                                                        "workflow": {
+                                                                            "id": "SCIMToken_Workflow"
+                                                                        }
+                                                                    },
+                                                                    "body": {}
+                                                                },
+                                                                "runtimeConfiguration": {
+                                                                    "secureData": {
+                                                                        "properties": [
+                                                                            "inputs",
+                                                                            "outputs"
+                                                                        ]
+                                                                    }
+                                                                },
+                                                                "runAfter": {}
+                                                            },
+                                                            "Cache_Token_rTest_Disable_Step3_Fetch_User_By_Filter": {
+                                                                "type": "SetVariable",
+                                                                "inputs": {
+                                                                    "name": "SCIMAccessTokenCache",
+                                                                    "value": "@body('Acquire_Token_rTest_Disable_Step3_Fetch_User_By_Filter')"
+                                                                },
+                                                                "runAfter": {
+                                                                    "Acquire_Token_rTest_Disable_Step3_Fetch_User_By_Filter": [
+                                                                        "Succeeded"
+                                                                    ]
+                                                                }
+                                                            }
+                                                        },
+                                                        "else": {
+                                                            "actions": {}
+                                                        },
+                                                        "runAfter": {}
                                                     }
                                                 },
                                                 "runAfter": {
@@ -3328,6 +4182,48 @@
                                                     "timeout": "PT15M"
                                                 },
                                                 "type": "Until"
+                                            },
+                                            "Ensure_SCIM_Token_DisableUserTest_Disable_Step1_Check_User_Exists": {
+                                                "type": "If",
+                                                "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                "actions": {
+                                                    "Acquire_Token_UserTest_Disable_Step1_Check_User_Exists": {
+                                                        "type": "Workflow",
+                                                        "inputs": {
+                                                            "host": {
+                                                                "workflow": {
+                                                                    "id": "SCIMToken_Workflow"
+                                                                }
+                                                            },
+                                                            "body": {}
+                                                        },
+                                                        "runtimeConfiguration": {
+                                                            "secureData": {
+                                                                "properties": [
+                                                                    "inputs",
+                                                                    "outputs"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "runAfter": {}
+                                                    },
+                                                    "Cache_Token_UserTest_Disable_Step1_Check_User_Exists": {
+                                                        "type": "SetVariable",
+                                                        "inputs": {
+                                                            "name": "SCIMAccessTokenCache",
+                                                            "value": "@body('Acquire_Token_UserTest_Disable_Step1_Check_User_Exists')"
+                                                        },
+                                                        "runAfter": {
+                                                            "Acquire_Token_UserTest_Disable_Step1_Check_User_Exists": [
+                                                                "Succeeded"
+                                                            ]
+                                                        }
+                                                    }
+                                                },
+                                                "else": {
+                                                    "actions": {}
+                                                },
+                                                "runAfter": {}
                                             }
                                         },
                                         "type": "Scope"
@@ -3469,9 +4365,14 @@
                                                             "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['disableUser'], ''), '%22')}",
                                                             "method": "GET",
                                                             "headers": {
-                                                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                                 "Accept": "@{parameters('scimContentType')}"
                                                             }
+                                                        },
+                                                        "runAfter": {
+                                                            "Ensure_SCIM_Token_DisableUserTest_Disable_Step4_Query_User_By_Id": [
+                                                                "Succeeded"
+                                                            ]
                                                         }
                                                     },
                                                     "DisableUserTest_Disable_Step5_Disable_User": {
@@ -3505,9 +4406,14 @@
                                                                     "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['disableUser'], ''), '%22')}",
                                                                     "method": "GET",
                                                                     "headers": {
-                                                                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                                        "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                                         "Accept": "@{parameters('scimContentType')}"
                                                                     }
+                                                                },
+                                                                "runAfter": {
+                                                                    "Ensure_SCIM_Token_DisableUserTest_Disable_Step6_Check_User_After_Disable": [
+                                                                        "Succeeded"
+                                                                    ]
                                                                 }
                                                             },
                                                             "DisableUserTest_Disable_Delay_Final_15s": {
@@ -3524,6 +4430,48 @@
                                                                         "unit": "Second"
                                                                     }
                                                                 }
+                                                            },
+                                                            "Ensure_SCIM_Token_DisableUserTest_Disable_Step6_Check_User_After_Disable": {
+                                                                "type": "If",
+                                                                "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                                "actions": {
+                                                                    "Acquire_Token_t_Disable_Step6_Check_User_After_Disable": {
+                                                                        "type": "Workflow",
+                                                                        "inputs": {
+                                                                            "host": {
+                                                                                "workflow": {
+                                                                                    "id": "SCIMToken_Workflow"
+                                                                                }
+                                                                            },
+                                                                            "body": {}
+                                                                        },
+                                                                        "runtimeConfiguration": {
+                                                                            "secureData": {
+                                                                                "properties": [
+                                                                                    "inputs",
+                                                                                    "outputs"
+                                                                                ]
+                                                                            }
+                                                                        },
+                                                                        "runAfter": {}
+                                                                    },
+                                                                    "Cache_Token_t_Disable_Step6_Check_User_After_Disable": {
+                                                                        "type": "SetVariable",
+                                                                        "inputs": {
+                                                                            "name": "SCIMAccessTokenCache",
+                                                                            "value": "@body('Acquire_Token_t_Disable_Step6_Check_User_After_Disable')"
+                                                                        },
+                                                                        "runAfter": {
+                                                                            "Acquire_Token_t_Disable_Step6_Check_User_After_Disable": [
+                                                                                "Succeeded"
+                                                                            ]
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "else": {
+                                                                    "actions": {}
+                                                                },
+                                                                "runAfter": {}
                                                             }
                                                         },
                                                         "runAfter": {
@@ -3583,6 +4531,48 @@
                                                             "timeout": "PT15M"
                                                         },
                                                         "type": "Until"
+                                                    },
+                                                    "Ensure_SCIM_Token_DisableUserTest_Disable_Step4_Query_User_By_Id": {
+                                                        "type": "If",
+                                                        "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                        "actions": {
+                                                            "Acquire_Token_eUserTest_Disable_Step4_Query_User_By_Id": {
+                                                                "type": "Workflow",
+                                                                "inputs": {
+                                                                    "host": {
+                                                                        "workflow": {
+                                                                            "id": "SCIMToken_Workflow"
+                                                                        }
+                                                                    },
+                                                                    "body": {}
+                                                                },
+                                                                "runtimeConfiguration": {
+                                                                    "secureData": {
+                                                                        "properties": [
+                                                                            "inputs",
+                                                                            "outputs"
+                                                                        ]
+                                                                    }
+                                                                },
+                                                                "runAfter": {}
+                                                            },
+                                                            "Cache_Token_eUserTest_Disable_Step4_Query_User_By_Id": {
+                                                                "type": "SetVariable",
+                                                                "inputs": {
+                                                                    "name": "SCIMAccessTokenCache",
+                                                                    "value": "@body('Acquire_Token_eUserTest_Disable_Step4_Query_User_By_Id')"
+                                                                },
+                                                                "runAfter": {
+                                                                    "Acquire_Token_eUserTest_Disable_Step4_Query_User_By_Id": [
+                                                                        "Succeeded"
+                                                                    ]
+                                                                }
+                                                            }
+                                                        },
+                                                        "else": {
+                                                            "actions": {}
+                                                        },
+                                                        "runAfter": {}
                                                     }
                                                 },
                                                 "type": "Scope"
@@ -3803,9 +4793,14 @@
                                                     "method": "GET",
                                                     "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['restoreUser'], ''), '%22')}",
                                                     "headers": {
-                                                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                        "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                         "Accept": "@{parameters('scimContentType')}"
                                                     }
+                                                },
+                                                "runAfter": {
+                                                    "Ensure_SCIM_Token_RestoreUserTest_SCIM_Pre_Check": [
+                                                        "Succeeded"
+                                                    ]
                                                 }
                                             },
                                             "Compose_RestoreUser_Body": {
@@ -3892,9 +4887,14 @@
                                                             "method": "GET",
                                                             "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['restoreUser'], ''), '%22')}",
                                                             "headers": {
-                                                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                                 "Accept": "@{parameters('scimContentType')}"
                                                             }
+                                                        },
+                                                        "runAfter": {
+                                                            "Ensure_SCIM_Token_RestoreUserTest_SCIM_Get_Create": [
+                                                                "Succeeded"
+                                                            ]
                                                         }
                                                     },
                                                     "RestoreUserTest_Wait_Create_30s": {
@@ -3911,6 +4911,48 @@
                                                                 "unit": "Second"
                                                             }
                                                         }
+                                                    },
+                                                    "Ensure_SCIM_Token_RestoreUserTest_SCIM_Get_Create": {
+                                                        "type": "If",
+                                                        "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                        "actions": {
+                                                            "Acquire_Token_IM_Token_RestoreUserTest_SCIM_Get_Create": {
+                                                                "type": "Workflow",
+                                                                "inputs": {
+                                                                    "host": {
+                                                                        "workflow": {
+                                                                            "id": "SCIMToken_Workflow"
+                                                                        }
+                                                                    },
+                                                                    "body": {}
+                                                                },
+                                                                "runtimeConfiguration": {
+                                                                    "secureData": {
+                                                                        "properties": [
+                                                                            "inputs",
+                                                                            "outputs"
+                                                                        ]
+                                                                    }
+                                                                },
+                                                                "runAfter": {}
+                                                            },
+                                                            "Cache_Token_IM_Token_RestoreUserTest_SCIM_Get_Create": {
+                                                                "type": "SetVariable",
+                                                                "inputs": {
+                                                                    "name": "SCIMAccessTokenCache",
+                                                                    "value": "@body('Acquire_Token_IM_Token_RestoreUserTest_SCIM_Get_Create')"
+                                                                },
+                                                                "runAfter": {
+                                                                    "Acquire_Token_IM_Token_RestoreUserTest_SCIM_Get_Create": [
+                                                                        "Succeeded"
+                                                                    ]
+                                                                }
+                                                            }
+                                                        },
+                                                        "else": {
+                                                            "actions": {}
+                                                        },
+                                                        "runAfter": {}
                                                     }
                                                 }
                                             },
@@ -3966,6 +5008,48 @@
                                                         }
                                                     }
                                                 }
+                                            },
+                                            "Ensure_SCIM_Token_RestoreUserTest_SCIM_Pre_Check": {
+                                                "type": "If",
+                                                "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                "actions": {
+                                                    "Acquire_Token_CIM_Token_RestoreUserTest_SCIM_Pre_Check": {
+                                                        "type": "Workflow",
+                                                        "inputs": {
+                                                            "host": {
+                                                                "workflow": {
+                                                                    "id": "SCIMToken_Workflow"
+                                                                }
+                                                            },
+                                                            "body": {}
+                                                        },
+                                                        "runtimeConfiguration": {
+                                                            "secureData": {
+                                                                "properties": [
+                                                                    "inputs",
+                                                                    "outputs"
+                                                                ]
+                                                            }
+                                                        },
+                                                        "runAfter": {}
+                                                    },
+                                                    "Cache_Token_CIM_Token_RestoreUserTest_SCIM_Pre_Check": {
+                                                        "type": "SetVariable",
+                                                        "inputs": {
+                                                            "name": "SCIMAccessTokenCache",
+                                                            "value": "@body('Acquire_Token_CIM_Token_RestoreUserTest_SCIM_Pre_Check')"
+                                                        },
+                                                        "runAfter": {
+                                                            "Acquire_Token_CIM_Token_RestoreUserTest_SCIM_Pre_Check": [
+                                                                "Succeeded"
+                                                            ]
+                                                        }
+                                                    }
+                                                },
+                                                "else": {
+                                                    "actions": {}
+                                                },
+                                                "runAfter": {}
                                             }
                                         }
                                     },
@@ -4132,9 +5216,14 @@
                                                                     "method": "GET",
                                                                     "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['restoreUser'], ''), '%22')}",
                                                                     "headers": {
-                                                                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                                        "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                                         "Accept": "@{parameters('scimContentType')}"
                                                                     }
+                                                                },
+                                                                "runAfter": {
+                                                                    "Ensure_SCIM_Token_RestoreUserTest_SCIM_Get_Deprovision": [
+                                                                        "Succeeded"
+                                                                    ]
                                                                 }
                                                             },
                                                             "RestoreUserTest_Wait_Deprovision_SCIM_15s": {
@@ -4151,6 +5240,48 @@
                                                                         "unit": "Second"
                                                                     }
                                                                 }
+                                                            },
+                                                            "Ensure_SCIM_Token_RestoreUserTest_SCIM_Get_Deprovision": {
+                                                                "type": "If",
+                                                                "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                                "actions": {
+                                                                    "Acquire_Token_ken_RestoreUserTest_SCIM_Get_Deprovision": {
+                                                                        "type": "Workflow",
+                                                                        "inputs": {
+                                                                            "host": {
+                                                                                "workflow": {
+                                                                                    "id": "SCIMToken_Workflow"
+                                                                                }
+                                                                            },
+                                                                            "body": {}
+                                                                        },
+                                                                        "runtimeConfiguration": {
+                                                                            "secureData": {
+                                                                                "properties": [
+                                                                                    "inputs",
+                                                                                    "outputs"
+                                                                                ]
+                                                                            }
+                                                                        },
+                                                                        "runAfter": {}
+                                                                    },
+                                                                    "Cache_Token_ken_RestoreUserTest_SCIM_Get_Deprovision": {
+                                                                        "type": "SetVariable",
+                                                                        "inputs": {
+                                                                            "name": "SCIMAccessTokenCache",
+                                                                            "value": "@body('Acquire_Token_ken_RestoreUserTest_SCIM_Get_Deprovision')"
+                                                                        },
+                                                                        "runAfter": {
+                                                                            "Acquire_Token_ken_RestoreUserTest_SCIM_Get_Deprovision": [
+                                                                                "Succeeded"
+                                                                            ]
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "else": {
+                                                                    "actions": {}
+                                                                },
+                                                                "runAfter": {}
                                                             }
                                                         }
                                                     },
@@ -4375,9 +5506,14 @@
                                                                             "method": "GET",
                                                                             "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', coalesce(triggerBody()?['initializationData']?['testUserNames']?['restoreUser'], ''), '%22')}",
                                                                             "headers": {
-                                                                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                                                 "Accept": "@{parameters('scimContentType')}"
                                                                             }
+                                                                        },
+                                                                        "runAfter": {
+                                                                            "Ensure_SCIM_Token_RestoreUserTest_SCIM_Get_Restore": [
+                                                                                "Succeeded"
+                                                                            ]
                                                                         }
                                                                     },
                                                                     "RestoreUserTest_Wait_Restore_30s": {
@@ -4394,6 +5530,48 @@
                                                                                 "unit": "Second"
                                                                             }
                                                                         }
+                                                                    },
+                                                                    "Ensure_SCIM_Token_RestoreUserTest_SCIM_Get_Restore": {
+                                                                        "type": "If",
+                                                                        "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                                                        "actions": {
+                                                                            "Acquire_Token_M_Token_RestoreUserTest_SCIM_Get_Restore": {
+                                                                                "type": "Workflow",
+                                                                                "inputs": {
+                                                                                    "host": {
+                                                                                        "workflow": {
+                                                                                            "id": "SCIMToken_Workflow"
+                                                                                        }
+                                                                                    },
+                                                                                    "body": {}
+                                                                                },
+                                                                                "runtimeConfiguration": {
+                                                                                    "secureData": {
+                                                                                        "properties": [
+                                                                                            "inputs",
+                                                                                            "outputs"
+                                                                                        ]
+                                                                                    }
+                                                                                },
+                                                                                "runAfter": {}
+                                                                            },
+                                                                            "Cache_Token_M_Token_RestoreUserTest_SCIM_Get_Restore": {
+                                                                                "type": "SetVariable",
+                                                                                "inputs": {
+                                                                                    "name": "SCIMAccessTokenCache",
+                                                                                    "value": "@body('Acquire_Token_M_Token_RestoreUserTest_SCIM_Get_Restore')"
+                                                                                },
+                                                                                "runAfter": {
+                                                                                    "Acquire_Token_M_Token_RestoreUserTest_SCIM_Get_Restore": [
+                                                                                        "Succeeded"
+                                                                                    ]
+                                                                                }
+                                                                            }
+                                                                        },
+                                                                        "else": {
+                                                                            "actions": {}
+                                                                        },
+                                                                        "runAfter": {}
                                                                     }
                                                                 }
                                                             },
@@ -4732,7 +5910,7 @@
                                     },
                                     "POD_SCIM_Pre_Check_User": {
                                         "runAfter": {
-                                            "POD_Create_Graph_User": [
+                                            "Ensure_SCIM_Token_POD_SCIM_Pre_Check_User": [
                                                 "Succeeded"
                                             ]
                                         },
@@ -4741,7 +5919,7 @@
                                             "method": "GET",
                                             "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', body('POD_Create_Graph_User')?['userPrincipalName'], '%22')}",
                                             "headers": {
-                                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                 "Accept": "@{parameters('scimContentType')}"
                                             }
                                         }
@@ -4867,7 +6045,7 @@
                                     },
                                     "POD_SCIM_Get_User": {
                                         "runAfter": {
-                                            "POD_Delay_After_Provision": [
+                                            "Ensure_SCIM_Token_POD_SCIM_Get_User": [
                                                 "Succeeded"
                                             ]
                                         },
@@ -4876,7 +6054,7 @@
                                             "method": "GET",
                                             "uri": "@{concat(parameters('scimEndpoint'), '/Users?filter=userName%20eq%20%22', body('POD_Create_Graph_User')?['userPrincipalName'], '%22')}",
                                             "headers": {
-                                                "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                                "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                                 "Accept": "@{parameters('scimContentType')}"
                                             }
                                         }
@@ -4924,6 +6102,98 @@
                                                     }
                                                 }
                                             }
+                                        }
+                                    },
+                                    "Ensure_SCIM_Token_POD_SCIM_Pre_Check_User": {
+                                        "type": "If",
+                                        "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                        "actions": {
+                                            "Acquire_Token_nsure_SCIM_Token_POD_SCIM_Pre_Check_User": {
+                                                "type": "Workflow",
+                                                "inputs": {
+                                                    "host": {
+                                                        "workflow": {
+                                                            "id": "SCIMToken_Workflow"
+                                                        }
+                                                    },
+                                                    "body": {}
+                                                },
+                                                "runtimeConfiguration": {
+                                                    "secureData": {
+                                                        "properties": [
+                                                            "inputs",
+                                                            "outputs"
+                                                        ]
+                                                    }
+                                                },
+                                                "runAfter": {}
+                                            },
+                                            "Cache_Token_nsure_SCIM_Token_POD_SCIM_Pre_Check_User": {
+                                                "type": "SetVariable",
+                                                "inputs": {
+                                                    "name": "SCIMAccessTokenCache",
+                                                    "value": "@body('Acquire_Token_nsure_SCIM_Token_POD_SCIM_Pre_Check_User')"
+                                                },
+                                                "runAfter": {
+                                                    "Acquire_Token_nsure_SCIM_Token_POD_SCIM_Pre_Check_User": [
+                                                        "Succeeded"
+                                                    ]
+                                                }
+                                            }
+                                        },
+                                        "else": {
+                                            "actions": {}
+                                        },
+                                        "runAfter": {
+                                            "POD_Create_Graph_User": [
+                                                "Succeeded"
+                                            ]
+                                        }
+                                    },
+                                    "Ensure_SCIM_Token_POD_SCIM_Get_User": {
+                                        "type": "If",
+                                        "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                        "actions": {
+                                            "Acquire_Token_Ensure_SCIM_Token_POD_SCIM_Get_User": {
+                                                "type": "Workflow",
+                                                "inputs": {
+                                                    "host": {
+                                                        "workflow": {
+                                                            "id": "SCIMToken_Workflow"
+                                                        }
+                                                    },
+                                                    "body": {}
+                                                },
+                                                "runtimeConfiguration": {
+                                                    "secureData": {
+                                                        "properties": [
+                                                            "inputs",
+                                                            "outputs"
+                                                        ]
+                                                    }
+                                                },
+                                                "runAfter": {}
+                                            },
+                                            "Cache_Token_Ensure_SCIM_Token_POD_SCIM_Get_User": {
+                                                "type": "SetVariable",
+                                                "inputs": {
+                                                    "name": "SCIMAccessTokenCache",
+                                                    "value": "@body('Acquire_Token_Ensure_SCIM_Token_POD_SCIM_Get_User')"
+                                                },
+                                                "runAfter": {
+                                                    "Acquire_Token_Ensure_SCIM_Token_POD_SCIM_Get_User": [
+                                                        "Succeeded"
+                                                    ]
+                                                }
+                                            }
+                                        },
+                                        "else": {
+                                            "actions": {}
+                                        },
+                                        "runAfter": {
+                                            "POD_Delay_After_Provision": [
+                                                "Succeeded"
+                                            ]
                                         }
                                     }
                                 }
@@ -4974,10 +6244,8 @@
                             },
                             "POD_User_Cleanup_SCIM_Delete": {
                                 "runAfter": {
-                                    "Set_PODUserTestOutputs": [
-                                        "Succeeded",
-                                        "Failed",
-                                        "Skipped"
+                                    "Ensure_SCIM_Token_POD_User_Cleanup_SCIM_Delete": [
+                                        "Succeeded"
                                     ]
                                 },
                                 "type": "Http",
@@ -4985,7 +6253,7 @@
                                     "method": "DELETE",
                                     "uri": "@{concat(parameters('scimEndpoint'), '/Users/', coalesce(first(body('POD_SCIM_Get_User')?['Resources'])?['id'], 'not-found'))}",
                                     "headers": {
-                                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                                        "Authorization": "@{concat('Bearer ', if(equals(parameters('scimAuthenticationMethod'), 'Bearer'), parameters('scimBearerToken'), variables('SCIMAccessTokenCache')?['accessToken']))}",
                                         "Accept": "@{parameters('scimContentType')}"
                                     }
                                 }
@@ -5006,6 +6274,54 @@
                                         "type": "ManagedServiceIdentity",
                                         "audience": "https://graph.microsoft.com/"
                                     }
+                                }
+                            },
+                            "Ensure_SCIM_Token_POD_User_Cleanup_SCIM_Delete": {
+                                "type": "If",
+                                "expression": "@and(not(equals(parameters('scimAuthenticationMethod'), 'Bearer')), or(empty(variables('SCIMAccessTokenCache')?['accessToken']), lessOrEquals(ticks(coalesce(variables('SCIMAccessTokenCache')?['expiresAt'], '1970-01-01T00:00:00Z')), ticks(addMinutes(utcNow(), 5)))))",
+                                "actions": {
+                                    "Acquire_Token__SCIM_Token_POD_User_Cleanup_SCIM_Delete": {
+                                        "type": "Workflow",
+                                        "inputs": {
+                                            "host": {
+                                                "workflow": {
+                                                    "id": "SCIMToken_Workflow"
+                                                }
+                                            },
+                                            "body": {}
+                                        },
+                                        "runtimeConfiguration": {
+                                            "secureData": {
+                                                "properties": [
+                                                    "inputs",
+                                                    "outputs"
+                                                ]
+                                            }
+                                        },
+                                        "runAfter": {}
+                                    },
+                                    "Cache_Token__SCIM_Token_POD_User_Cleanup_SCIM_Delete": {
+                                        "type": "SetVariable",
+                                        "inputs": {
+                                            "name": "SCIMAccessTokenCache",
+                                            "value": "@body('Acquire_Token__SCIM_Token_POD_User_Cleanup_SCIM_Delete')"
+                                        },
+                                        "runAfter": {
+                                            "Acquire_Token__SCIM_Token_POD_User_Cleanup_SCIM_Delete": [
+                                                "Succeeded"
+                                            ]
+                                        }
+                                    }
+                                },
+                                "else": {
+                                    "actions": {}
+                                },
+                                "runAfter": {
+                                    "Set_PODUserTestOutputs": [
+                                        "Succeeded",
+                                        "Failed",
+                                        "Skipped"
+                                    ]
                                 }
                             }
                         },
@@ -5582,6 +6898,19 @@
                         }
                     ]
                 }
+            },
+            "Initialize_AttributeMatchExcludeList_Variable_1": {
+                "type": "InitializeVariable",
+                "inputs": {
+                    "variables": [
+                        {
+                            "name": "attributeMatchExcludeList",
+                            "type": "Array",
+                            "value": "@triggerBody()?['initializationData']?['updateTestExcludeList']"
+                        }
+                    ]
+                },
+                "runAfter": {}
             }
         },
         "outputs": {}
