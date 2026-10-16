@@ -3,6 +3,10 @@
 ###############################################################################
 * text=auto
 
+Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp/VERSION text eol=lf
+Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp/*_Workflow.json text eol=lf
+Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp/Orchestrator_Parameters.json text eol=lf
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #

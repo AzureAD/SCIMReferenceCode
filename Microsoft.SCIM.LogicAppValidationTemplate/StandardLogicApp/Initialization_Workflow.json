@@ -16,59 +16,14 @@
         },
         "actions": {
             "Initialize_Processing_Variables": {
-                "runAfter": {},
+                "runAfter": {
+                    "Initialize_Processing_Variables_Variable_6": [
+                        "Succeeded"
+                    ]
+                },
                 "type": "InitializeVariable",
                 "inputs": {
                     "variables": [
-                        {
-                            "name": "sourceToTargetLookup",
-                            "type": "Array",
-                            "value": []
-                        },
-                        {
-                            "name": "userBody",
-                            "type": "Object",
-                            "value": {
-                                "accountEnabled": true,
-                                "passwordProfile": {
-                                    "forceChangePasswordNextSignIn": true,
-                                    "password": "@{concat('Tmp!', substring(guid(),0,8), '@', substring(guid(),24,8))}"
-                                }
-                            }
-                        },
-                        {
-                            "name": "updateUserBody",
-                            "type": "Object",
-                            "value": {}
-                        },
-                        {
-                            "name": "ExcludedList",
-                            "type": "Array",
-                            "value": [
-                                "IsSoftDeleted",
-                                "accountEnabled",
-                                "passwordProfile",
-                                "manager",
-                                "mail",
-                                "userPrincipalName",
-                                "id"
-                            ]
-                        },
-                        {
-                            "name": "GraphArrayProperties",
-                            "type": "Array",
-                            "value": [
-                                "businessPhones",
-                                "otherMails",
-                                "proxyAddresses",
-                                "imAddresses"
-                            ]
-                        },
-                        {
-                            "name": "scimDirectUserCreateBody",
-                            "type": "Object",
-                            "value": {}
-                        },
                         {
                             "name": "additionalFunctionSources",
                             "type": "Array",
@@ -1272,6 +1227,123 @@
                         },
                         "isVerbosePatchSupported": "@outputs('Compose_IsVerbosePatchSupported')"
                     }
+                }
+            },
+            "Initialize_Processing_Variables_Variable_1": {
+                "type": "InitializeVariable",
+                "inputs": {
+                    "variables": [
+                        {
+                            "name": "sourceToTargetLookup",
+                            "type": "Array",
+                            "value": []
+                        }
+                    ]
+                },
+                "runAfter": {}
+            },
+            "Initialize_Processing_Variables_Variable_2": {
+                "type": "InitializeVariable",
+                "inputs": {
+                    "variables": [
+                        {
+                            "name": "userBody",
+                            "type": "Object",
+                            "value": {
+                                "accountEnabled": true,
+                                "passwordProfile": {
+                                    "forceChangePasswordNextSignIn": true,
+                                    "password": "@{concat('Tmp!', substring(guid(),0,8), '@', substring(guid(),24,8))}"
+                                }
+                            }
+                        }
+                    ]
+                },
+                "runAfter": {
+                    "Initialize_Processing_Variables_Variable_1": [
+                        "Succeeded"
+                    ]
+                }
+            },
+            "Initialize_Processing_Variables_Variable_3": {
+                "type": "InitializeVariable",
+                "inputs": {
+                    "variables": [
+                        {
+                            "name": "updateUserBody",
+                            "type": "Object",
+                            "value": {}
+                        }
+                    ]
+                },
+                "runAfter": {
+                    "Initialize_Processing_Variables_Variable_2": [
+                        "Succeeded"
+                    ]
+                }
+            },
+            "Initialize_Processing_Variables_Variable_4": {
+                "type": "InitializeVariable",
+                "inputs": {
+                    "variables": [
+                        {
+                            "name": "ExcludedList",
+                            "type": "Array",
+                            "value": [
+                                "IsSoftDeleted",
+                                "accountEnabled",
+                                "passwordProfile",
+                                "manager",
+                                "mail",
+                                "userPrincipalName",
+                                "id"
+                            ]
+                        }
+                    ]
+                },
+                "runAfter": {
+                    "Initialize_Processing_Variables_Variable_3": [
+                        "Succeeded"
+                    ]
+                }
+            },
+            "Initialize_Processing_Variables_Variable_5": {
+                "type": "InitializeVariable",
+                "inputs": {
+                    "variables": [
+                        {
+                            "name": "GraphArrayProperties",
+                            "type": "Array",
+                            "value": [
+                                "businessPhones",
+                                "otherMails",
+                                "proxyAddresses",
+                                "imAddresses"
+                            ]
+                        }
+                    ]
+                },
+                "runAfter": {
+                    "Initialize_Processing_Variables_Variable_4": [
+                        "Succeeded"
+                    ]
+                }
+            },
+            "Initialize_Processing_Variables_Variable_6": {
+                "type": "InitializeVariable",
+                "inputs": {
+                    "variables": [
+                        {
+                            "name": "scimDirectUserCreateBody",
+                            "type": "Object",
+                            "value": {}
+                        }
+                    ]
+                },
+                "runAfter": {
+                    "Initialize_Processing_Variables_Variable_5": [
+                        "Succeeded"
+                    ]
                 }
             }
         },
