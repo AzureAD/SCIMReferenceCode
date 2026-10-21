@@ -89,6 +89,18 @@ Tests that don't apply are reported as **SKIPPED** (not failures). However, grou
 
 ## What "Passing" Means
 
+### Version and validation timing
+
+`Final_TestResults` includes the deployed `LogicAppVersion`, derived during
+deployment from the same bundle's VERSION file. It also includes
+`validationStartedAtUtc` and `validationCompletedAtUtc`, their corresponding
+`validationStartedAtEpochSeconds` and `validationCompletedAtEpochSeconds`,
+and `validationDurationSeconds`. UTC timestamps are captured once at the first
+Compose and at result evaluation; numeric values are derived from those captures.
+Epoch seconds count from 1970-01-01 UTC, and duration is elapsed whole seconds.
+These fields are not Azure's authoritative run-history start/end times and do
+not affect pass/fail. Runs that never reach the final action have no final JSON.
+
 ### Overall Result Logic
 
 The Orchestrator's `Evaluate_Test_Results` action computes `overallLogicAppResult` as follows:

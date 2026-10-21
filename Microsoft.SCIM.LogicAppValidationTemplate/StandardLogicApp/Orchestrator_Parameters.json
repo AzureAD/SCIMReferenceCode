@@ -43,10 +43,10 @@
   },
   "LogicAppVersion": {
     "metadata": {
-      "description": "Version of the Logic App for tracking and deployment purposes"
+      "description": "Populated during deployment from VERSION in the same source bundle."
     },
     "type": "String",
-    "value": "14.0"
+    "value": ""
   },
   "attributeTransforms": {
     "metadata": {

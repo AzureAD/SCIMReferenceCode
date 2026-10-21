@@ -17,6 +17,8 @@ federation exchange, or full gallery readiness.
 - Node.js with the built-in `node:test` runner and `structuredClone`. Node.js
   22 or later is recommended. No npm packages or `npm install` are required.
 - Git available on `PATH`.
+- PowerShell 7 (`pwsh`) available on `PATH` for the offline deployment tests.
+  This is a test/deployment tool, not a dependency of the deployed workflow.
 - A repository checkout or worktree with the pre-feature baseline commit
   `8bdf02e700b8c4e667c6eee6924010274a58af8f` available in its local history.
   A downloaded source ZIP or shallow clone missing that commit is insufficient
@@ -41,27 +43,39 @@ node --test .\minimal-auth-selection.test.cjs
 ```
 
 Paths to the workflow files are resolved relative to the test file, not the
-terminal's current directory. The two commands run the same four tests.
+terminal's current directory. The two commands run the same six tests.
 
 Expected summary:
 
 ```text
-tests 4
-pass 4
+tests 6
+pass 6
 fail 0
 ```
 
 Exact formatting and timing depend on the Node.js version and test reporter.
 Exit code `0` means the tests passed; a nonzero exit code indicates a failure.
 
-## What the four tests check
+## What the six tests check
 
 | Test | Coverage |
 |---|---|
 | Selected branch and `EnabledTests` | OAuth and federation choices, blank/invalid selection, and existing suite/individual selectors |
 | Selected-result aggregation | A failed, skipped or missing selected result cannot be rescued by a passing unselected method |
 | Parent readiness | Only selected `PASSED` satisfies authentication readiness; an independent User failure still fails the parent; other semantic predicates match the baseline |
-| Preservation and consistency | Existing nested protocol actions, other suite definitions and scripts remain unchanged; documentation uses the selector name; the version parameter agrees with VERSION; final results identify the choice |
+| Preservation and consistency | Existing nested protocol actions, other suite definitions and collector remain unchanged; documentation uses the selector name; the template version is blank; final results identify the choice |
+| Version and timing output | Native result uses the deployed version; timestamps come from single captures; epoch/duration calculations cover whole seconds, subsecond truncation and midnight crossing |
+| Offline deployment | The PowerShell test below verifies version injection, preserved parameters, read-back and preflight failures without cloud calls |
+
+[version-deployment.test.ps1](version-deployment.test.ps1) is invoked by the
+sixth Node test. It parses the deployment script and loads only the tested
+functions, mocking Azure CLI and HTTP requests. It also invokes guarded
+preflight failure paths that exit before any Azure operation.
+To run it separately from this directory:
+
+```powershell
+pwsh -NoProfile -File .\version-deployment.test.ps1
+```
 
 ## How workflow expressions are checked
 
@@ -72,7 +86,7 @@ outputs for the expression subset exercised by these tests.
 
 This helper is **not the Azure Logic Apps engine**. It does not execute HTTP
 actions, reproduce every expression-language rule, model lazy branch evaluation,
-or validate scheduling, retries, managed identity, token lifetime or deployment.
+or validate scheduling, retries, managed identity, token lifetime or live deployment.
 Expression changes outside its supported subset may require a deliberate helper
 update and a real runtime check.
 
@@ -80,15 +94,17 @@ update and a real runtime check.
 
 ### Bundle version: do not hard-code a release number in the test
 
-The test reads [VERSION](../VERSION), checks that it is nonempty, and compares it
-with `LogicAppVersion.value` in
-[Orchestrator_Parameters.json](../Orchestrator_Parameters.json). It does not assert
-a literal release such as `14.0`.
+The test reads [VERSION](../VERSION) and checks that it is nonempty.
+[Orchestrator_Parameters.json](../Orchestrator_Parameters.json) intentionally has
+an empty `LogicAppVersion.value`; deployment generates its value from VERSION.
+The offline PowerShell tests check injection, LF/CRLF trimming, future-version
+values, preservation of nested data/expressions, unchanged source files,
+missing/empty inputs, version read-back mismatch, and rejection of
+`-SkipParameters`. No literal release number is asserted.
 
-For a future version bump, update the authoritative VERSION file and the existing
-parameter default together. The test then verifies consistency without needing a
-third version edit. It does not enforce a version-format policy or prove that a
-release number increased.
+For a future version bump, update only VERSION. The generated upload and native
+result carry that value; the source template remains blank. Tests do not enforce
+a version-format policy or prove that a release number increased.
 
 ### Comparison baseline: intentionally pinned
 
@@ -106,7 +122,7 @@ do not simply move the baseline to hide a failing assertion.
 |---|---|
 | `node` or `git` not found | Install or select the prerequisite and reopen the terminal so its PATH is available |
 | Unknown Git revision / missing baseline object | Use a normal repository checkout with the baseline commit in local history |
-| Version assertion fails | Compare VERSION with the shared `LogicAppVersion` default; do not restore a hard-coded test version |
+| Version assertion fails | Verify VERSION is nonempty, the template version is blank, and injection/read-back checks pass; do not hard-code a release number |
 | Workflow-preservation assertion fails | Inspect the named action/file and decide whether its change is intentional |
 | Expression parser/assertion fails | Inspect the expression and the helper's supported subset; do not assume this alone establishes a cloud runtime failure |
 

@@ -36,6 +36,13 @@ function evaluate(expression, context) {
         coalesce: (...args) => args.find(value => value != null), json: JSON.parse,
         string: value => typeof value === 'object' ? JSON.stringify(value) : String(value),
         contains: (value, item) => value?.includes(item) || false,
+        ticks: value => {
+            const fraction = /\.(\d+)Z$/.exec(value)?.[1] || '';
+            return BigInt(Date.parse(value.replace(/\.\d+Z$/, 'Z'))) * 10000n +
+                BigInt(fraction.padEnd(7, '0')) + 621355968000000000n;
+        },
+        sub: (a, b) => a - b,
+        div: (a, b) => Number(a / BigInt(b)),
     };
     const space = () => { while (position < source.length && /\s/.test(source[position])) position++; };
     function value() {
@@ -46,7 +53,7 @@ function evaluate(expression, context) {
             while (source[position] !== "'") { if (position >= source.length) throw Error('Unclosed string'); position++; }
             result = source.slice(start, position++);
         } else {
-            const match = /^[A-Za-z_]\w*/.exec(source.slice(position));
+            const match = /^(?:[A-Za-z_]\w*|\d+)/.exec(source.slice(position));
             assert.ok(match, source.slice(position));
             position += match[0].length;
             space();
@@ -62,7 +69,7 @@ function evaluate(expression, context) {
                 assert.equal(source[position++], ')');
                 assert.ok(functions[match[0]], match[0]);
                 result = functions[match[0]](...args);
-            } else result = {true: true, false: false, null: null}[match[0]];
+            } else result = /^\d+$/.test(match[0]) ? Number(match[0]) : {true: true, false: false, null: null}[match[0]];
         }
         space();
         while (source[position] === '?' || source[position] === '[') {
@@ -136,9 +143,9 @@ test('token protocols and semantic source remain unchanged; naming and bundle ve
     // VERSION is authoritative; future releases should not require a test-only version edit.
     const version = fs.readFileSync(path.join(root, 'VERSION'), 'utf8').trim();
     assert.notEqual(version, '', 'VERSION must contain a bundle version');
-    assert.equal(load('Orchestrator_Parameters.json').LogicAppVersion.value, version);
+    assert.equal(load('Orchestrator_Parameters.json').LogicAppVersion.value, '');
     assert.equal(load('Orchestrator_Parameters.json').selectedAuthenticationMethod.value, '');
-    for (const name of ['Deploy-LogicAppWorkflows.ps1', 'ValidateLogicAppRun-Standard.ps1']) {
+    for (const name of ['ValidateLogicAppRun-Standard.ps1']) {
         assert.equal(fs.readFileSync(path.join(root, name), 'utf8').replace(/\r\n/g, '\n'),
             execFileSync('git', ['show', `8bdf02e:Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp/${name}`], {cwd: root, encoding: 'utf8'}).replace(/\r\n/g, '\n'));
     }
@@ -148,4 +155,32 @@ test('token protocols and semantic source remain unchanged; naming and bundle ve
         assert.ok(!text.includes('`WorkloadIdentityFederation`'), name);
     }
     assert.equal(parent.Final_TestResults.inputs.selectedAuthenticationMethod, "@parameters('selectedAuthenticationMethod')");
+});
+
+test('final result uses the deployed version and two single-capture validation timestamps', () => {
+    const final = parent.Final_TestResults.inputs;
+    assert.equal(final.LogicAppVersion, "@parameters('LogicAppVersion')");
+    assert.equal(parent.Compose_Debug_WorkflowObject.inputs.validationStartedAtUtc, '@utcNow()');
+    assert.equal(parent.Evaluate_Test_Results.inputs.validationCompletedAtUtc, '@utcNow()');
+    for (const [start, end, seconds] of [
+        ['2026-10-21T13:00:00Z', '2026-10-21T13:33:12Z', 1992],
+        ['2026-10-21T23:59:59.9000000Z', '2026-10-22T00:00:01.1000000Z', 1],
+    ]) {
+        const context = {parameters: {LogicAppVersion: 'future-version'}, outputs: {
+            Compose_Debug_WorkflowObject: {validationStartedAtUtc: start},
+            Evaluate_Test_Results: {validationCompletedAtUtc: end},
+        }};
+        assert.equal(evaluate(final.LogicAppVersion, context), 'future-version');
+        assert.equal(evaluate(final.validationStartedAtUtc, context), start);
+        assert.equal(evaluate(final.validationCompletedAtUtc, context), end);
+        assert.equal(evaluate(final.validationStartedAtEpochSeconds, context), Math.floor(Date.parse(start) / 1000));
+        assert.equal(evaluate(final.validationCompletedAtEpochSeconds, context), Math.floor(Date.parse(end) / 1000));
+        assert.equal(evaluate(final.validationDurationSeconds, context), seconds);
+    }
+});
+
+test('PowerShell deployment derives version without modifying source parameters', () => {
+    const output = execFileSync('pwsh', ['-NoProfile', '-File', path.join(__dirname, 'version-deployment.test.ps1')],
+        {cwd: root, encoding: 'utf8'});
+    assert.ok(output.includes('Version deployment checks passed'), output);
 });

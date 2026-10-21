@@ -5,7 +5,8 @@
 .DESCRIPTION
     This script reads *_Workflow.json files from a specified directory and creates/updates
     workflows in an Azure Logic App Standard resource using the Azure REST API (via az CLI).
-    It also optionally deploys a parameters.json file for workflow parameters.
+    It also deploys parameters.json, deriving LogicAppVersion from VERSION in WorkflowsPath.
+    The source parameters file is not modified. VERSION must come from the same source bundle.
 
     The script performs pre-deployment validation of all files before making any API calls,
     ensuring no partial deployments occur if any file is invalid.
@@ -26,6 +27,10 @@
     (Optional) Path to a parameters JSON file to deploy as the app-level parameters.json.
     If not specified, the script will look for *_Parameters.json in the WorkflowsPath.
 
+.PARAMETER SkipParameters
+    Retained for command-line compatibility, but rejected for versioned bundles.
+    Deploy parameters with workflows so final results cannot report a stale version.
+
 .EXAMPLE
     .\Deploy-LogicAppWorkflows.ps1 -SubscriptionId "xxxx" -ResourceGroup "myRG" -LogicAppName "myLogicApp"
 
@@ -34,7 +39,7 @@
 
 .EXAMPLE
     .\Deploy-LogicAppWorkflows.ps1 -SubscriptionId "xxxx" -ResourceGroup "myRG" -LogicAppName "myLogicApp" -SkipParameters
-    Deploys only workflow files without updating the parameters.json.
+    Rejected for versioned bundles: parameters must be deployed with the workflow version.
 
 .NOTES
     Prerequisites:
@@ -268,7 +273,8 @@ function Deploy-VfsFile {
         [string]$RG,
         [string]$AppName,
         [string]$RemotePath,
-        [string]$LocalFilePath
+        [string]$LocalFilePath,
+        [string]$Content
     )
 
     # ARM-proxied VFS endpoint — routes through management.azure.com instead of SCM directly
@@ -284,7 +290,7 @@ function Deploy-VfsFile {
         }
 
         # Read the raw file content — preserves exact bytes including Logic Apps expressions
-        $bodyContent = Get-Content -Path $LocalFilePath -Raw -Encoding UTF8
+        $bodyContent = if ($PSBoundParameters.ContainsKey('Content')) { $Content } else { Get-Content -Path $LocalFilePath -Raw -Encoding UTF8 }
 
         # Use Invoke-RestMethod to send raw content without JSON re-serialization
         $headers = @{
@@ -294,6 +300,13 @@ function Deploy-VfsFile {
         }
 
         $result = Invoke-RestMethod -Method PUT -Uri $vfsUri -Headers $headers -Body $bodyContent -ContentType "application/json"
+
+        if ($RemotePath -eq "parameters.json") {
+            $readback = Invoke-RestMethod -Method GET -Uri $vfsUri -Headers $headers
+            if ($readback.LogicAppVersion.value -cne $script:BundleVersion) {
+                throw "Deployed LogicAppVersion does not match VERSION. Do not start the workflows."
+            }
+        }
 
         return $true
     }
@@ -351,6 +364,23 @@ function Deploy-Workflow {
     }
 }
 
+function Get-VersionedParametersContent {
+    param(
+        [string]$ParametersFilePath,
+        [string]$BundleVersion
+    )
+
+    $parameters = Get-Content -LiteralPath $ParametersFilePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($null -eq $parameters -or $parameters.LogicAppVersion.type -cne 'String') {
+        throw "Parameters must define LogicAppVersion with type String."
+    }
+    if ([string]::IsNullOrWhiteSpace($BundleVersion)) {
+        throw "VERSION must contain a nonempty bundle version."
+    }
+    $parameters.LogicAppVersion | Add-Member -NotePropertyName value -NotePropertyValue $BundleVersion.Trim() -Force
+    return $parameters | ConvertTo-Json -Depth 100
+}
+
 function Deploy-Parameters {
     <#
     .SYNOPSIS
@@ -366,7 +396,7 @@ function Deploy-Parameters {
     Write-LogMessage "Deploying parameters file: $ParametersFilePath" -Level Info
 
     try {
-        $paramsContent = Get-Content -Path $ParametersFilePath -Raw -Encoding UTF8
+        $paramsContent = Get-VersionedParametersContent -ParametersFilePath $ParametersFilePath -BundleVersion $script:BundleVersion
         $paramsObj = $paramsContent | ConvertFrom-Json
 
         # Validate it's a valid JSON object
@@ -382,9 +412,9 @@ function Deploy-Parameters {
 
     try {
         # Upload parameters.json to root via ARM VFS
-        Deploy-VfsFile -SubId $SubId -RG $RG -AppName $AppName `
+        $null = Deploy-VfsFile -SubId $SubId -RG $RG -AppName $AppName `
             -RemotePath "parameters.json" `
-            -LocalFilePath $ParametersFilePath
+            -Content $paramsContent
 
         Write-LogMessage "  Parameters file deployed successfully." -Level Success
         return $true
@@ -409,6 +439,23 @@ Write-Host ""
 $WorkflowsPath = Resolve-Path -Path $WorkflowsPath -ErrorAction SilentlyContinue
 if (-not $WorkflowsPath) {
     Write-LogMessage "Workflows path does not exist: $WorkflowsPath" -Level Error
+    exit 1
+}
+
+try {
+    if ($SkipParameters) {
+        throw "-SkipParameters is not supported for versioned bundles. Deploy parameters with the workflows to avoid stale version metadata."
+    }
+    if ($ParametersFile -and -not (Test-Path -LiteralPath $ParametersFile -PathType Leaf)) {
+        throw "Parameters file does not exist: $ParametersFile"
+    }
+    $script:BundleVersion = (Get-Content -LiteralPath (Join-Path $WorkflowsPath 'VERSION') -Raw -Encoding UTF8).Trim()
+    if ([string]::IsNullOrWhiteSpace($script:BundleVersion)) {
+        throw "VERSION must contain a nonempty bundle version."
+    }
+}
+catch {
+    Write-LogMessage "Version preparation failed: $_" -Level Error
     exit 1
 }
 
@@ -482,6 +529,12 @@ if ($SkipParameters) {
 }
 elseif ($ParametersFile -and (Test-Path $ParametersFile)) {
     $pErrors = Test-ParametersFile -FilePath $ParametersFile -FileName (Split-Path $ParametersFile -Leaf)
+    try {
+        $null = Get-VersionedParametersContent -ParametersFilePath $ParametersFile -BundleVersion $script:BundleVersion
+    }
+    catch {
+        $pErrors += "Version preparation failed: $_"
+    }
     if ($pErrors.Count -gt 0) {
         $validationFailed = $true
         foreach ($err in $pErrors) {
@@ -494,8 +547,18 @@ elseif ($ParametersFile -and (Test-Path $ParametersFile)) {
 }
 else {
     $autoParamFiles = Get-ParametersFiles -Path $WorkflowsPath
+    if ($autoParamFiles.Count -eq 0) {
+        Write-LogMessage "A parameters file is required to deploy the bundle version." -Level Error
+        $validationFailed = $true
+    }
     foreach ($pf in $autoParamFiles) {
         $pErrors = Test-ParametersFile -FilePath $pf.FullName -FileName $pf.Name
+        try {
+            $null = Get-VersionedParametersContent -ParametersFilePath $pf.FullName -BundleVersion $script:BundleVersion
+        }
+        catch {
+            $pErrors += "Version preparation failed: $_"
+        }
         if ($pErrors.Count -gt 0) {
             $validationFailed = $true
             foreach ($err in $pErrors) {
@@ -535,11 +598,19 @@ else {
         foreach ($pf in $paramFiles) {
             Write-LogMessage "  Found: $($pf.Name)" -Level Info
             $paramsDeployed = Deploy-Parameters -SubId $SubscriptionId -RG $ResourceGroup -AppName $LogicAppName -ParametersFilePath $pf.FullName
+            if (-not $paramsDeployed) {
+                Write-LogMessage "Parameters deployment or version read-back failed. No workflows will be uploaded." -Level Error
+                exit 1
+            }
         }
     }
     else {
         Write-LogMessage "Step 6: No parameters file found. Skipping parameters deployment." -Level Info
     }
+}
+if (-not $paramsDeployed) {
+    Write-LogMessage "Parameters deployment or version read-back failed. No workflows will be uploaded." -Level Error
+    exit 1
 }
 Write-Host ""
 

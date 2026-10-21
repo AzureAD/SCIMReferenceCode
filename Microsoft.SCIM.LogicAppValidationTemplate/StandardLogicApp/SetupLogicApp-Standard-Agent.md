@@ -722,6 +722,14 @@ style="width:6.5in;height:2.60972in" />
 
 16. Run the following command
 
+Keep `VERSION` beside the workflow files in the selected `WorkflowsPath`.
+The script reads that file, populates `LogicAppVersion` in the uploaded
+parameters without modifying the source template, and verifies the version
+by reading back deployed parameters. Missing/empty VERSION or a version
+read-back mismatch stops deployment. `-SkipParameters` is rejected to avoid
+deploying workflows with stale version metadata. VERSION and workflows must
+come from the same source revision. No additional runtime package is needed.
+
 .\Deploy-LogicAppWorkflows.ps1 \`
 
 -SubscriptionId \$subscriptionId \`
@@ -1057,6 +1065,16 @@ learn about the tests and their results.
 style="width:6.5in;height:2.60764in" />
 
 In Final_TestResults -\> Select 'Show raw Outputs’.
+
+The native output includes `LogicAppVersion` from the deployed parameters.
+`validationStartedAtUtc` is captured by the first Orchestrator Compose;
+`validationCompletedAtUtc` is captured during result evaluation after results
+are collected. The matching `validationStartedAtEpochSeconds`,
+`validationCompletedAtEpochSeconds`, and `validationDurationSeconds` are
+integer seconds derived from those same captures, with subsecond fractions
+truncated. These are validation milestones, not the exact Azure run-history
+start/end timestamps. The final action executes before workflow termination;
+early failures or cancellations may not produce final output.
 
 <img src="./media/image68.png"
 style="width:5.61111in;height:5.53819in" />

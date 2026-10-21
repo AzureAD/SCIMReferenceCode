@@ -427,7 +427,7 @@ az webapp identity assign --name "<logicAppName>" --resource-group "rg-scim-vali
 Note the `principalId` — this is the **managedIdentityObjectId**.
 
 #### Step 2f: Deploy workflow templates
-The Logic App has 5 workflows + 1 parameters file. Deploy them via the Kudu VFS API.
+The Logic App has 5 workflows + 1 parameters file, plus VERSION for deployment metadata. Deploy the JSON files via the Kudu VFS API.
 
 **File acquisition (REQUIRED — try GitHub first, fall back to local):**
 
@@ -437,10 +437,12 @@ The canonical source of truth for the template files is:
 
 Raw download base: `https://raw.githubusercontent.com/AzureAD/SCIMReferenceCode/master/Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp/`
 
-For each of the 6 files below:
+Acquire the seven files below from the same immutable source revision. Resolve the selected GitHub branch to a commit before downloading and use that commit in the raw URL. For a local feature bundle, use all files from that local bundle instead. Do not mix upstream workflows with a local VERSION or mix per-file fallback sources. If acquisition fails, restart acquisition of the complete bundle from one source.
 
-1. **First, attempt the GitHub raw URL.** Use `curl -fsSL <rawUrl> -o <filename>` (or the agent's web fetch tool). Treat HTTP 200 as success. If the response is HTTP 404/403/5xx or a network error, fall back to step 2.
-2. **Fallback: read the file from the local workspace** (the same folder that contains this `scim-onboarding.agent.md`). If neither source returns the file, abort Phase 2 and tell the ISV which file is missing.
+For each of the 7 files below:
+
+1. **First, attempt the pinned GitHub raw URLs for the complete bundle.** Use `curl -fsSL <rawUrl> -o <filename>` (or the agent's web fetch tool). Treat HTTP 200 as success.
+2. **Fallback: reacquire the complete bundle from the local workspace** (the same folder that contains this `scim-onboarding.agent.md`). If neither complete source is available, abort Phase 2 and tell the ISV which file is missing. Never deploy a partially downloaded or mixed-source bundle.
 
 Files to acquire (exact names, case-sensitive):
 
@@ -452,23 +454,21 @@ Files to acquire (exact names, case-sensitive):
 | `GroupTests_Workflow.json` | `GroupTests_Workflow/workflow.json` |
 | `SCIMTests_Workflow.json` | `SCIMTests_Workflow/workflow.json` |
 | `Orchestrator_Parameters.json` | basis for `parameters.json` (after override, see below) |
+| `VERSION` | authoritative version used to populate `LogicAppVersion`; not uploaded as a workflow |
 
 Example acquisition loop the agent must follow before any upload:
 
-done
 ```bash
-BASE_RAW="https://raw.githubusercontent.com/AzureAD/SCIMReferenceCode/master/Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp"
-FILES=(Orchestrator_Workflow.json Initialization_Workflow.json UserTests_Workflow.json GroupTests_Workflow.json SCIMTests_Workflow.json Orchestrator_Parameters.json)
+BASE_RAW="https://raw.githubusercontent.com/AzureAD/SCIMReferenceCode/<resolved-commit>/Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp"
+FILES=(Orchestrator_Workflow.json Initialization_Workflow.json UserTests_Workflow.json GroupTests_Workflow.json SCIMTests_Workflow.json Orchestrator_Parameters.json VERSION)
 
 for f in "${FILES[@]}"; do
   if curl -fsSL "$BASE_RAW/$f" -o "$f"; then
     echo "  [github] $f"
-  elif [ -f "./$f" ]; then
-    echo "  [local]  $f (github fetch failed)"
   else
-    echo "  [MISSING] $f — abort"; exit 1
+    echo "  [MISSING] $f — stop and reacquire the complete local bundle"; exit 1
   fi
-
+done
 ```
 
 Always log to the ISV which source (`github` vs `local`) was used per file, so they know whether they are deploying the upstream version or a locally modified one.
@@ -542,13 +542,18 @@ curl -X PUT \
 # Use jq or python to do the replacement:
 cat Orchestrator_Parameters.json | python3 -c "
 import sys, json
+from pathlib import Path
 p = json.load(sys.stdin)
+version = Path('VERSION').read_text(encoding='utf-8-sig').strip()
+if not version:
+    sys.exit('VERSION must contain a nonempty bundle version')
+p['LogicAppVersion']['value'] = version
 p['scimEndpoint']['value'] = '<ISV_SCIM_ENDPOINT>'
 p['scimBearerToken']['value'] = '<ISV_BEARER_TOKEN>'
 p['servicePrincipalId']['value'] = '<SERVICE_PRINCIPAL_ID>'
 p['testUserDomain']['value'] = '<VERIFIED_DOMAIN>'
 json.dump(p, sys.stdout, indent=2)
-" > parameters_override.json
+" > parameters_override.json || exit 1
 
 curl -X PUT \
   "https://management.azure.com/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Web/sites/<logicApp>/extensions/api/vfs/site/wwwroot/parameters.json?api-version=2022-03-01" \
@@ -952,6 +957,8 @@ federatedTokenEndpoint, federatedClientId, federatedBaseAddress, federatedAudien
 
 If any key is missing, abort Phase 4 and tell the ISV exactly which key is missing. Do NOT PUT a parameters.json that fails this check.
 
+Read VERSION from the acquired bundle on every parameters write, trim it, reject a missing/empty value, and overwrite `LogicAppVersion.value`. Do not use the blank template value or infer a version from another checkout. Before starting a run, verify the deployed read-back version equals the acquired VERSION.
+
 #### Post-PUT read-back verification (MANDATORY)
 
 After the PUT completes, re-GET `parameters.json` and for each key in the patch table above, assert the returned value matches what was sent. If `servicePrincipalId` was supposed to be `aaa-bbb-ccc` but the read-back shows something else (or the key is missing), abort Phase 4 with the specific mismatch. Do NOT proceed to Phase 5.
@@ -1229,6 +1236,15 @@ az rest --method GET \
 ```
 
 Then fetch the output content from the `outputsLink.uri` in the response.
+
+The native final JSON includes `LogicAppVersion`, `validationStartedAtUtc`,
+`validationCompletedAtUtc`, the corresponding `validationStartedAtEpochSeconds`
+and `validationCompletedAtEpochSeconds`, and `validationDurationSeconds`.
+The start is captured in the first Compose action; completion is captured during
+result evaluation. These are validation milestones, not Azure's exact run-history
+start/end times. Epoch and duration values are integer seconds derived from those
+same UTC captures. Runs that never reach the final action have no final JSON.
+Report these values from the exact run, not from the current local VERSION.
 
 The sibling `Evaluate_Test_Results` action on the same run also exposes three top-level aggregation fields (fetch its `outputsLink.uri` the same way):
 
