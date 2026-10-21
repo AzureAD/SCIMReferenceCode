@@ -1,4 +1,11 @@
 {
+  "selectedAuthenticationMethod": {
+    "type": "String",
+    "value": "",
+    "metadata": {
+      "description": "ISV-selected authentication test for this run: OAuth2ClientCredentials or FederatedIdentity. Direct semantic tests still use scimBearerToken."
+    }
+  },
   "EnabledTests": {
     "allowedValues": [
       "All",
@@ -39,7 +46,7 @@
       "description": "Version of the Logic App for tracking and deployment purposes"
     },
     "type": "String",
-    "value": "10.0"
+    "value": "14.0"
   },
   "attributeTransforms": {
     "metadata": {

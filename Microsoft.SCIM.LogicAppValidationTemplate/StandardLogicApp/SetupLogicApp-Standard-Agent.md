@@ -205,8 +205,10 @@ generates submission artifacts.
 The agent handles the entire validation process through a simple
 conversation. Here’s what happens at a high level:
 
-1.  **Asks you a few questions** — Your SCIM endpoint URL, bearer token,
-    and authentication method, confirming Schema, Input parameters
+1.  **Asks you a few questions** — First choose OAuth client credentials
+    or Federated identity (Workload Identity Federation) for this run.
+    Confirm reuse or replacement of its connection parameters, then provide
+    your SCIM endpoint URL and bearer token, confirming Schema, Input parameters
     required for testing.
 2.  **Sets up everything automatically** — Creates the Entra app, Azure
     resources, Logic App, assigning permissions — all the manual portal
@@ -222,6 +224,16 @@ conversation. Here’s what happens at a high level:
 
 You don’t need to navigate any portal or run any script — just answer
 the agent’s questions and approve the commands it runs.
+
+For manual deployment, set the String parameter `selectedAuthenticationMethod`
+to `OAuth2ClientCredentials` or `FederatedIdentity` (Workload Identity
+Federation). Only that
+authentication test runs; clear the unselected method's connection fields.
+The selected test must return `PASSED` along with the existing required
+semantic tests. Final results identify the selected authentication method.
+This selects the authentication validation test, not a shared credential
+provider: direct semantic calls still use `scimBearerToken`, and Entra
+provisioning uses its separately configured saved connection.
 
 ## Prerequisites
 
