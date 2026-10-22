@@ -37,6 +37,10 @@ Collect the ISV's SCIM endpoint and bearer token, validate their Azure environme
 
 ### Steps
 
+0. **Choose one authentication method for this run** — use `ask_user` to ask: "Which authentication method do you want to validate: OAuth client credentials or Federated identity (Workload Identity Federation)?"
+
+   Record `selectedAuthenticationMethod` as `OAuth2ClientCredentials` or `FederatedIdentity`. Confirm whether to reuse supplied connection parameters or collect fresh ones. If inputs are missing or both methods were supplied, resolve the choice before continuing. Only the selected authentication test runs; its success is required alongside the existing semantic tests. Do not treat static bearer access as a third validation method. This choice does not replace `scimBearerToken` in direct semantic tests or automatically reconfigure the Entra provisioning connection.
+
 1. **Tenant whitelisting (prerequisite)** — Before proceeding with SCIM validation, the ISV must submit a tenant whitelisting request by completing the form at:
 
    📄 **https://forms.microsoft.com/pages/responsepage.aspx?id=v4j5cvGGr0GRqy180BHbR3elR4YvzS1IhaP_XITThvJUODY1UTJSSUFXTzFYMTQ0SkxSWTY4OTYzRi4u&route=shorturl**
@@ -53,7 +57,7 @@ Collect the ISV's SCIM endpoint and bearer token, validate their Azure environme
    
    b. **Bearer token** (must be long-lived — warn if JWT expires within 2 hours)
    
-   c. **Authentication method** — ask: "Does your SCIM endpoint use OAuth client credentials or a static bearer token?"
+   c. **Selected authentication inputs** — use the choice confirmed in Step 0:
       - If **OAuth**: ask for all 5 parameters, one at a time:
         - Client ID
         - Client Secret
@@ -69,11 +73,10 @@ Collect the ISV's SCIM endpoint and bearer token, validate their Azure environme
           > Do NOT submit an empty box — empty submissions are treated as cancellation and the agent will stop.
           
           The agent treats `none` (case-insensitive) as an empty scope when writing `scimOAuthScope` to `parameters.json`.
-      - If **static bearer token**: record `authMethod = bearer`. The 5 OAuth fields (`scimClientId`, `scimClientSecret`, `scimTokenEndpoint`, `scimCredentialLocationInRequest`, `scimOAuthScope`) will be written as empty strings in Phase 4. (Logic App test behavior — including `Validate_Credentials_Test` — is out of scope for Phase 1; see Phase 4 for parameter handling and expected test behavior.)
+      - If **Federated identity**: set the 5 OAuth fields (`scimClientId`, `scimClientSecret`, `scimTokenEndpoint`, `scimCredentialLocationInRequest`, `scimOAuthScope`) to empty strings in Phase 4.
 
       d. **Federated identity test inputs (for `Federated_Identity_Test`)**:
-        - Ask: "Do you want to run the federated identity validation test now?"
-        - If **yes**, collect these values one at a time:
+        - If **Federated identity was selected**, collect these values one at a time:
           - `federatedEntraTenantId`
           - `federatedApplicationId`
           - `federatedApplicationClientSecret`
@@ -81,9 +84,9 @@ Collect the ISV's SCIM endpoint and bearer token, validate their Azure environme
           - `federatedClientId`
           - `federatedBaseAddress`
           - `federatedAudience` (required for Google STS/SA flow, optional otherwise)
-        - If **no**, set all federated fields to empty strings in Phase 4 so the parameters contract remains complete.
+        - If **OAuth was selected**, set all federated fields to empty strings in Phase 4 so the parameters contract remains complete.
 
-   **You MUST ask these questions using `ask_user`. Do NOT assume values, do NOT skip OAuth questions, and do NOT proceed until the ISV has answered.**
+   **You MUST ask these questions using `ask_user`. Do NOT assume values, do NOT skip the selected method's required questions, and do NOT proceed until the ISV has answered.**
 
 3. **Validate Azure CLI login**:
    ```bash
@@ -357,6 +360,8 @@ else:
 
 **Hand-off to Phase 4 (do this when you reach Phase 4, not now):**
 
+Write the confirmed `selectedAuthenticationMethod` to `parameters.json`. The bearer used by existing setup/direct SCIM actions is not an additional authentication-test selection; retain the existing setup procedure.
+
 | Parameter | Branch A (bearer only) | Branch B (bearer + OAuth) |
 |---|---|---|
 | `scimEndpoint` | `<scimEndpoint>` | `<scimEndpoint>` |
@@ -381,14 +386,16 @@ For federated identity testing, also pass these Phase 4 parameters:
 
 `federatedGrantType` is intentionally omitted because workflow code now derives the grant type.
 
-**Test behavior differences:**
+**Authentication test behavior (independent of the setup branches above):**
 
-| Test | Branch A | Branch B |
+| Test | OAuth selected | Federated identity selected |
 |---|---|---|
 | Core SCIM tests | Use `scimBearerToken` ✓ | Use `scimBearerToken` ✓ |
-| `Validate_Credentials_Test` | **SKIPPED** (empty tokenEndpoint) | **RUNS** (exercises OAuth) |
-| `Federated_Identity_Test` | **SKIPPED/FAILED based on missing federated inputs** | **RUNS** when federated inputs are populated; a non-passing result is acceptable when `Validate_Credentials_Test` succeeds |
-| POD / sync engine | Uses bearer from stored secrets | Uses OAuth from stored secrets |
+| `Validate_Credentials_Test` | **RUNS** using the confirmed OAuth inputs | **SKIPPED** (not selected) |
+| `Federated_Identity_Test` | **SKIPPED** (not selected) | **RUNS** using the confirmed federated inputs |
+| Authentication result | Requires OAuth `PASSED` | Requires Federated identity `PASSED` |
+
+Keep provisioning setup and direct-test bearer configuration distinct from this test selection. In final results, identify the selected method; an unselected `SKIPPED` is expected, but a skipped or missing selected result blocks success.
 
 #### Step 2c: Create resource group (if needed)
 ```bash
@@ -420,7 +427,7 @@ az webapp identity assign --name "<logicAppName>" --resource-group "rg-scim-vali
 Note the `principalId` — this is the **managedIdentityObjectId**.
 
 #### Step 2f: Deploy workflow templates
-The Logic App has 5 workflows + 1 parameters file. Deploy them via the Kudu VFS API.
+The Logic App has 5 workflows + 1 parameters file, plus VERSION for deployment metadata. Deploy the JSON files via the Kudu VFS API.
 
 **File acquisition (REQUIRED — try GitHub first, fall back to local):**
 
@@ -430,10 +437,12 @@ The canonical source of truth for the template files is:
 
 Raw download base: `https://raw.githubusercontent.com/AzureAD/SCIMReferenceCode/master/Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp/`
 
-For each of the 6 files below:
+Acquire the seven files below from the same immutable source revision. Resolve the selected GitHub branch to a commit before downloading and use that commit in the raw URL. For a local feature bundle, use all files from that local bundle instead. Do not mix upstream workflows with a local VERSION or mix per-file fallback sources. If acquisition fails, restart acquisition of the complete bundle from one source.
 
-1. **First, attempt the GitHub raw URL.** Use `curl -fsSL <rawUrl> -o <filename>` (or the agent's web fetch tool). Treat HTTP 200 as success. If the response is HTTP 404/403/5xx or a network error, fall back to step 2.
-2. **Fallback: read the file from the local workspace** (the same folder that contains this `scim-onboarding.agent.md`). If neither source returns the file, abort Phase 2 and tell the ISV which file is missing.
+For each of the 7 files below:
+
+1. **First, attempt the pinned GitHub raw URLs for the complete bundle.** Use `curl -fsSL <rawUrl> -o <filename>` (or the agent's web fetch tool). Treat HTTP 200 as success.
+2. **Fallback: reacquire the complete bundle from the local workspace** (the same folder that contains this `scim-onboarding.agent.md`). If neither complete source is available, abort Phase 2 and tell the ISV which file is missing. Never deploy a partially downloaded or mixed-source bundle.
 
 Files to acquire (exact names, case-sensitive):
 
@@ -445,23 +454,21 @@ Files to acquire (exact names, case-sensitive):
 | `GroupTests_Workflow.json` | `GroupTests_Workflow/workflow.json` |
 | `SCIMTests_Workflow.json` | `SCIMTests_Workflow/workflow.json` |
 | `Orchestrator_Parameters.json` | basis for `parameters.json` (after override, see below) |
+| `VERSION` | authoritative version used to populate `LogicAppVersion`; not uploaded as a workflow |
 
 Example acquisition loop the agent must follow before any upload:
 
-done
 ```bash
-BASE_RAW="https://raw.githubusercontent.com/AzureAD/SCIMReferenceCode/master/Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp"
-FILES=(Orchestrator_Workflow.json Initialization_Workflow.json UserTests_Workflow.json GroupTests_Workflow.json SCIMTests_Workflow.json Orchestrator_Parameters.json)
+BASE_RAW="https://raw.githubusercontent.com/AzureAD/SCIMReferenceCode/<resolved-commit>/Microsoft.SCIM.LogicAppValidationTemplate/StandardLogicApp"
+FILES=(Orchestrator_Workflow.json Initialization_Workflow.json UserTests_Workflow.json GroupTests_Workflow.json SCIMTests_Workflow.json Orchestrator_Parameters.json VERSION)
 
 for f in "${FILES[@]}"; do
   if curl -fsSL "$BASE_RAW/$f" -o "$f"; then
     echo "  [github] $f"
-  elif [ -f "./$f" ]; then
-    echo "  [local]  $f (github fetch failed)"
   else
-    echo "  [MISSING] $f — abort"; exit 1
+    echo "  [MISSING] $f — stop and reacquire the complete local bundle"; exit 1
   fi
-
+done
 ```
 
 Always log to the ISV which source (`github` vs `local`) was used per file, so they know whether they are deploying the upstream version or a locally modified one.
@@ -535,13 +542,18 @@ curl -X PUT \
 # Use jq or python to do the replacement:
 cat Orchestrator_Parameters.json | python3 -c "
 import sys, json
+from pathlib import Path
 p = json.load(sys.stdin)
+version = Path('VERSION').read_text(encoding='utf-8-sig').strip()
+if not version:
+    sys.exit('VERSION must contain a nonempty bundle version')
+p['LogicAppVersion']['value'] = version
 p['scimEndpoint']['value'] = '<ISV_SCIM_ENDPOINT>'
 p['scimBearerToken']['value'] = '<ISV_BEARER_TOKEN>'
 p['servicePrincipalId']['value'] = '<SERVICE_PRINCIPAL_ID>'
 p['testUserDomain']['value'] = '<VERIFIED_DOMAIN>'
 json.dump(p, sys.stdout, indent=2)
-" > parameters_override.json
+" > parameters_override.json || exit 1
 
 curl -X PUT \
   "https://management.azure.com/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.Web/sites/<logicApp>/extensions/api/vfs/site/wwwroot/parameters.json?api-version=2022-03-01" \
@@ -905,6 +917,8 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 Update these parameters in the JSON:
 | Parameter | Value | Source |
 |-----------|-------|--------|
+| `selectedAuthenticationMethod` | `OAuth2ClientCredentials` or `FederatedIdentity` | Confirmed Phase 1 Step 0 choice. Controls the authentication test and aggregate, not the direct-test bearer. |
+| `LogicAppVersion` | `<VERSION from the same local source bundle>` | Read the bundle's `VERSION` file; preserve this value in deployment and the final handoff. Do not infer a tested version from the current branch after a run. |
 | `servicePrincipalId` | `<servicePrincipal.id from Step 2a instantiate response>` | **Entra enterprise app SP id — NOT the Logic App MI objectId.** Both are GUIDs; swapping them silently breaks every Graph call against `/servicePrincipals/<id>/...` with a 404. |
 | `scimEndpoint` | `<ISV's endpoint from Phase 1 Step 2a>` | **MANDATORY.** The Logic App tests call this URL directly. Strip any `aadOptscim062020` feature flags. |
 | `scimBearerToken` | `<ISV's bearer token from Phase 1 Step 2b>` | **MANDATORY.** Used by both the Logic App tests (direct SCIM calls) AND by the Entra sync engine (via `SecretToken` in Step 2b). If the ISV did not provide one, abort and request it. |
@@ -931,6 +945,7 @@ Update these parameters in the JSON:
 After patching the JSON in memory, assert every key below exists at the top level of `parameters.json` (value may be empty string for optional fields, but the key MUST be present — the workflows reference each one via `parameters('xxx')`):
 
 ```
+selectedAuthenticationMethod, LogicAppVersion,
 servicePrincipalId, scimEndpoint, scimBearerToken, scimContentType,
 testUserDomain, EnabledTests, IsSoftDeleted,
 defaultUserProperties, defaultGroupProperties, scimTargetUserValues,
@@ -942,13 +957,15 @@ federatedTokenEndpoint, federatedClientId, federatedBaseAddress, federatedAudien
 
 If any key is missing, abort Phase 4 and tell the ISV exactly which key is missing. Do NOT PUT a parameters.json that fails this check.
 
+Read VERSION from the acquired bundle on every parameters write, trim it, reject a missing/empty value, and overwrite `LogicAppVersion.value`. Do not use the blank template value or infer a version from another checkout. Before starting a run, verify the deployed read-back version equals the acquired VERSION.
+
 #### Post-PUT read-back verification (MANDATORY)
 
 After the PUT completes, re-GET `parameters.json` and for each key in the patch table above, assert the returned value matches what was sent. If `servicePrincipalId` was supposed to be `aaa-bbb-ccc` but the read-back shows something else (or the key is missing), abort Phase 4 with the specific mismatch. Do NOT proceed to Phase 5.
 
-If the ISV did not provide OAuth credentials, leave `scimClientId`, `scimClientSecret`, `scimTokenEndpoint`, `scimCredentialLocationInRequest`, and `scimOAuthScope` as empty strings. The `Validate_Credentials_Test` will be SKIPPED — note this as expected in the final report. This is unrelated to the Entra sync engine, which always uses the bearer token (`SecretToken`) configured in Step 2b.
+If Federated identity was selected, leave `scimClientId`, `scimClientSecret`, `scimTokenEndpoint`, `scimCredentialLocationInRequest`, and `scimOAuthScope` as empty strings. The unselected `Validate_Credentials_Test` will be SKIPPED. If OAuth was selected, missing OAuth inputs must be resolved before deployment; a skipped selected test cannot pass validation. Provisioning still uses its separately saved connection, not the token acquired inside this test.
 
-If the ISV did not provide federated identity inputs, leave all federated parameters as empty strings (`federatedEntraTenantId`, `federatedApplicationId`, `federatedApplicationClientSecret`, `federatedTokenEndpoint`, `federatedClientId`, `federatedBaseAddress`, `federatedAudience`).
+If OAuth was selected, leave all federated parameters as empty strings (`federatedEntraTenantId`, `federatedApplicationId`, `federatedApplicationClientSecret`, `federatedTokenEndpoint`, `federatedClientId`, `federatedBaseAddress`, `federatedAudience`). If Federated identity was selected, resolve its required inputs before deployment.
 
 #### defaultUserProperties handling (CRITICAL — do NOT build from scratch)
 
@@ -1220,13 +1237,22 @@ az rest --method GET \
 
 Then fetch the output content from the `outputsLink.uri` in the response.
 
+The native final JSON includes `LogicAppVersion`, `validationStartedAtUtc`,
+`validationCompletedAtUtc`, the corresponding `validationStartedAtEpochSeconds`
+and `validationCompletedAtEpochSeconds`, and `validationDurationSeconds`.
+The start is captured in the first Compose action; completion is captured during
+result evaluation. These are validation milestones, not Azure's exact run-history
+start/end times. Epoch and duration values are integer seconds derived from those
+same UTC captures. Runs that never reach the final action have no final JSON.
+Report these values from the exact run, not from the current local VERSION.
+
 The sibling `Evaluate_Test_Results` action on the same run also exposes three top-level aggregation fields (fetch its `outputsLink.uri` the same way):
 
 | Field | Values | Meaning |
 |---|---|---|
 | `overallLogicAppResult` | `"Succeeded"` \| `"Failed"` | LA pass/fail verdict. `"Failed"` when any Strict test (User/SCIM/Group) is not `PASSED` — including illegitimate SKIP. Group Strict tests are legitimately excused when `isGroupSupported=false`; in the ISV summary, explain that `/Schemas` does not advertise the SCIM Group resource and the Entra Group mapping is disabled when those facts were verified. Manager tests are legitimately excused when `isManagerAttributeSupported=false`. |
 | `optionalSuccessTestsResult` | `"PASSED"` \| `"WARNING"` | Signals WARNING when any of Delete_User, Delete_Group, Restore_Group, or SCIM_Group_Pagination is not `PASSED` (including illegitimate SKIP). Never causes `overallLogicAppResult="Failed"`. |
-| `authenticationModelResult` | `"PASSED"` \| `"FAILED"` | `"PASSED"` when at least one of `Validate_Credentials_Test` or `Federated_Identity_Test` succeeded. `"FAILED"` when neither passed — also trips `overallLogicAppResult="Failed"`. |
+| `authenticationModelResult` | Selected test's result, or `"FAILED"` if missing/invalid | Only the test chosen by `selectedAuthenticationMethod` contributes. Exactly `"PASSED"` satisfies readiness; failed, skipped, missing or unexpected results block success. The other method cannot rescue it. |
 
 ### Step 6b: Parse each test result
 
@@ -1256,7 +1282,7 @@ Test result semantics:
 - **`"SKIPPED - Group object mapping disabled in Entra sync schema"`** — legitimate skip when `isGroupSupported=false`. Before describing why, verify the Phase 1 `/Schemas` evidence and the current Entra mapping state. When `/Schemas` does not advertise `urn:ietf:params:scim:schemas:core:2.0:Group` and the Entra Group object mapping is disabled, tell the ISV exactly that. Overall run stays `"Succeeded"`.
 - **`"SKIPPED - IsManagerAttributeSupported is false"`** — legitimate skip when `isManagerAttributeSupported=false`. Overall run stays `"Succeeded"`.
 
-**Authentication pair exception:** `Validate_Credentials_Test` and `Federated_Identity_Test` are `Mandatory/StrictOneSuccess`, not independently strict. Evaluate them as a pair using `authenticationModelResult`. When `authenticationModelResult == "PASSED"`, one model succeeded and the other model may be skipped or may contain a diagnostic non-success result such as `"Entra token acquisition failed"`. Do not classify that non-passing counterpart as a failed validation test, do not block submission, and do not include it in `Tests failed`. When `authenticationModelResult == "FAILED"`, authentication fails and submission is blocked.
+**Selected authentication exception:** The existing `Mandatory/StrictOneSuccess` labels are retained for compatibility. Require the selected test to return `PASSED`; the unselected test is expected to be `SKIPPED` and is not included in `Tests failed`. Do not accept success of the other method as a substitute. Any selected result other than `PASSED` blocks submission.
 
 ### Step 6c: Drill into child workflow actions to find the real error (BEFORE pattern matching)
 
@@ -1471,9 +1497,9 @@ Give the ISV a complete, copy-ready submission summary for the exact successful 
 1. **Apply the success gate.** Continue only when ALL of the following are true:
    - The exact captured orchestrator `<runId>` reached terminal status `Succeeded`.
    - `Evaluate_Test_Results.overallLogicAppResult == "Succeeded"` (fetched from the `Evaluate_Test_Results` action inputs on that run).
-   - `Evaluate_Test_Results.authenticationModelResult == "PASSED"` (at least one auth model succeeded — this is a hard requirement).
+   - `Evaluate_Test_Results.authenticationModelResult == "PASSED"` (the selected authentication test succeeded — this is a hard requirement).
   - Every **non-authentication** entry in `Final_TestResults.testResults[]` has `testResult` starting with `"success"`, `"SKIPPED"`, or `"WARNING"` — NEVER `"FAILED"`.
-  - Treat `Validate_Credentials_Test` and `Federated_Identity_Test` as one `Mandatory/StrictOneSuccess` authentication pair. Because `authenticationModelResult == "PASSED"` is already required, a skipped or non-passing counterpart (including a diagnostic result such as `"Entra token acquisition failed"`) is acceptable and does not block submission. Report which authentication model passed, but do not count the counterpart in `Tests failed`.
+  - Require the test chosen by `selectedAuthenticationMethod` to pass. Report that choice and its result. The unselected authentication test is expected to be `SKIPPED` and does not count in `Tests failed`; a failed, skipped, or missing selected result blocks submission.
    - `optionalSuccessTestsResult == "PASSED"` is preferred; `"WARNING"` is acceptable — call out each warning test explicitly in the summary.
    - No Phase 6 issue remains unresolved.
 

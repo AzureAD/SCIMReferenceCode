@@ -89,25 +89,38 @@ Tests that don't apply are reported as **SKIPPED** (not failures). However, grou
 
 ## What "Passing" Means
 
+### Version and validation timing
+
+`Final_TestResults` includes the deployed `LogicAppVersion`, derived during
+deployment from the same bundle's VERSION file. It also includes
+`validationStartedAtUtc` and `validationCompletedAtUtc`, their corresponding
+`validationStartedAtEpochSeconds` and `validationCompletedAtEpochSeconds`,
+and `validationDurationSeconds`. UTC timestamps are captured once at the first
+Compose and at result evaluation; numeric values are derived from those captures.
+Epoch seconds count from 1970-01-01 UTC, and duration is elapsed whole seconds.
+These fields are not Azure's authoritative run-history start/end times and do
+not affect pass/fail. Runs that never reach the final action have no final JSON.
+
 ### Overall Result Logic
 
 The Orchestrator's `Evaluate_Test_Results` action computes `overallLogicAppResult` as follows:
 
-- **`Succeeded`** — ALL mandatory tests returned `PASSED` or `SKIPPED`, AND at least one authentication test passed (see below).
-- **`Failed`** — ANY mandatory test returned `FAILED`, OR both authentication tests failed.
+- **`Succeeded`** — Existing mandatory/capability gates pass, AND the selected authentication test returned `PASSED`.
+- **`Failed`** — A required semantic gate does not pass, OR the selected authentication test is failed, skipped, missing, or the selection is invalid.
 
-### Authentication Model (OR logic)
+### Authentication Model (one selected method)
 
-The authentication result uses **OR logic** across two tests:
+Set `selectedAuthenticationMethod` to one of the following values. Existing token-exchange actions are reused; the unselected test stays `SKIPPED` and makes no token request.
 
-| Validate_Credentials_Test | Federated_Identity_Test | Auth Model Result |
-|---------------------------|------------------------|-------------------|
-| PASSED | PASSED | **PASSED** |
-| PASSED | FAILED/SKIPPED | **PASSED** |
-| FAILED/SKIPPED | PASSED | **PASSED** |
-| FAILED/SKIPPED | FAILED/SKIPPED | **FAILED** — blocks overall `Succeeded` |
+| Selection | Required test | Authentication result |
+|-----------|---------------|-----------------------|
+| `OAuth2ClientCredentials` | `Validate_Credentials_Test` | PASSED only when this test passes |
+| `FederatedIdentity` | `Federated_Identity_Test` | PASSED only when this test passes |
+| Empty/invalid | Neither | FAILED |
 
-This means an ISV only needs to pass **one** of the two authentication tests. If they configured OAuth only, a `Federated_Identity_Test` failure does not block submission.
+Final results identify the selection. Success of the other method cannot rescue a failed or skipped selected test. Existing non-authentication requirements remain unchanged.
+
+`FederatedIdentity` is the selector name for Workload Identity Federation (WIF), matching the existing test/output naming. Selection does not reroute the other tests' credentials: direct semantic requests still use `scimBearerToken`; provisioning requests use the separately saved Entra connection. Tokens acquired inside either authentication test remain local to that test.
 
 ### Optional Tests (WARNING, not FAIL)
 
@@ -126,8 +139,8 @@ These 4 tests are `testCategory: optional`. When they fail, the `testResult` fie
 |------|---------------|------------|
 | User_Update_Manager_Test | `isManagerAttributeSupported = false` | SKIPPED (pass) |
 | SCIM_Update_Manager_Test | `manager` not in target directory attributes | SKIPPED (pass) |
-| Validate_Credentials_Test | `scimTokenEndpoint` is empty (static bearer token) | SKIPPED — ok if Federated_Identity passes |
-| Federated_Identity_Test | Federated parameters are empty | SKIPPED — ok if Validate_Credentials passes |
+| Validate_Credentials_Test | Federated identity selected | Expected SKIPPED; selected federation must pass |
+| Federated_Identity_Test | OAuth selected | Expected SKIPPED; selected OAuth must pass |
 
 ### Group Tests Are Mandatory
 
@@ -143,9 +156,9 @@ This applies to: Create_Group, Update_Group, Group_Update_Add_Member, Group_Upda
 |----------|---------------|--------|
 | All 25 tests: `success` | **Succeeded** | Ready for gallery submission |
 | All mandatory pass, optional tests show `WARNING` | **Succeeded** | Ready — warnings are informational |
-| OAuth configured + Validate_Credentials passes, Federated_Identity fails (no federated params) | **Succeeded** | Ready — only one auth test needed |
+| OAuth selected + Validate_Credentials passes, Federated_Identity skipped | **Succeeded** | Ready if other required tests pass |
 | Federated configured + Federated_Identity passes, Validate_Credentials skipped | **Succeeded** | Ready — only one auth test needed |
-| Both Validate_Credentials AND Federated_Identity fail/skip | **Failed** | Must fix — at least one auth test must pass |
+| Selected authentication test fails/skips or its result is missing | **Failed** | Must fix the selected method |
 | Manager tests `SKIPPED` (no manager mapping) | **Succeeded** | Ready — ISV should document no manager support |
 | Disable_User_Test `FAILED` | **Failed** | Must implement soft-delete (`active: false`) on SCIM endpoint |
 | Group tests `FAILED` (no Group schema) | **Failed** | Must add Group support to SCIM endpoint |

@@ -3630,23 +3630,18 @@
               "actions": {}
             },
             "expression": {
-              "or": [
+              "and": [
                 {
                   "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "All"
+                    "@parameters('selectedAuthenticationMethod')",
+                    "OAuth2ClientCredentials"
                   ]
                 },
                 {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "SCIMTests"
-                  ]
-                },
-                {
-                  "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "Validate_Credentials_Test"
+                  "or": [
+                    { "equals": [ "@triggerBody()?['EnabledTests']", "All" ] },
+                    { "equals": [ "@triggerBody()?['EnabledTests']", "SCIMTests" ] },
+                    { "equals": [ "@triggerBody()?['EnabledTests']", "Validate_Credentials_Test" ] }
                   ]
                 }
               ]
@@ -4152,17 +4147,18 @@
               "actions": {}
             },
             "expression": {
-              "or": [
-                {
-                  "equals": [ "@triggerBody()?['EnabledTests']", "All" ]
-                },
-                {
-                  "equals": [ "@triggerBody()?['EnabledTests']", "SCIMTests" ]
-                },
+              "and": [
                 {
                   "equals": [
-                    "@triggerBody()?['EnabledTests']",
-                    "Federated_Identity_Test"
+                    "@parameters('selectedAuthenticationMethod')",
+                    "FederatedIdentity"
+                  ]
+                },
+                {
+                  "or": [
+                    { "equals": [ "@triggerBody()?['EnabledTests']", "All" ] },
+                    { "equals": [ "@triggerBody()?['EnabledTests']", "SCIMTests" ] },
+                    { "equals": [ "@triggerBody()?['EnabledTests']", "Federated_Identity_Test" ] }
                   ]
                 }
               ]
@@ -5302,8 +5298,10 @@
           "SCIMGroupPaginationTestOutputs": "@variables('SCIMGroupPaginationTestOutputs')",
           "SCIMUpdateManagerTestOutputs": "@variables('SCIMUpdateManagerTestOutputs')",
           "testSuiteName": "SCIMTests",
-          "status": "@if(or(or(or(equals(variables('SchemaDiscoverabilityTestOutputs')['overallResult'], 'FAILED'), equals(variables('SCIMNullUpdateTestOutputs')['overallResult'], 'FAILED')), or(or(equals(variables('ValidateCredentialsTestOutputs')['overallResult'], 'FAILED'), equals(variables('FederatedIdentityTestOutputs')['overallResult'], 'FAILED')), equals(variables('SCIMUserCreateTestOutputs')['overallResult'], 'FAILED'))), or(or(or(equals(variables('SCIMGroupCreateTestOutputs')['overallResult'], 'FAILED'), equals(variables('SCIMUserUpdateTestOutputs')['overallResult'], 'FAILED')), equals(variables('SCIMGroupUpdateTestOutputs')['overallResult'], 'FAILED')), and(contains(string(coalesce(triggerBody()?['initializationData']?['targetDirectoryUserAttributes'], json('[]'))), 'manager'), equals(variables('SCIMUpdateManagerTestOutputs')['overallResult'], 'FAILED')))), 'Failed', 'Passed')",
-          "workflowRunId": "@workflow().run.name"
+          "status": "@if(or(or(or(equals(variables('SchemaDiscoverabilityTestOutputs')['overallResult'], 'FAILED'), equals(variables('SCIMNullUpdateTestOutputs')['overallResult'], 'FAILED')), or(not(equals(if(equals(parameters('selectedAuthenticationMethod'), 'OAuth2ClientCredentials'), coalesce(variables('ValidateCredentialsTestOutputs')?['overallResult'], 'FAILED'), if(equals(parameters('selectedAuthenticationMethod'), 'FederatedIdentity'), coalesce(variables('FederatedIdentityTestOutputs')?['overallResult'], 'FAILED'), 'FAILED')), 'PASSED')), equals(variables('SCIMUserCreateTestOutputs')['overallResult'], 'FAILED'))), or(or(or(equals(variables('SCIMGroupCreateTestOutputs')['overallResult'], 'FAILED'), equals(variables('SCIMUserUpdateTestOutputs')['overallResult'], 'FAILED')), equals(variables('SCIMGroupUpdateTestOutputs')['overallResult'], 'FAILED')), and(contains(string(coalesce(triggerBody()?['initializationData']?['targetDirectoryUserAttributes'], json('[]'))), 'manager'), equals(variables('SCIMUpdateManagerTestOutputs')['overallResult'], 'FAILED')))), 'Failed', 'Passed')",
+          "workflowRunId": "@workflow().run.name",
+          "authenticationModelResult": "@if(equals(parameters('selectedAuthenticationMethod'), 'OAuth2ClientCredentials'), coalesce(variables('ValidateCredentialsTestOutputs')?['overallResult'], 'FAILED'), if(equals(parameters('selectedAuthenticationMethod'), 'FederatedIdentity'), coalesce(variables('FederatedIdentityTestOutputs')?['overallResult'], 'FAILED'), 'FAILED'))",
+          "selectedAuthenticationMethod": "@parameters('selectedAuthenticationMethod')"
         }
       }
     },

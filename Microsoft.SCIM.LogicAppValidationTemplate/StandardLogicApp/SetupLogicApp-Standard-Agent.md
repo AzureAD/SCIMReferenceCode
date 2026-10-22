@@ -205,8 +205,10 @@ generates submission artifacts.
 The agent handles the entire validation process through a simple
 conversation. Here’s what happens at a high level:
 
-1.  **Asks you a few questions** — Your SCIM endpoint URL, bearer token,
-    and authentication method, confirming Schema, Input parameters
+1.  **Asks you a few questions** — First choose OAuth client credentials
+    or Federated identity (Workload Identity Federation) for this run.
+    Confirm reuse or replacement of its connection parameters, then provide
+    your SCIM endpoint URL and bearer token, confirming Schema, Input parameters
     required for testing.
 2.  **Sets up everything automatically** — Creates the Entra app, Azure
     resources, Logic App, assigning permissions — all the manual portal
@@ -222,6 +224,16 @@ conversation. Here’s what happens at a high level:
 
 You don’t need to navigate any portal or run any script — just answer
 the agent’s questions and approve the commands it runs.
+
+For manual deployment, set the String parameter `selectedAuthenticationMethod`
+to `OAuth2ClientCredentials` or `FederatedIdentity` (Workload Identity
+Federation). Only that
+authentication test runs; clear the unselected method's connection fields.
+The selected test must return `PASSED` along with the existing required
+semantic tests. Final results identify the selected authentication method.
+This selects the authentication validation test, not a shared credential
+provider: direct semantic calls still use `scimBearerToken`, and Entra
+provisioning uses its separately configured saved connection.
 
 ## Prerequisites
 
@@ -710,6 +722,14 @@ style="width:6.5in;height:2.60972in" />
 
 16. Run the following command
 
+Keep `VERSION` beside the workflow files in the selected `WorkflowsPath`.
+The script reads that file, populates `LogicAppVersion` in the uploaded
+parameters without modifying the source template, and verifies the version
+by reading back deployed parameters. Missing/empty VERSION or a version
+read-back mismatch stops deployment. `-SkipParameters` is rejected to avoid
+deploying workflows with stale version metadata. VERSION and workflows must
+come from the same source revision. No additional runtime package is needed.
+
 .\Deploy-LogicAppWorkflows.ps1 \`
 
 -SubscriptionId \$subscriptionId \`
@@ -1045,6 +1065,16 @@ learn about the tests and their results.
 style="width:6.5in;height:2.60764in" />
 
 In Final_TestResults -\> Select 'Show raw Outputs’.
+
+The native output includes `LogicAppVersion` from the deployed parameters.
+`validationStartedAtUtc` is captured by the first Orchestrator Compose;
+`validationCompletedAtUtc` is captured during result evaluation after results
+are collected. The matching `validationStartedAtEpochSeconds`,
+`validationCompletedAtEpochSeconds`, and `validationDurationSeconds` are
+integer seconds derived from those same captures, with subsecond fractions
+truncated. These are validation milestones, not the exact Azure run-history
+start/end timestamps. The final action executes before workflow termination;
+early failures or cancellations may not produce final output.
 
 <img src="./media/image68.png"
 style="width:5.61111in;height:5.53819in" />
