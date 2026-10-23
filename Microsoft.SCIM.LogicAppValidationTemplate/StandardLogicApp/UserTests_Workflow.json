@@ -638,13 +638,22 @@
                                                                 "Failed"
                                                             ]
                                                         },
-                                                        "type": "ParseJson",
-                                                        "inputs": {
-                                                            "content": "@triggerBody()?['initializationData']?['updateUserBody']",
-                                                            "schema": {
-                                                                "type": "object",
-                                                                "minProperties": 1
+                                                        "type": "If",
+                                                        "expression": "@contains(toLower(coalesce(triggerBody()?['initializationData']?['baseAddress'], '')), 'googleapis.com')",
+                                                        "actions": {
+                                                            "Validate_Google_User_Update_Attributes": {
+                                                                "type": "ParseJson",
+                                                                "inputs": {
+                                                                    "content": "@triggerBody()?['initializationData']?['updateUserBody']",
+                                                                    "schema": {
+                                                                        "type": "object",
+                                                                        "minProperties": 1
+                                                                    }
+                                                                }
                                                             }
+                                                        },
+                                                        "else": {
+                                                            "actions": {}
                                                         }
                                                     },
                                                     "Update_User_Update_User_Attributes": {
