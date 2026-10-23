@@ -631,11 +631,35 @@
                                                             }
                                                         }
                                                     },
-                                                    "Update_User_Update_User_Attributes": {
+                                                    "Validate_User_Update_Attributes": {
                                                         "runAfter": {
                                                             "Update_User_Query_User_By_Id": [
                                                                 "Succeeded",
                                                                 "Failed"
+                                                            ]
+                                                        },
+                                                        "type": "If",
+                                                        "expression": "@contains(toLower(coalesce(triggerBody()?['initializationData']?['baseAddress'], '')), 'googleapis.com')",
+                                                        "actions": {
+                                                            "Validate_Google_User_Update_Attributes": {
+                                                                "type": "ParseJson",
+                                                                "inputs": {
+                                                                    "content": "@triggerBody()?['initializationData']?['updateUserBody']",
+                                                                    "schema": {
+                                                                        "type": "object",
+                                                                        "minProperties": 1
+                                                                    }
+                                                                }
+                                                            }
+                                                        },
+                                                        "else": {
+                                                            "actions": {}
+                                                        }
+                                                    },
+                                                    "Update_User_Update_User_Attributes": {
+                                                        "runAfter": {
+                                                            "Validate_User_Update_Attributes": [
+                                                                "Succeeded"
                                                             ]
                                                         },
                                                         "type": "Http",
@@ -718,6 +742,14 @@
                                                                             "not": {
                                                                                 "contains": [
                                                                                     "@variables('attributeMatchExcludeList')",
+                                                                                    "@items('ForEach_SourceToTargetLookup')?['source']"
+                                                                                ]
+                                                                            }
+                                                                        },
+                                                                        {
+                                                                            "not": {
+                                                                                "contains": [
+                                                                                    "@coalesce(triggerBody()?['initializationData']?['googleSkippedUpdateSources'], json('[]'))",
                                                                                     "@items('ForEach_SourceToTargetLookup')?['source']"
                                                                                 ]
                                                                             }

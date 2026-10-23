@@ -73,6 +73,21 @@
                             "name": "additionalFunctionSources",
                             "type": "Array",
                             "value": []
+                        },
+                        {
+                            "name": "googleRequiredUserTargets",
+                            "type": "Array",
+                            "value": []
+                        },
+                        {
+                            "name": "googleSkippedUpdateSources",
+                            "type": "Array",
+                            "value": []
+                        },
+                        {
+                            "name": "googleUpdateUserBody",
+                            "type": "Object",
+                            "value": {}
                         }
                     ]
                 }
@@ -1229,11 +1244,200 @@
                 },
                 "type": "Scope"
             },
-            "Response_Initialization_Data": {
+            "Protect_Google_Required_User_Attributes": {
                 "runAfter": {
                     "Build_SCIM_User_Body": [
                         "Succeeded"
                     ]
+                },
+                "type": "If",
+                "expression": "@contains(toLower(coalesce(first(body('Filter_BaseAddress_Connectivity_Parameter'))?['value'], '')), 'googleapis.com')",
+                "actions": {
+                    "Set_Google_Update_User_Body": {
+                        "type": "SetVariable",
+                        "inputs": {
+                            "name": "googleUpdateUserBody",
+                            "value": "@outputs('Compose_Final_Dynamic_Update_User_Body')"
+                        }
+                    },
+                    "Get_Google_Required_User_Schemas": {
+                        "runAfter": {
+                            "Set_Google_Update_User_Body": [ "Succeeded" ]
+                        },
+                        "type": "Http",
+                        "inputs": {
+                            "uri": "@concat(parameters('scimEndpoint'), '/Schemas')",
+                            "method": "GET",
+                            "headers": {
+                                "Authorization": "@concat('Bearer ', parameters('scimBearerToken'))",
+                                "Accept": "@parameters('scimContentType')"
+                            }
+                        }
+                    },
+                    "Parse_Google_Required_User_Schemas": {
+                        "runAfter": {
+                            "Get_Google_Required_User_Schemas": [ "Succeeded" ]
+                        },
+                        "type": "ParseJson",
+                        "inputs": {
+                            "content": "@body('Get_Google_Required_User_Schemas')",
+                            "schema": {
+                                "type": "object",
+                                "required": [ "Resources" ],
+                                "properties": {
+                                    "Resources": {
+                                        "type": "array",
+                                        "minItems": 1,
+                                        "items": {
+                                            "type": "object",
+                                            "required": [ "id", "attributes" ],
+                                            "properties": {
+                                                "id": { "type": "string" },
+                                                "attributes": { "type": "array" }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "ForEach_Google_User_Target": {
+                        "runAfter": {
+                            "Parse_Google_Required_User_Schemas": [ "Succeeded" ]
+                        },
+                        "type": "Foreach",
+                        "foreach": "@variables('sourceToTargetLookup')",
+                        "runtimeConfiguration": {
+                            "concurrency": { "repetitions": 1 }
+                        },
+                        "actions": {
+                            "Compose_Google_Target_Attribute_Path": {
+                                "type": "Compose",
+                                "inputs": "@toLower(if(startsWith(toLower(items('ForEach_Google_User_Target')['target']), 'urn:'), last(split(items('ForEach_Google_User_Target')['target'], ':')), items('ForEach_Google_User_Target')['target']))"
+                            },
+                            "Compose_Google_Target_Schema_Path": {
+                                "runAfter": {
+                                    "Compose_Google_Target_Attribute_Path": [ "Succeeded" ]
+                                },
+                                "type": "Compose",
+                                "inputs": "@if(contains(outputs('Compose_Google_Target_Attribute_Path'), '['), concat(first(split(outputs('Compose_Google_Target_Attribute_Path'), '[')), last(split(outputs('Compose_Google_Target_Attribute_Path'), ']'))), outputs('Compose_Google_Target_Attribute_Path'))"
+                            },
+                            "Filter_Google_Target_Schema": {
+                                "runAfter": {
+                                    "Compose_Google_Target_Schema_Path": [ "Succeeded" ]
+                                },
+                                "type": "Query",
+                                "inputs": {
+                                    "from": "@body('Parse_Google_Required_User_Schemas')['Resources']",
+                                    "where": "@equals(toLower(item()['id']), if(startsWith(toLower(items('ForEach_Google_User_Target')['target']), 'urn:'), toLower(substring(items('ForEach_Google_User_Target')['target'], 0, lastIndexOf(items('ForEach_Google_User_Target')['target'], ':'))), 'urn:ietf:params:scim:schemas:core:2.0:user'))"
+                                }
+                            },
+                            "Filter_Google_Target_Attribute": {
+                                "runAfter": {
+                                    "Filter_Google_Target_Schema": [ "Succeeded" ]
+                                },
+                                "type": "Query",
+                                "inputs": {
+                                    "from": "@coalesce(first(body('Filter_Google_Target_Schema'))?['attributes'], json('[]'))",
+                                    "where": "@equals(toLower(item()['name']), first(split(outputs('Compose_Google_Target_Schema_Path'), '.')))"
+                                }
+                            },
+                            "Filter_Google_Required_SubAttributes": {
+                                "runAfter": {
+                                    "Filter_Google_Target_Attribute": [ "Succeeded" ]
+                                },
+                                "type": "Query",
+                                "inputs": {
+                                    "from": "@coalesce(first(body('Filter_Google_Target_Attribute'))?['subAttributes'], json('[]'))",
+                                    "where": "@and(equals(item()?['required'], true), or(not(contains(outputs('Compose_Google_Target_Schema_Path'), '.')), equals(toLower(item()['name']), last(split(outputs('Compose_Google_Target_Schema_Path'), '.')))))"
+                                }
+                            },
+                            "Filter_Google_Required_Descendant_Mappings": {
+                                "runAfter": {
+                                    "Filter_Google_Required_SubAttributes": [ "Succeeded" ]
+                                },
+                                "type": "Query",
+                                "inputs": {
+                                    "from": "@variables('sourceToTargetLookup')",
+                                    "where": "@and(not(contains(outputs('Compose_Google_Target_Schema_Path'), '.')), equals(item()?['targetSchema']?['required'], true), equals(if(startsWith(toLower(item()['target']), 'urn:'), toLower(substring(item()['target'], 0, lastIndexOf(item()['target'], ':'))), 'urn:ietf:params:scim:schemas:core:2.0:user'), if(startsWith(toLower(items('ForEach_Google_User_Target')['target']), 'urn:'), toLower(substring(items('ForEach_Google_User_Target')['target'], 0, lastIndexOf(items('ForEach_Google_User_Target')['target'], ':'))), 'urn:ietf:params:scim:schemas:core:2.0:user')), or(startsWith(toLower(last(split(item()['target'], ':'))), concat(outputs('Compose_Google_Target_Schema_Path'), '.')), startsWith(toLower(last(split(item()['target'], ':'))), concat(outputs('Compose_Google_Target_Schema_Path'), '['))))"
+                                }
+                            },
+                            "Check_Google_Target_Required": {
+                                "runAfter": {
+                                    "Filter_Google_Required_Descendant_Mappings": [ "Succeeded" ]
+                                },
+                                "type": "If",
+                                "expression": "@or(equals(items('ForEach_Google_User_Target')?['targetSchema']?['required'], true), not(empty(body('Filter_Google_Required_SubAttributes'))), not(empty(body('Filter_Google_Required_Descendant_Mappings'))), and(not(contains(outputs('Compose_Google_Target_Schema_Path'), '.')), equals(first(body('Filter_Google_Target_Attribute'))?['required'], true)))",
+                                "actions": {
+                                    "Append_Google_Required_User_Target": {
+                                        "type": "AppendToArrayVariable",
+                                        "inputs": {
+                                            "name": "googleRequiredUserTargets",
+                                            "value": "@toLower(items('ForEach_Google_User_Target')['target'])"
+                                        }
+                                    },
+                                    "Compose_Google_Required_Update_Source_Value": {
+                                        "runAfter": {
+                                            "Append_Google_Required_User_Target": [ "Succeeded" ]
+                                        },
+                                        "type": "Compose",
+                                        "inputs": "@if(contains(items('ForEach_Google_User_Target')['source'], '.'), variables('googleUpdateUserBody')?[first(split(items('ForEach_Google_User_Target')['source'], '.'))]?[last(split(items('ForEach_Google_User_Target')['source'], '.'))], variables('googleUpdateUserBody')?[items('ForEach_Google_User_Target')['source']])"
+                                    },
+                                    "Filter_Google_Nonempty_Update_Values": {
+                                        "runAfter": {
+                                            "Compose_Google_Required_Update_Source_Value": [ "Succeeded" ]
+                                        },
+                                        "type": "Query",
+                                        "inputs": {
+                                            "from": "@if(contains(outputs('Compose_Dynamic_ArrayProperties'), items('ForEach_Google_User_Target')['source']), coalesce(outputs('Compose_Google_Required_Update_Source_Value'), json('[]')), createArray(outputs('Compose_Google_Required_Update_Source_Value')))",
+                                            "where": "@and(not(equals(item(), null)), not(equals(item(), '')))"
+                                        }
+                                    },
+                                    "Compose_Google_Protected_Update_Body": {
+                                        "runAfter": {
+                                            "Filter_Google_Nonempty_Update_Values": [ "Succeeded" ]
+                                        },
+                                        "type": "Compose",
+                                        "inputs": "@if(empty(body('Filter_Google_Nonempty_Update_Values')), if(contains(items('ForEach_Google_User_Target')['source'], '.'), if(contains(variables('googleUpdateUserBody'), first(split(items('ForEach_Google_User_Target')['source'], '.'))), setProperty(variables('googleUpdateUserBody'), first(split(items('ForEach_Google_User_Target')['source'], '.')), removeProperty(coalesce(variables('googleUpdateUserBody')?[first(split(items('ForEach_Google_User_Target')['source'], '.'))], json('{}')), last(split(items('ForEach_Google_User_Target')['source'], '.')))), variables('googleUpdateUserBody')), removeProperty(variables('googleUpdateUserBody'), items('ForEach_Google_User_Target')['source'])), if(contains(outputs('Compose_Dynamic_ArrayProperties'), items('ForEach_Google_User_Target')['source']), setProperty(variables('googleUpdateUserBody'), items('ForEach_Google_User_Target')['source'], body('Filter_Google_Nonempty_Update_Values')), variables('googleUpdateUserBody')))"
+                                    },
+                                    "Set_Google_Protected_Update_Body": {
+                                        "runAfter": {
+                                            "Compose_Google_Protected_Update_Body": [ "Succeeded" ]
+                                        },
+                                        "type": "SetVariable",
+                                        "inputs": {
+                                            "name": "googleUpdateUserBody",
+                                            "value": "@outputs('Compose_Google_Protected_Update_Body')"
+                                        }
+                                    },
+                                    "Check_Google_Update_Source_Omitted": {
+                                        "runAfter": {
+                                            "Set_Google_Protected_Update_Body": [ "Succeeded" ]
+                                        },
+                                        "type": "If",
+                                        "expression": "@empty(body('Filter_Google_Nonempty_Update_Values'))",
+                                        "actions": {
+                                            "Append_Google_Skipped_Update_Source": {
+                                                "type": "AppendToArrayVariable",
+                                                "inputs": {
+                                                    "name": "googleSkippedUpdateSources",
+                                                    "value": "@items('ForEach_Google_User_Target')['source']"
+                                                }
+                                            }
+                                        },
+                                        "else": { "actions": {} }
+                                    }
+                                },
+                                "else": { "actions": {} }
+                            }
+                        }
+                    }
+                },
+                "else": { "actions": {} }
+            },
+            "Response_Initialization_Data": {
+                "runAfter": {
+                    "Protect_Google_Required_User_Attributes": [ "Succeeded" ]
                 },
                 "type": "Response",
                 "kind": "Http",
@@ -1248,6 +1452,8 @@
                         "schema": "@body('Get_Schema')",
                         "baseAddress": "@if(greater(length(coalesce(body('Filter_BaseAddress_Connectivity_Parameter'), json('[]'))), 0), first(body('Filter_BaseAddress_Connectivity_Parameter'))?['value'], '')",
                         "sourceToTargetLookup": "@variables('sourceToTargetLookup')",
+                        "googleRequiredUserTargets": "@variables('googleRequiredUserTargets')",
+                        "googleSkippedUpdateSources": "@variables('googleSkippedUpdateSources')",
                         "mappedUserTargetAttributes": "@body('Select_Target_Attribute_Names')",
                         "mappedGroupTargetAttributes": "@body('Select_Target_Group_Attribute_Names')",
                         "targetDirectoryUserAttributes": "@outputs('Compose_Target_User_Attributes')",
@@ -1255,7 +1461,7 @@
                         "targetUserSchemaName": "@coalesce(first(body('Filter_Target_User_Object'))?['name'], 'urn:ietf:params:scim:schemas:core:2.0:User')",
                         "targetGroupSchemaName": "@coalesce(first(body('Filter_Target_Group_Object'))?['name'], 'urn:ietf:params:scim:schemas:core:2.0:Group')",
                         "userBody": "@outputs('Compose_Final_Dynamic_User_Body')",
-                        "updateUserBody": "@outputs('Compose_Final_Dynamic_Update_User_Body')",
+                        "updateUserBody": "@if(contains(toLower(coalesce(first(body('Filter_BaseAddress_Connectivity_Parameter'))?['value'], '')), 'googleapis.com'), variables('googleUpdateUserBody'), outputs('Compose_Final_Dynamic_Update_User_Body'))",
                         "workflowRunId": "@workflow().run.name",
                         "arrayProperties": "@outputs('Compose_Dynamic_ArrayProperties')",
                         "isGroupSupported": "@outputs('Compose_IsGroupSupported')",

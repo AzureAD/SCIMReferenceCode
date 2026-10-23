@@ -357,6 +357,13 @@
           ]
         }
       },
+      "Compose_Google_Federated_Auth_Bypass": {
+        "runAfter": {
+          "Response_Immediate": [ "Succeeded" ]
+        },
+        "type": "Compose",
+        "inputs": "@and(equals(parameters('selectedAuthenticationMethod'), 'FederatedIdentity'), contains(toLower(coalesce(triggerBody()?['initializationData']?['baseAddress'], '')), 'googleapis.com'))"
+      },
       "SCIMTests_Scope": {
         "actions": {
           "Schema_Discoverability_Test": {
@@ -1599,7 +1606,7 @@
                     "type": "Wait",
                     "inputs": {
                       "interval": {
-                        "count": 7,
+                        "count": 30,
                         "unit": "Second"
                       }
                     }
@@ -1699,7 +1706,7 @@
                     "type": "Query",
                     "inputs": {
                       "from": "@coalesce(triggerBody()?['initializationData']?['sourceToTargetLookup'], json('[]'))",
-                      "where": "@and(equals(coalesce(item()?['matchingPrecedence'], 0), 0), not(contains(toLower(coalesce(item()?['targetSchema']?['type'], '')), 'reference')), not(equals(coalesce(item()?['target'], ''), 'userName')), not(equals(coalesce(item()?['target'], ''), 'active')), not(equals(coalesce(item()?['target'], ''), 'externalId')), not(equals(coalesce(item()?['target'], ''), 'roles')), if(startsWith(coalesce(item()?['target'], ''), 'urn:'), not(contains(string(body('Query_Required_Enterprise_Attrs')), concat('\"name\":\"', last(split(item()?['target'], ':')), '\"'))), not(contains(string(body('Query_Required_Core_Attrs')), concat('\"name\":\"', if(contains(coalesce(item()?['target'], ''), '['), first(split(item()?['target'], '[')), if(contains(coalesce(item()?['target'], ''), '.'), first(split(item()?['target'], '.')), coalesce(item()?['target'], ''))), '\"')))))"
+                      "where": "@and(equals(coalesce(item()?['matchingPrecedence'], 0), 0), not(contains(toLower(coalesce(item()?['targetSchema']?['type'], '')), 'reference')), not(equals(coalesce(item()?['target'], ''), 'userName')), not(equals(coalesce(item()?['target'], ''), 'active')), not(equals(coalesce(item()?['target'], ''), 'externalId')), not(equals(coalesce(item()?['target'], ''), 'roles')), if(contains(toLower(coalesce(triggerBody()?['initializationData']?['baseAddress'], '')), 'googleapis.com'), and(not(equals(coalesce(item()?['targetSchema']?['required'], false), true)), not(contains(coalesce(triggerBody()?['initializationData']?['googleRequiredUserTargets'], json('[]')), toLower(coalesce(item()?['target'], ''))))), if(startsWith(coalesce(item()?['target'], ''), 'urn:'), not(contains(string(body('Query_Required_Enterprise_Attrs')), concat('\"name\":\"', last(split(item()?['target'], ':')), '\"'))), not(contains(string(body('Query_Required_Core_Attrs')), concat('\"name\":\"', if(contains(coalesce(item()?['target'], ''), '['), first(split(item()?['target'], '[')), if(contains(coalesce(item()?['target'], ''), '.'), first(split(item()?['target'], '.')), coalesce(item()?['target'], ''))), '\"'))))))"
                     }
                   },
                   "ForEach_Build_Null_Patch_Operations": {
@@ -1803,34 +1810,41 @@
                       "Operations": "@if(coalesce(triggerBody()?['initializationData']?['isVerbosePatchSupported'], true), variables('scimNullPatchOperations'), union(body('Filter_Null_MultiValued_Ops'), if(greater(length(body('Filter_Null_Scalar_Attrs')), 0), json(concat('[{\"op\":\"replace\",\"value\":{', join(body('Select_Null_Batch_KeyValues'), ','), '}}]')), json('[]'))))"
                     }
                   },
-                  "SCIM_Patch_Null_Update": {
+                  "Check_Null_Update_Has_Targets": {
                     "runAfter": {
                       "Compose_SCIM_Null_Patch_Body": [
                         "Succeeded"
                       ]
                     },
-                    "type": "Http",
-                    "inputs": {
-                      "uri": "@{concat(parameters('scimEndpoint'), '/Users/', outputs('Compose_SCIM_Null_User_Id'))}",
-                      "method": "PATCH",
-                      "headers": {
-                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
-                        "Content-Type": "@{parameters('scimContentType')}",
-                        "Accept": "@{parameters('scimContentType')}"
-                      },
-                      "body": "@outputs('Compose_SCIM_Null_Patch_Body')"
-                    }
+                    "type": "If",
+                    "expression": "@or(not(contains(toLower(coalesce(triggerBody()?['initializationData']?['baseAddress'], '')), 'googleapis.com')), not(empty(body('Filter_Null_Update_Target_Attributes'))))",
+                    "actions": {
+                      "SCIM_Patch_Null_Update": {
+                        "type": "Http",
+                        "inputs": {
+                          "uri": "@{concat(parameters('scimEndpoint'), '/Users/', outputs('Compose_SCIM_Null_User_Id'))}",
+                          "method": "PATCH",
+                          "headers": {
+                            "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                            "Content-Type": "@{parameters('scimContentType')}",
+                            "Accept": "@{parameters('scimContentType')}"
+                          },
+                          "body": "@outputs('Compose_SCIM_Null_Patch_Body')"
+                        }
+                      }
+                    },
+                    "else": { "actions": {} }
                   },
                   "Delay_After_SCIM_Null_Update": {
                     "runAfter": {
-                      "SCIM_Patch_Null_Update": [
+                      "Check_Null_Update_Has_Targets": [
                         "Succeeded"
                       ]
                     },
                     "type": "Wait",
                     "inputs": {
                       "interval": {
-                        "count": 7,
+                        "count": 30,
                         "unit": "Second"
                       }
                     }
@@ -2006,34 +2020,41 @@
                       "Operations": "@if(coalesce(triggerBody()?['initializationData']?['isVerbosePatchSupported'], true), body('Select_Null_Patch_Ops_Phase2'), union(body('Filter_Null_Phase2_MultiValued_Ops'), if(greater(length(body('Filter_Null_Phase2_Batch_Ops')), 0), json(concat('[{\"op\":\"replace\",\"value\":{', join(body('Select_Null_Phase2_Batch_KV'), ','), '}}]')), json('[]'))))"
                     }
                   },
-                  "SCIM_Patch_Null_Update_Phase2": {
+                  "Check_Null_Update_Phase2_Has_Targets": {
                     "runAfter": {
                       "Compose_Null_Patch_Request_Phase2": [
                         "Succeeded"
                       ]
                     },
-                    "type": "Http",
-                    "inputs": {
-                      "uri": "@{concat(parameters('scimEndpoint'), '/Users/', outputs('Compose_SCIM_Null_User_Id'))}",
-                      "method": "PATCH",
-                      "headers": {
-                        "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
-                        "Content-Type": "@{parameters('scimContentType')}",
-                        "Accept": "@{parameters('scimContentType')}"
-                      },
-                      "body": "@outputs('Compose_Null_Patch_Request_Phase2')"
-                    }
+                    "type": "If",
+                    "expression": "@or(not(contains(toLower(coalesce(triggerBody()?['initializationData']?['baseAddress'], '')), 'googleapis.com')), not(empty(body('Filter_Null_Update_Target_Attributes'))))",
+                    "actions": {
+                      "SCIM_Patch_Null_Update_Phase2": {
+                        "type": "Http",
+                        "inputs": {
+                          "uri": "@{concat(parameters('scimEndpoint'), '/Users/', outputs('Compose_SCIM_Null_User_Id'))}",
+                          "method": "PATCH",
+                          "headers": {
+                            "Authorization": "@{concat('Bearer ', parameters('scimBearerToken'))}",
+                            "Content-Type": "@{parameters('scimContentType')}",
+                            "Accept": "@{parameters('scimContentType')}"
+                          },
+                          "body": "@outputs('Compose_Null_Patch_Request_Phase2')"
+                        }
+                      }
+                    },
+                    "else": { "actions": {} }
                   },
                   "Delay_After_SCIM_Null_Update_Phase2": {
                     "runAfter": {
-                      "SCIM_Patch_Null_Update_Phase2": [
+                      "Check_Null_Update_Phase2_Has_Targets": [
                         "Succeeded"
                       ]
                     },
                     "type": "Wait",
                     "inputs": {
                       "interval": {
-                        "count": 7,
+                        "count": 30,
                         "unit": "Second"
                       }
                     }
@@ -2119,15 +2140,18 @@
                     "inputs": {
                       "testName": "SCIM_Null_Update_Test",
                       "timestamp": "@utcNow()",
-                      "phase1_emptyString_patchStatusCode": "@outputs('SCIM_Patch_Null_Update')['statusCode']",
+                      "clearingPhasesSkipped": "@and(contains(toLower(coalesce(triggerBody()?['initializationData']?['baseAddress'], '')), 'googleapis.com'), empty(body('Filter_Null_Update_Target_Attributes')))",
+                      "skipReason": "@if(and(contains(toLower(coalesce(triggerBody()?['initializationData']?['baseAddress'], '')), 'googleapis.com'), empty(body('Filter_Null_Update_Target_Attributes'))), 'No eligible optional attributes; empty-string and null PATCH requests were not sent.', null)",
+                      "excludedGoogleRequiredTargets": "@coalesce(triggerBody()?['initializationData']?['googleRequiredUserTargets'], json('[]'))",
+                      "phase1_emptyString_patchStatusCode": "@outputs('SCIM_Patch_Null_Update')?['statusCode']",
                       "phase1_emptyString_failedVerifications": "@length(body('Filter_Failed_Null_Verifications'))",
-                      "phase2_null_patchStatusCode": "@outputs('SCIM_Patch_Null_Update_Phase2')['statusCode']",
+                      "phase2_null_patchStatusCode": "@outputs('SCIM_Patch_Null_Update_Phase2')?['statusCode']",
                       "phase2_null_failedVerifications": "@length(body('Filter_Failed_Null_Phase2_Verifications'))",
                       "phase2_null_verificationDetails": "@body('Filter_Failed_Null_Phase2_Verifications')",
                       "totalAttributesVerified": "@length(variables('scimNullUpdateResults'))",
                       "passedCount": "@length(body('Filter_Passed_Null_Verifications'))",
                       "failedCount": "@length(body('Filter_Failed_Null_Verifications'))",
-                      "overallResult": "@if(and(not(empty(outputs('Compose_SCIM_Null_User_Id'))), or(equals(outputs('SCIM_Patch_Null_Update')['statusCode'], 200), equals(outputs('SCIM_Patch_Null_Update')['statusCode'], 204)), equals(length(body('Filter_Failed_Null_Verifications')), 0), or(equals(outputs('SCIM_Patch_Null_Update_Phase2')['statusCode'], 200), equals(outputs('SCIM_Patch_Null_Update_Phase2')['statusCode'], 204)), equals(length(body('Filter_Failed_Null_Phase2_Verifications')), 0)), 'PASSED', 'FAILED')"
+                      "overallResult": "@if(and(not(empty(outputs('Compose_SCIM_Null_User_Id'))), or(and(contains(toLower(coalesce(triggerBody()?['initializationData']?['baseAddress'], '')), 'googleapis.com'), empty(body('Filter_Null_Update_Target_Attributes'))), equals(outputs('SCIM_Patch_Null_Update')?['statusCode'], 200), equals(outputs('SCIM_Patch_Null_Update')?['statusCode'], 204)), equals(length(body('Filter_Failed_Null_Verifications')), 0), or(and(contains(toLower(coalesce(triggerBody()?['initializationData']?['baseAddress'], '')), 'googleapis.com'), empty(body('Filter_Null_Update_Target_Attributes'))), equals(outputs('SCIM_Patch_Null_Update_Phase2')?['statusCode'], 200), equals(outputs('SCIM_Patch_Null_Update_Phase2')?['statusCode'], 204)), equals(length(body('Filter_Failed_Null_Phase2_Verifications')), 0)), 'PASSED', 'FAILED')"
                     }
                   },
                   "Filter_MultiValue_Targets": {
@@ -2784,7 +2808,7 @@
                     "type": "Wait",
                     "inputs": {
                       "interval": {
-                        "count": 7,
+                        "count": 30,
                         "unit": "Second"
                       }
                     }
@@ -2946,7 +2970,7 @@
                         "type": "Wait",
                         "inputs": {
                           "interval": {
-                            "count": 7,
+                            "count": 30,
                             "unit": "Second"
                           }
                         }
@@ -3184,7 +3208,7 @@
                     "type": "Wait",
                     "inputs": {
                       "interval": {
-                        "count": 7,
+                        "count": 30,
                         "unit": "Second"
                       }
                     }
@@ -3366,7 +3390,7 @@
                         "type": "Wait",
                         "inputs": {
                           "interval": {
-                            "count": 7,
+                            "count": 30,
                             "unit": "Second"
                           }
                         }
@@ -4155,6 +4179,14 @@
                   ]
                 },
                 {
+                  "not": {
+                    "equals": [
+                      "@outputs('Compose_Google_Federated_Auth_Bypass')",
+                      true
+                    ]
+                  }
+                },
+                {
                   "or": [
                     { "equals": [ "@triggerBody()?['EnabledTests']", "All" ] },
                     { "equals": [ "@triggerBody()?['EnabledTests']", "SCIMTests" ] },
@@ -4856,7 +4888,7 @@
                     "type": "Wait",
                     "inputs": {
                       "interval": {
-                        "count": 7,
+                        "count": 30,
                         "unit": "Second"
                       }
                     }
@@ -4896,7 +4928,7 @@
                     "type": "Wait",
                     "inputs": {
                       "interval": {
-                        "count": 7,
+                        "count": 30,
                         "unit": "Second"
                       }
                     }
@@ -4952,7 +4984,7 @@
                     "type": "Wait",
                     "inputs": {
                       "interval": {
-                        "count": 7,
+                        "count": 30,
                         "unit": "Second"
                       }
                     }
@@ -4992,7 +5024,7 @@
                     "type": "Wait",
                     "inputs": {
                       "interval": {
-                        "count": 7,
+                        "count": 30,
                         "unit": "Second"
                       }
                     }
@@ -5051,7 +5083,7 @@
                     "type": "Wait",
                     "inputs": {
                       "interval": {
-                        "count": 7,
+                        "count": 30,
                         "unit": "Second"
                       }
                     }
@@ -5274,15 +5306,22 @@
           }
         },
         "runAfter": {
-          "Response_Immediate": [
+          "Compose_Google_Federated_Auth_Bypass": [
             "Succeeded"
           ]
         },
         "type": "Scope"
       },
-      "Compose_Final_Results": {
+      "Compose_Authentication_Model_Result": {
         "runAfter": {
           "SCIMTests_Scope": [ "Succeeded", "Failed", "Skipped", "TimedOut" ]
+        },
+        "type": "Compose",
+        "inputs": "@if(equals(outputs('Compose_Google_Federated_Auth_Bypass'), true), 'PASSED', if(equals(parameters('selectedAuthenticationMethod'), 'OAuth2ClientCredentials'), coalesce(variables('ValidateCredentialsTestOutputs')?['overallResult'], 'FAILED'), if(equals(parameters('selectedAuthenticationMethod'), 'FederatedIdentity'), coalesce(variables('FederatedIdentityTestOutputs')?['overallResult'], 'FAILED'), 'FAILED')))"
+      },
+      "Compose_Final_Results": {
+        "runAfter": {
+          "Compose_Authentication_Model_Result": [ "Succeeded" ]
         },
         "type": "Compose",
         "inputs": {
@@ -5298,9 +5337,11 @@
           "SCIMGroupPaginationTestOutputs": "@variables('SCIMGroupPaginationTestOutputs')",
           "SCIMUpdateManagerTestOutputs": "@variables('SCIMUpdateManagerTestOutputs')",
           "testSuiteName": "SCIMTests",
-          "status": "@if(or(or(or(equals(variables('SchemaDiscoverabilityTestOutputs')['overallResult'], 'FAILED'), equals(variables('SCIMNullUpdateTestOutputs')['overallResult'], 'FAILED')), or(not(equals(if(equals(parameters('selectedAuthenticationMethod'), 'OAuth2ClientCredentials'), coalesce(variables('ValidateCredentialsTestOutputs')?['overallResult'], 'FAILED'), if(equals(parameters('selectedAuthenticationMethod'), 'FederatedIdentity'), coalesce(variables('FederatedIdentityTestOutputs')?['overallResult'], 'FAILED'), 'FAILED')), 'PASSED')), equals(variables('SCIMUserCreateTestOutputs')['overallResult'], 'FAILED'))), or(or(or(equals(variables('SCIMGroupCreateTestOutputs')['overallResult'], 'FAILED'), equals(variables('SCIMUserUpdateTestOutputs')['overallResult'], 'FAILED')), equals(variables('SCIMGroupUpdateTestOutputs')['overallResult'], 'FAILED')), and(contains(string(coalesce(triggerBody()?['initializationData']?['targetDirectoryUserAttributes'], json('[]'))), 'manager'), equals(variables('SCIMUpdateManagerTestOutputs')['overallResult'], 'FAILED')))), 'Failed', 'Passed')",
+          "status": "@if(or(or(or(equals(variables('SchemaDiscoverabilityTestOutputs')['overallResult'], 'FAILED'), equals(variables('SCIMNullUpdateTestOutputs')['overallResult'], 'FAILED')), or(not(equals(outputs('Compose_Authentication_Model_Result'), 'PASSED')), equals(variables('SCIMUserCreateTestOutputs')['overallResult'], 'FAILED'))), or(or(or(equals(variables('SCIMGroupCreateTestOutputs')['overallResult'], 'FAILED'), equals(variables('SCIMUserUpdateTestOutputs')['overallResult'], 'FAILED')), equals(variables('SCIMGroupUpdateTestOutputs')['overallResult'], 'FAILED')), and(contains(string(coalesce(triggerBody()?['initializationData']?['targetDirectoryUserAttributes'], json('[]'))), 'manager'), equals(variables('SCIMUpdateManagerTestOutputs')['overallResult'], 'FAILED')))), 'Failed', 'Passed')",
           "workflowRunId": "@workflow().run.name",
-          "authenticationModelResult": "@if(equals(parameters('selectedAuthenticationMethod'), 'OAuth2ClientCredentials'), coalesce(variables('ValidateCredentialsTestOutputs')?['overallResult'], 'FAILED'), if(equals(parameters('selectedAuthenticationMethod'), 'FederatedIdentity'), coalesce(variables('FederatedIdentityTestOutputs')?['overallResult'], 'FAILED'), 'FAILED'))",
+          "authenticationModelResult": "@outputs('Compose_Authentication_Model_Result')",
+          "authenticationModelBypassed": "@outputs('Compose_Google_Federated_Auth_Bypass')",
+          "authenticationModelBypassReason": "@if(equals(outputs('Compose_Google_Federated_Auth_Bypass'), true), 'Temporary Google workload identity exception: standalone authentication diagnostics skipped because the tenant-app token does not represent the Microsoft SyncFabric client identity. Authentication is marked PASSED by exception; mandatory Entra provisioning and SCIM checks remain required.', null)",
           "selectedAuthenticationMethod": "@parameters('selectedAuthenticationMethod')"
         }
       }

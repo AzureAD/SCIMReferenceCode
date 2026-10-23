@@ -67,8 +67,8 @@ Tests that don't apply are reported as **SKIPPED** (not failures). However, grou
 | 18 | **SCIM_User_Update_Test** | mandatory | Direct `PATCH /Users/{id}` with auto-generated update values for eligible attributes (single-valued, string/integer/datetime/boolean, excluding groups/roles/id/schemas/meta/active). | PATCH returns 200/204; subsequent GET returns 200/204; all PATCHed attribute values match in the response; zero mismatches. Passes with `(no updatable attributes)` if no eligible attributes exist. |
 | 19 | **SCIM_Group_Create_Test** | mandatory | Direct `POST /Groups` with SCIM group body. **FAILED** if groups not supported. | HTTP 200 or 201; response contains non-empty `id`; returned `displayName` matches sent `displayName`. |
 | 20 | **SCIM_Group_Update_Test** | mandatory | Direct `PATCH /Groups/{id}` with attribute updates (single-valued, non-reference, excluding id/members/schemas/meta). | PATCH returns 200/204; GET returns 200/204; all PATCHed attributes match; zero mismatches. |
-| 21 | **Validate_Credentials_Test** | mandatory | OAuth 2.0 Client Credentials flow — acquires a token from the ISV's `scimTokenEndpoint`, sends credentials in the required `Header` or `Body` location, includes the optional space-delimited scope string, then validates SCIM access with the token. **Skipped** when `scimTokenEndpoint` is empty (static bearer token). | Token endpoint returns 2xx with `access_token`; token validity between 60–360 minutes; SCIM endpoint returns 2xx when called with the token. |
-| 22 | **Federated_Identity_Test** | mandatory | Workload identity federation — acquires Entra ID token, then exchanges it for ISV token via one of three flows: Google Service Account, Google STS, or generic federated endpoint. **Skipped** when federated parameters are empty. | Entra token acquisition returns 2xx with `access_token`; federated token exchange returns 2xx with valid token. Supports Google SA flow (STS exchange → SA impersonation), Google STS flow (direct exchange), and generic flow (client assertion). |
+| 21 | **Validate_Credentials_Test** | mandatory when selected | OAuth 2.0 Client Credentials flow — acquires a token from the ISV's `scimTokenEndpoint`, sends credentials in the required `Header` or `Body` location, includes the optional space-delimited scope string, then validates SCIM access with the token. **Skipped** when this method is not selected. | Token endpoint returns 2xx with `access_token`; token validity between 60–360 minutes; SCIM endpoint returns 2xx when called with the token. |
+| 22 | **Federated_Identity_Test** | mandatory when selected, except Google below | Workload identity federation — acquires Entra ID token, then exchanges it for ISV token via one of three flows: Google Service Account, Google STS, or generic federated endpoint. **Skipped** when unselected or covered by the temporary Google federation exception below. | Entra token acquisition returns 2xx with `access_token`; federated token exchange returns 2xx with valid token. Supports Google SA flow (STS exchange → SA impersonation), Google STS flow (direct exchange), and generic flow (client assertion). For the Google exception, diagnostics stay SKIPPED and only the aggregate authentication result is marked PASSED. |
 | 23 | **SCIM_User_Pagination_Test** | mandatory | Ensures ≥11 users exist (creates throwaway users if needed), then paginates `GET /Users?startIndex=N&count=5` across pages. Cleans up created users afterward. | At least 2 pages traversed; all pages return HTTP 200; response `startIndex` matches expected value (`page * 5 + 1`); zero failed page verifications. |
 | 24 | **SCIM_Group_Pagination_Test** | optional | Same as user pagination but for `/Groups`. Failure = WARNING. **Skipped** if groups not supported. | At least 2 pages traversed; all pages return HTTP 200; response `startIndex` matches expected; zero failed verifications. |
 | 25 | **SCIM_Update_Manager_Test** | mandatory | Direct SCIM PATCH test for manager attribute: set (Add), change (Replace), remove (Replace with empty). **Skipped** if `manager` not in target directory attributes. | Each PATCH returns 200/204; GET after each operation confirms manager value matches expected; all three operations (set/change/remove) succeed. |
@@ -76,6 +76,14 @@ Tests that don't apply are reported as **SKIPPED** (not failures). However, grou
 ---
 
 ## Test Categories Summary
+
+The existing post-create and post-PATCH propagation waits in `SCIMTests_Workflow.json` are 30 seconds before dependent operations or verification reads. These waits cover null updates, user and group updates, and manager updates to allow asynchronously updated attributes to become visible.
+
+For connections whose saved `baseAddress` contains `googleapis.com` (case-insensitive), initialization reads `/Schemas` and identifies mapped required attributes and subattributes, also honoring `targetSchema.required`. `SCIM_Null_Update_Test` excludes those targets from both empty-string and null PATCH payloads and their verification lists. For example, a required `emails[type eq "other"].value` is not cleared; optional sibling fields and optional address or enterprise-extension fields remain eligible. Clearing a whole complex attribute is also excluded when it contains a subattribute declared required by either `/Schemas` or another mapping's `targetSchema.required`, even if the parent is optional. The same parent protection applies to blank mapped sources in the Entra update payload. Schema URNs are matched separately, so a required extension attribute does not exclude an optional core attribute with the same name.
+
+The Google Entra update payload is protected separately: blank/null source values (including blank array entries) mapped to required targets are omitted, while populated updates, `false`, and `0` are retained. Omitted sources are listed in initialization's `googleSkippedUpdateSources` and excluded from update-value comparisons. For Google connections only, the Entra update step rejects an entirely empty update body before calling Graph, reporting a validation failure rather than sending an empty PATCH. Other providers retain their previous update-request behavior, including sending an empty body if one is produced. This changes the validation workflow's Graph PATCH, not the provisioning service's saved mappings or future production behavior. Manager-removal lifecycle phases are unchanged.
+
+If the Google null test has no eligible targets, neither clearing PATCH is sent. Its summary explicitly reports `clearingPhasesSkipped`, the reason, excluded required targets, and zero verified attributes. Successful setup can still pass; HTTP or verification failures are not exempted. Other providers retain their existing attribute-selection behavior.
 
 | Category | Tests | Exercises |
 |----------|-------|-----------|
@@ -105,8 +113,8 @@ not affect pass/fail. Runs that never reach the final action have no final JSON.
 
 The Orchestrator's `Evaluate_Test_Results` action computes `overallLogicAppResult` as follows:
 
-- **`Succeeded`** — Existing mandatory/capability gates pass, AND the selected authentication test returned `PASSED`.
-- **`Failed`** — A required semantic gate does not pass, OR the selected authentication test is failed, skipped, missing, or the selection is invalid.
+- **`Succeeded`** — Existing mandatory/capability gates pass, AND the authentication model result is `PASSED` (selected diagnostic success or the temporary Google federation exception below).
+- **`Failed`** — A required semantic gate does not pass, OR the selected authentication test is failed, skipped, or missing outside the Google exception, or the selection is invalid.
 
 ### Authentication Model (one selected method)
 
@@ -115,10 +123,18 @@ Set `selectedAuthenticationMethod` to one of the following values. Existing toke
 | Selection | Required test | Authentication result |
 |-----------|---------------|-----------------------|
 | `OAuth2ClientCredentials` | `Validate_Credentials_Test` | PASSED only when this test passes |
-| `FederatedIdentity` | `Federated_Identity_Test` | PASSED only when this test passes |
+| `FederatedIdentity` | `Federated_Identity_Test` | PASSED when this test passes, or by the temporary Google exception below |
 | Empty/invalid | Neither | FAILED |
 
-Final results identify the selection. Success of the other method cannot rescue a failed or skipped selected test. Existing non-authentication requirements remain unchanged.
+Final results identify the selection. Outside the temporary Google exception, success of the other method cannot rescue a failed or skipped selected test. Existing non-authentication requirements remain unchanged.
+
+#### Temporary Google workload identity exception
+
+When the saved connection's `baseAddress` contains `googleapis.com` (case-insensitive) **and** `selectedAuthenticationMethod` is `FederatedIdentity`, both standalone authentication diagnostics remain `SKIPPED` and make no token requests. The aggregate `authenticationModelResult` is temporarily marked `PASSED` by exception. Child and final orchestrator results expose `authenticationModelBypassed: true` and `authenticationModelBypassReason` so this is distinguishable from a successful diagnostic.
+
+The standalone diagnostic acquires a tenant-app token; it cannot represent Microsoft's first-party SyncFabric client identity when Google restricts the token's authorized party (`azp`). This exception does not relax that provider restriction or change the real connection. Existing mandatory Entra provisioning, provisioning-log, and SCIM checks must still pass for overall success. A passing aggregate authentication result alone does not establish E2E success or prove a fresh STS token exchange occurred.
+
+Google connections selecting `OAuth2ClientCredentials`, non-Google connections, missing base addresses, and invalid method selections do not receive this exception. Standalone tests have not been made globally optional.
 
 `FederatedIdentity` is the selector name for Workload Identity Federation (WIF), matching the existing test/output naming. Selection does not reroute the other tests' credentials: direct semantic requests still use `scimBearerToken`; provisioning requests use the separately saved Entra connection. Tokens acquired inside either authentication test remain local to that test.
 
