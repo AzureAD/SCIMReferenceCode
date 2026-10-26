@@ -39,7 +39,7 @@ Collect the ISV's SCIM endpoint and bearer token, validate their Azure environme
 
 0. **Choose one authentication method for this run** — use `ask_user` to ask: "Which authentication method do you want to validate: OAuth client credentials or Federated identity (Workload Identity Federation)?"
 
-   Record `selectedAuthenticationMethod` as `OAuth2ClientCredentials` or `FederatedIdentity`. Confirm whether to reuse supplied connection parameters or collect fresh ones. If inputs are missing or both methods were supplied, resolve the choice before continuing. Only the selected authentication test runs; its success is required alongside the existing semantic tests. Do not treat static bearer access as a third validation method. This choice does not replace `scimBearerToken` in direct semantic tests or automatically reconfigure the Entra provisioning connection.
+   Record `selectedAuthenticationMethod` as `OAuth2ClientCredentials` or `FederatedIdentity`. Confirm whether to reuse supplied connection parameters or collect fresh ones. If inputs are missing or both methods were supplied, resolve the choice before continuing. Only the selected authentication test runs; its success is required alongside the existing semantic tests, except for the explicit Google federation aggregate exception described below. Do not treat static bearer access as a third validation method. This choice does not replace `scimBearerToken` in direct semantic tests or automatically reconfigure the Entra provisioning connection.
 
 1. **Tenant whitelisting (prerequisite)** — Before proceeding with SCIM validation, the ISV must submit a tenant whitelisting request by completing the form at:
 
@@ -395,7 +395,7 @@ For federated identity testing, also pass these Phase 4 parameters:
 | `Federated_Identity_Test` | **SKIPPED** (not selected) | **RUNS** using the confirmed federated inputs |
 | Authentication result | Requires OAuth `PASSED` | Requires Federated identity `PASSED` |
 
-Keep provisioning setup and direct-test bearer configuration distinct from this test selection. In final results, identify the selected method; an unselected `SKIPPED` is expected, but a skipped or missing selected result blocks success.
+Keep provisioning setup and direct-test bearer configuration distinct from this test selection. In final results, identify the selected method; an unselected `SKIPPED` is expected. A skipped selected result blocks success unless covered by the verified Google federation aggregate exception below; a missing selected result still blocks submission.
 
 #### Step 2c: Create resource group (if needed)
 ```bash
@@ -1252,7 +1252,7 @@ The sibling `Evaluate_Test_Results` action on the same run also exposes three to
 |---|---|---|
 | `overallLogicAppResult` | `"Succeeded"` \| `"Failed"` | LA pass/fail verdict. `"Failed"` when any Strict test (User/SCIM/Group) is not `PASSED` — including illegitimate SKIP. Group Strict tests are legitimately excused when `isGroupSupported=false`; in the ISV summary, explain that `/Schemas` does not advertise the SCIM Group resource and the Entra Group mapping is disabled when those facts were verified. Manager tests are legitimately excused when `isManagerAttributeSupported=false`. |
 | `optionalSuccessTestsResult` | `"PASSED"` \| `"WARNING"` | Signals WARNING when any of Delete_User, Delete_Group, Restore_Group, or SCIM_Group_Pagination is not `PASSED` (including illegitimate SKIP). Never causes `overallLogicAppResult="Failed"`. |
-| `authenticationModelResult` | Selected test's result, or `"FAILED"` if missing/invalid | Only the test chosen by `selectedAuthenticationMethod` contributes. Exactly `"PASSED"` satisfies readiness; failed, skipped, missing or unexpected results block success. The other method cannot rescue it. |
+| `authenticationModelResult` | Selected test's result, or `"PASSED"` by the explicit Google federation exception; otherwise `"FAILED"` if missing/invalid | Exactly `"PASSED"` satisfies authentication readiness. Outside the verified Google federation exception, failed, skipped, missing or unexpected selected results block success. The other method cannot rescue it. For Google, verify the bypass flag and reason and disclose the skipped diagnostic. |
 
 ### Step 6b: Parse each test result
 
@@ -1278,11 +1278,11 @@ Test result semantics:
 - **`"success"`** — the test ran and passed.
 - **`"FAILED - <reason>"`** — a Strict test ran and failed. Contributes to `overallLogicAppResult="Failed"`.
 - **`"WARNING - <reason>"`** — an OptionalSuccess test ran and failed. Contributes to `optionalSuccessTestsResult="WARNING"` only — does not affect `overallLogicAppResult`.
-- **`"SKIPPED"`** — the test was excluded by the `EnabledTests` parameter. Under the mandated `EnabledTests: "All"` this should not appear for Strict tests; if it does, the Strict test is illegitimately skipped and `overallLogicAppResult` will be `"Failed"`.
+- **`"SKIPPED"`** — the test was excluded by `EnabledTests` or by an explicit workflow exception. Under the mandated `EnabledTests: "All"`, accept a Strict test's skip only for a verified Google authentication or pagination exception described below; other skipped mandatory tests block overall success.
 - **`"SKIPPED - Group object mapping disabled in Entra sync schema"`** — legitimate skip when `isGroupSupported=false`. Before describing why, verify the Phase 1 `/Schemas` evidence and the current Entra mapping state. When `/Schemas` does not advertise `urn:ietf:params:scim:schemas:core:2.0:Group` and the Entra Group object mapping is disabled, tell the ISV exactly that. Overall run stays `"Succeeded"`.
 - **`"SKIPPED - IsManagerAttributeSupported is false"`** — legitimate skip when `isManagerAttributeSupported=false`. Overall run stays `"Succeeded"`.
 
-**Selected authentication exception:** The existing `Mandatory/StrictOneSuccess` labels are retained for compatibility. Require the selected test to return `PASSED`; the unselected test is expected to be `SKIPPED` and is not included in `Tests failed`. Do not accept success of the other method as a substitute. Any selected result other than `PASSED` blocks submission.
+**Selected authentication exception:** The existing `Mandatory/StrictOneSuccess` labels are retained for compatibility. Normally require the selected test to return `PASSED`; the unselected test is expected to be `SKIPPED` and is not included in `Tests failed`. For Google + `FederatedIdentity`, accept the enabled selected diagnostic's explicit `SKIPPED` result only with `authenticationModelResult: PASSED`, `authenticationModelBypassed: true`, and a nonempty bypass reason from the workflow. Verify the Google base address in initialization data. Describe this as an aggregate exception, not a successful token exchange. Do not accept success of the other method, arbitrary skipped tests, or failed/missing selected diagnostics as a substitute. Outside this exception, any selected result other than `PASSED` blocks submission. Enabled Google pagination tests may remain individually `SKIPPED` when `paginationModelResults` explicitly accepts them as `PASSED`; report that exception separately.
 
 ### Step 6c: Drill into child workflow actions to find the real error (BEFORE pattern matching)
 
@@ -1497,9 +1497,9 @@ Give the ISV a complete, copy-ready submission summary for the exact successful 
 1. **Apply the success gate.** Continue only when ALL of the following are true:
    - The exact captured orchestrator `<runId>` reached terminal status `Succeeded`.
    - `Evaluate_Test_Results.overallLogicAppResult == "Succeeded"` (fetched from the `Evaluate_Test_Results` action inputs on that run).
-   - `Evaluate_Test_Results.authenticationModelResult == "PASSED"` (the selected authentication test succeeded — this is a hard requirement).
+   - `Evaluate_Test_Results.authenticationModelResult == "PASSED"` (selected diagnostic success or the explicit Google federation exception).
   - Every **non-authentication** entry in `Final_TestResults.testResults[]` has `testResult` starting with `"success"`, `"SKIPPED"`, or `"WARNING"` — NEVER `"FAILED"`.
-  - Require the test chosen by `selectedAuthenticationMethod` to pass. Report that choice and its result. The unselected authentication test is expected to be `SKIPPED` and does not count in `Tests failed`; a failed, skipped, or missing selected result blocks submission.
+  - Require the test chosen by `selectedAuthenticationMethod` to report `PASSED`, except for the explicit Google federation exception above. For that exception, verify `EnabledTests` includes federation, the Google base address, the selected diagnostic's `SKIPPED` result, and the workflow's passing aggregate, bypass flag, and nonempty reason. Disclose that no standalone token exchange occurred. The unselected authentication test is expected to be `SKIPPED` and does not count in `Tests failed`; a failed/missing selected result or a selected skip outside this exception blocks submission. Report Google authentication and pagination aggregate exceptions without counting them as executed passing diagnostics.
    - `optionalSuccessTestsResult == "PASSED"` is preferred; `"WARNING"` is acceptable — call out each warning test explicitly in the summary.
    - No Phase 6 issue remains unresolved.
 

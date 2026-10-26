@@ -1393,12 +1393,19 @@
                                             "where": "@and(not(equals(item(), null)), not(equals(item(), '')))"
                                         }
                                     },
-                                    "Compose_Google_Protected_Update_Body": {
+                                    "Compose_Google_Update_Parent_After_Removal": {
                                         "runAfter": {
                                             "Filter_Google_Nonempty_Update_Values": [ "Succeeded" ]
                                         },
                                         "type": "Compose",
-                                        "inputs": "@if(empty(body('Filter_Google_Nonempty_Update_Values')), if(contains(items('ForEach_Google_User_Target')['source'], '.'), if(contains(variables('googleUpdateUserBody'), first(split(items('ForEach_Google_User_Target')['source'], '.'))), setProperty(variables('googleUpdateUserBody'), first(split(items('ForEach_Google_User_Target')['source'], '.')), removeProperty(coalesce(variables('googleUpdateUserBody')?[first(split(items('ForEach_Google_User_Target')['source'], '.'))], json('{}')), last(split(items('ForEach_Google_User_Target')['source'], '.')))), variables('googleUpdateUserBody')), removeProperty(variables('googleUpdateUserBody'), items('ForEach_Google_User_Target')['source'])), if(contains(outputs('Compose_Dynamic_ArrayProperties'), items('ForEach_Google_User_Target')['source']), setProperty(variables('googleUpdateUserBody'), items('ForEach_Google_User_Target')['source'], body('Filter_Google_Nonempty_Update_Values')), variables('googleUpdateUserBody')))"
+                                        "inputs": "@if(contains(items('ForEach_Google_User_Target')['source'], '.'), removeProperty(coalesce(variables('googleUpdateUserBody')?[first(split(items('ForEach_Google_User_Target')['source'], '.'))], json('{}')), last(split(items('ForEach_Google_User_Target')['source'], '.'))), json('{}'))"
+                                    },
+                                    "Compose_Google_Protected_Update_Body": {
+                                        "runAfter": {
+                                            "Compose_Google_Update_Parent_After_Removal": [ "Succeeded" ]
+                                        },
+                                        "type": "Compose",
+                                        "inputs": "@if(empty(body('Filter_Google_Nonempty_Update_Values')), if(contains(items('ForEach_Google_User_Target')['source'], '.'), if(contains(variables('googleUpdateUserBody'), first(split(items('ForEach_Google_User_Target')['source'], '.'))), if(and(contains(coalesce(variables('googleUpdateUserBody')?[first(split(items('ForEach_Google_User_Target')['source'], '.'))], json('{}')), last(split(items('ForEach_Google_User_Target')['source'], '.'))), empty(outputs('Compose_Google_Update_Parent_After_Removal'))), removeProperty(variables('googleUpdateUserBody'), first(split(items('ForEach_Google_User_Target')['source'], '.'))), setProperty(variables('googleUpdateUserBody'), first(split(items('ForEach_Google_User_Target')['source'], '.')), outputs('Compose_Google_Update_Parent_After_Removal'))), variables('googleUpdateUserBody')), removeProperty(variables('googleUpdateUserBody'), items('ForEach_Google_User_Target')['source'])), if(contains(outputs('Compose_Dynamic_ArrayProperties'), items('ForEach_Google_User_Target')['source']), setProperty(variables('googleUpdateUserBody'), items('ForEach_Google_User_Target')['source'], body('Filter_Google_Nonempty_Update_Values')), variables('googleUpdateUserBody')))"
                                     },
                                     "Set_Google_Protected_Update_Body": {
                                         "runAfter": {
@@ -1454,6 +1461,7 @@
                         "sourceToTargetLookup": "@variables('sourceToTargetLookup')",
                         "googleRequiredUserTargets": "@variables('googleRequiredUserTargets')",
                         "googleSkippedUpdateSources": "@variables('googleSkippedUpdateSources')",
+                        "googleUpdateBodyEmptiedByFiltering": "@and(contains(toLower(coalesce(first(body('Filter_BaseAddress_Connectivity_Parameter'))?['value'], '')), 'googleapis.com'), not(empty(outputs('Compose_Final_Dynamic_Update_User_Body'))), equals(variables('googleUpdateUserBody'), json('{}')), not(empty(variables('googleSkippedUpdateSources'))))",
                         "mappedUserTargetAttributes": "@body('Select_Target_Attribute_Names')",
                         "mappedGroupTargetAttributes": "@body('Select_Target_Group_Attribute_Names')",
                         "targetDirectoryUserAttributes": "@outputs('Compose_Target_User_Attributes')",
