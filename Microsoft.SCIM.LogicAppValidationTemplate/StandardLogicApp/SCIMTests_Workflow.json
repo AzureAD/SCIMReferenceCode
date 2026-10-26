@@ -2970,7 +2970,7 @@
                         "type": "Wait",
                         "inputs": {
                           "interval": {
-                            "count": 30,
+                            "count": 90,
                             "unit": "Second"
                           }
                         }

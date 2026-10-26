@@ -407,6 +407,12 @@ test('token protocols and unrelated semantic source remain unchanged; naming and
         const actual = structuredClone(child.SCIMTests_Scope.actions[name]);
         // Permit the two new selection gates, but no changes inside their protocol actions.
         if (['Validate_Credentials_Test', 'Federated_Identity_Test'].includes(name)) actual.expression = old.SCIMTests_Scope.actions[name].expression;
+        if (name === 'SCIM_User_Update_Test') {
+            actual.actions.SCIM_User_Update_Test_Actions.actions.Check_Update_Has_Eligible_Attrs.actions
+                .Delay_SCIM_Update_User_After_Patch.inputs.interval.count =
+                old.SCIMTests_Scope.actions[name].actions.SCIM_User_Update_Test_Actions.actions
+                    .Check_Update_Has_Eligible_Attrs.actions.Delay_SCIM_Update_User_After_Patch.inputs.interval.count;
+        }
         assert.deepEqual(actual, old.SCIMTests_Scope.actions[name], name);
     }
     const initialization = load('Initialization_Workflow.json');

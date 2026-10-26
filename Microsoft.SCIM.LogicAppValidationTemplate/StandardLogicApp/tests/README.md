@@ -71,7 +71,7 @@ Exit code `0` means the tests passed; a nonzero exit code indicates a failure.
 | Google empty-update provenance | Only a previously nonempty Google payload emptied by filtering receives the exception marker; already-empty/null payloads and other providers do not. |
 | Google nested-update filtering | Removing the last required blank/null nested source prunes its empty parent and reaches the existing pass exception; populated siblings, `false`, `0`, missing sources, and non-Google behavior are preserved. |
 | Google empty-update reporting | Successful create/provisioning remains mandatory; only eligible empty updates bypass the update phase and report `PASSED` with an explicit explanation. Normal updates and cleanup dependencies are preserved. |
-| Preservation and consistency | Existing nested protocol actions, unrelated suite logic and collector remain unchanged; documentation uses the selector name; the template version is blank; final results identify the choice |
+| Preservation and consistency | Existing nested protocol actions, unrelated suite logic and collector remain unchanged, except the intentional direct-user-update propagation wait adjustment; documentation uses the selector name; the template version is blank; final results identify the choice |
 | Version and timing output | Native result uses the deployed version; timestamps come from single captures; epoch/duration calculations cover whole seconds, subsecond truncation and midnight crossing |
 | Offline deployment | The PowerShell test below verifies version injection, preserved parameters, read-back and preflight failures without cloud calls |
 
