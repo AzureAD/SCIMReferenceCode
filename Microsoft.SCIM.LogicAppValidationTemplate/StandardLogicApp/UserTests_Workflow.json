@@ -615,6 +615,17 @@
                                             "overallResult": "@if(equals(variables('UpdateUserScopeExecutionStatus'), 'Succeeded'), if(and(and(greater(length(coalesce(body('Update_Verify_Create_Provisioning_Logs')?['value'], json('[]'))), 0), equals(toLower(coalesce(first(body('Update_Verify_Create_Provisioning_Logs')?['value'])?['provisioningStatusInfo']?['status'], '')), 'success')), greater(length(coalesce(body('Update_User_Verify_User_Created')?['Resources'], json('[]'))), 0)), 'PASSED', 'FAILED'), 'FAILED')"
                                         }
                                     },
+                                    "Compose_Google_Empty_Update_Exception": {
+                                        "runAfter": {
+                                            "Set_UpdateUser_CreatePhase_Output_Variables": [
+                                                "Succeeded",
+                                                "Failed",
+                                                "Skipped"
+                                            ]
+                                        },
+                                        "type": "Compose",
+                                        "inputs": "@and(equals(actions('Set_UpdateUser_CreatePhase_Output_Variables')?['status'], 'Succeeded'), equals(variables('UpdateUserTestOutputs')?['overallResult'], 'PASSED'), contains(toLower(coalesce(triggerBody()?['initializationData']?['baseAddress'], '')), 'googleapis.com'), equals(triggerBody()?['initializationData']?['googleUpdateBodyEmptiedByFiltering'], true), equals(triggerBody()?['initializationData']?['updateUserBody'], json('{}')), not(empty(coalesce(triggerBody()?['initializationData']?['googleSkippedUpdateSources'], json('[]')))))"
+                                    },
                                     "Update_User_Check_Create_Phase_Status": {
                                         "actions": {
                                             "Update_User_Verify_Update_And_Provisioning": {
@@ -1051,10 +1062,8 @@
                                             }
                                         },
                                         "runAfter": {
-                                            "Set_UpdateUser_CreatePhase_Output_Variables": [
-                                                "Succeeded",
-                                                "Failed",
-                                                "Skipped"
+                                            "Compose_Google_Empty_Update_Exception": [
+                                                "Succeeded"
                                             ]
                                         },
                                         "else": {
@@ -1067,14 +1076,51 @@
                                                         "@toLower(variables('UpdateUserTestOutputs')['overallResult'])",
                                                         "passed"
                                                     ]
+                                                },
+                                                {
+                                                    "equals": [
+                                                        "@outputs('Compose_Google_Empty_Update_Exception')",
+                                                        false
+                                                    ]
                                                 }
                                             ]
                                         },
                                         "type": "If"
                                     },
-                                    "Update_Cleanup_Delete_User": {
+                                    "Apply_Google_Empty_Update_Exception": {
                                         "runAfter": {
                                             "Update_User_Check_Create_Phase_Status": [
+                                                "Succeeded",
+                                                "Skipped"
+                                            ]
+                                        },
+                                        "type": "If",
+                                        "expression": "@equals(outputs('Compose_Google_Empty_Update_Exception'), true)",
+                                        "actions": {
+                                            "Set_Google_Empty_Update_Outputs": {
+                                                "type": "SetVariable",
+                                                "inputs": {
+                                                    "name": "UpdateUserTestOutputs",
+                                                    "value": {
+                                                        "result": "success - Google exception: required-attribute filtering removed all available updates. Create/provisioning checks passed; no update PATCH or update verification was executed.",
+                                                        "overallResult": "PASSED",
+                                                        "provisioningLogsResult": "success",
+                                                        "scimCheckResult": "success",
+                                                        "errorDetails": {
+                                                            "provisioningLogs": null,
+                                                            "scimCheck": null
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        "else": {
+                                            "actions": {}
+                                        }
+                                    },
+                                    "Update_Cleanup_Delete_User": {
+                                        "runAfter": {
+                                            "Apply_Google_Empty_Update_Exception": [
                                                 "Succeeded",
                                                 "Failed",
                                                 "TimedOut",

@@ -3,7 +3,8 @@
 ## Purpose and scope
 
 [minimal-auth-selection.test.cjs](minimal-auth-selection.test.cjs) checks the
-single-authentication-selection behavior in the actual workflow JSON files.
+single-authentication-selection behavior and Google exception reporting in the
+actual workflow JSON files.
 It is developer verification, not a deployed workflow or a prerequisite for an
 ISV's cloud validation run.
 
@@ -19,8 +20,9 @@ federation exchange, or full gallery readiness.
 - Git available on `PATH`.
 - PowerShell 7 (`pwsh`) available on `PATH` for the offline deployment tests.
   This is a test/deployment tool, not a dependency of the deployed workflow.
-- A repository checkout or worktree with the pre-feature baseline commit
-  `8bdf02e700b8c4e667c6eee6924010274a58af8f` available in its local history.
+- A repository checkout or worktree with the merged Google baseline commit
+  `fde52cc606880c703e01d14ab7d36323a872b2e7` and the earlier
+  `8bdf02e700b8c4e667c6eee6924010274a58af8f` collector baseline available in its local history.
   A downloaded source ZIP or shallow clone missing that commit is insufficient
   for the preservation checks.
 
@@ -43,32 +45,38 @@ node --test .\minimal-auth-selection.test.cjs
 ```
 
 Paths to the workflow files are resolved relative to the test file, not the
-terminal's current directory. The two commands run the same six tests.
+terminal's current directory. The two commands run the same twelve tests.
 
 Expected summary:
 
 ```text
-tests 6
-pass 6
+tests 12
+pass 12
 fail 0
 ```
 
 Exact formatting and timing depend on the Node.js version and test reporter.
 Exit code `0` means the tests passed; a nonzero exit code indicates a failure.
 
-## What the six tests check
+## What the tests check
 
 | Test | Coverage |
 |---|---|
 | Selected branch and `EnabledTests` | OAuth and federation choices, blank/invalid selection, and existing suite/individual selectors |
 | Selected-result aggregation | A failed, skipped or missing selected result cannot be rescued by a passing unselected method |
 | Parent readiness | Only selected `PASSED` satisfies authentication readiness; an independent User failure still fails the parent; other semantic predicates match the baseline |
-| Preservation and consistency | Existing nested protocol actions, other suite definitions and collector remain unchanged; documentation uses the selector name; the template version is blank; final results identify the choice |
+| Google WIF reporting | Individual diagnostic results stay unchanged, including `SKIPPED` for Google federation. The existing Google + `FederatedIdentity` exception passes only the authentication aggregate and retains its bypass reason; other providers still require the selected diagnostic result. No individual fields are added. |
+| Google pagination eligibility | Only enabled, explicitly skipped Google pagination receives aggregate `PASSED`; missing/failed results and non-Google or customer-excluded skips are not promoted. Individual results remain unchanged. |
+| Google pagination readiness | Aggregate results reach overall readiness and final metadata; group failures remain optional warnings, and independent semantic/runtime failures still block success. |
+| Google empty-update provenance | Only a previously nonempty Google payload emptied by filtering receives the exception marker; already-empty/null payloads and other providers do not. |
+| Google nested-update filtering | Removing the last required blank/null nested source prunes its empty parent and reaches the existing pass exception; populated siblings, `false`, `0`, missing sources, and non-Google behavior are preserved. |
+| Google empty-update reporting | Successful create/provisioning remains mandatory; only eligible empty updates bypass the update phase and report `PASSED` with an explicit explanation. Normal updates and cleanup dependencies are preserved. |
+| Preservation and consistency | Existing nested protocol actions, unrelated suite logic and collector remain unchanged, except the intentional direct-user-update propagation wait adjustment; documentation uses the selector name; the template version is blank; final results identify the choice |
 | Version and timing output | Native result uses the deployed version; timestamps come from single captures; epoch/duration calculations cover whole seconds, subsecond truncation and midnight crossing |
 | Offline deployment | The PowerShell test below verifies version injection, preserved parameters, read-back and preflight failures without cloud calls |
 
 [version-deployment.test.ps1](version-deployment.test.ps1) is invoked by the
-sixth Node test. It parses the deployment script and loads only the tested
+offline deployment Node test. It parses the deployment script and loads only the tested
 functions, mocking Azure CLI and HTTP requests. It also invokes guarded
 preflight failure paths that exit before any Azure operation.
 To run it separately from this directory:
