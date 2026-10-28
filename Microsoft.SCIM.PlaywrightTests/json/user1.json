@@ -1,0 +1,26 @@
+{
+  "userName": "UserName123",
+  "active": true,
+  "displayName": "BobIsAmazing",
+  "schemas": [
+    "urn:ietf:params:scim:schemas:core:2.0:User"
+  ],
+  "externalId": "${__UUID}",
+  "name": {
+    "formatted": "Ryan Leenay",
+    "familyName": "Leenay",
+    "givenName": "Ryan"
+  },
+  "emails": [
+    {
+      "Primary": true,
+      "type": "work",
+      "value": "testing@bob.com"
+    },
+    {
+      "Primary": false,
+      "type": "home",
+      "value": "testinghome@bob.com"
+    }
+  ]
+}

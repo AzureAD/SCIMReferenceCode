@@ -4,8 +4,8 @@ namespace Microsoft.SCIM
 {
     using System;
     using System.Collections.Generic;
-    using System.Net.Http;
     using System.Threading.Tasks;
+    using Microsoft.AspNetCore.Http;
 
     public abstract class ProviderAdapterTemplate<T> : IProviderAdapter<T> where T : Resource
     {
@@ -22,11 +22,11 @@ namespace Microsoft.SCIM
 
         public abstract string SchemaIdentifier { get; }
 
-        public virtual async Task<Resource> Create(HttpRequestMessage request, Resource resource, string correlationIdentifier)
+        public virtual async Task<Resource> Create(HttpContext httpContext, Resource resource, string correlationIdentifier)
         {
-            if (null == request)
+            if (null == httpContext)
             {
-                throw new ArgumentNullException(nameof(request));
+                throw new ArgumentNullException(nameof(httpContext));
             }
 
             if (null == resource)
@@ -40,7 +40,7 @@ namespace Microsoft.SCIM
             }
 
             IReadOnlyCollection<IExtension> extensions = this.ReadExtensions();
-            IRequest<Resource> creationRequest = new CreationRequest(request, resource, correlationIdentifier, extensions);
+            IRequest<Resource> creationRequest = new SystemForCrossDomainIdentityManagementRequest<Resource>(httpContext, resource, correlationIdentifier, extensions);
             Resource result = await this.Provider.CreateAsync(creationRequest).ConfigureAwait(false);
             return result;
         }
@@ -61,11 +61,11 @@ namespace Microsoft.SCIM
             return result;
         }
 
-        public virtual async Task Delete(HttpRequestMessage request, string identifier, string correlationIdentifier)
+        public virtual async Task<Resource> Delete(HttpContext httpContext, string identifier, string correlationIdentifier)
         {
-            if (null == request)
+            if (null == httpContext)
             {
-                throw new ArgumentNullException(nameof(request));
+                throw new ArgumentNullException(nameof(httpContext));
             }
 
             if (string.IsNullOrWhiteSpace(identifier))
@@ -81,11 +81,11 @@ namespace Microsoft.SCIM
             IReadOnlyCollection<IExtension> extensions = this.ReadExtensions();
             IResourceIdentifier resourceIdentifier = this.CreateResourceIdentifier(identifier);
             IRequest<IResourceIdentifier> deletionRequest =
-                new DeletionRequest(request, resourceIdentifier, correlationIdentifier, extensions);
-            await this.Provider.DeleteAsync(deletionRequest).ConfigureAwait(false);
+                new SystemForCrossDomainIdentityManagementRequest<IResourceIdentifier>(httpContext, resourceIdentifier, correlationIdentifier, extensions);
+            return await this.Provider.DeleteAsync(deletionRequest).ConfigureAwait(false);
         }
 
-        public virtual string GetPath(HttpRequestMessage request)
+        public virtual string GetPath()
         {
             IReadOnlyCollection<IExtension> extensions = this.ReadExtensions();
             if (extensions != null && extensions.TryGetPath(this.SchemaIdentifier, out string result))
@@ -98,16 +98,16 @@ namespace Microsoft.SCIM
         }
 
         public virtual async Task<QueryResponseBase> Query(
-            HttpRequestMessage request,
+            HttpContext httpContext,
             IReadOnlyCollection<IFilter> filters,
             IReadOnlyCollection<string> requestedAttributePaths,
             IReadOnlyCollection<string> excludedAttributePaths,
             IPaginationParameters paginationParameters,
             string correlationIdentifier)
         {
-            if (null == request)
+            if (null == httpContext)
             {
-                throw new ArgumentNullException(nameof(request));
+                throw new ArgumentNullException(nameof(httpContext));
             }
 
             if (null == requestedAttributePaths)
@@ -125,13 +125,13 @@ namespace Microsoft.SCIM
                 throw new ArgumentNullException(nameof(correlationIdentifier));
             }
 
-            string path = this.GetPath(request);
+            string path = this.GetPath();
             IQueryParameters queryParameters =
                 new QueryParameters(this.SchemaIdentifier, path, filters, requestedAttributePaths, excludedAttributePaths);
             queryParameters.PaginationParameters = paginationParameters;
             IReadOnlyCollection<IExtension> extensions = this.ReadExtensions();
             IRequest<IQueryParameters> queryRequest =
-                new QueryRequest(request, queryParameters, correlationIdentifier, extensions);
+                new SystemForCrossDomainIdentityManagementRequest<IQueryParameters>(httpContext, queryParameters, correlationIdentifier, extensions);
             QueryResponseBase result = await this.Provider.PaginateQueryAsync(queryRequest).ConfigureAwait(false);
 
             return result;
@@ -152,13 +152,13 @@ namespace Microsoft.SCIM
         }
 
         public virtual async Task<Resource> Replace(
-            HttpRequestMessage request,
+            HttpContext httpContext,
             Resource resource,
             string correlationIdentifier)
         {
-            if (null == request)
+            if (null == httpContext)
             {
-                throw new ArgumentNullException(nameof(request));
+                throw new ArgumentNullException(nameof(httpContext));
             }
 
             if (null == resource)
@@ -172,21 +172,21 @@ namespace Microsoft.SCIM
             }
 
             IReadOnlyCollection<IExtension> extensions = this.ReadExtensions();
-            IRequest<Resource> replaceRequest = new ReplaceRequest(request, resource, correlationIdentifier, extensions);
+            IRequest<Resource> replaceRequest = new SystemForCrossDomainIdentityManagementRequest<Resource>(httpContext, resource, correlationIdentifier, extensions);
             Resource result = await this.Provider.ReplaceAsync(replaceRequest).ConfigureAwait(false);
             return result;
         }
 
         public virtual async Task<Resource> Retrieve(
-            HttpRequestMessage request,
+            HttpContext httpContext,
             string identifier,
             IReadOnlyCollection<string> requestedAttributePaths,
             IReadOnlyCollection<string> excludedAttributePaths,
             string correlationIdentifier)
         {
-            if (null == request)
+            if (null == httpContext)
             {
-                throw new ArgumentNullException(nameof(request));
+                throw new ArgumentNullException(nameof(httpContext));
             }
 
             if (string.IsNullOrWhiteSpace(identifier))
@@ -204,7 +204,7 @@ namespace Microsoft.SCIM
                 throw new ArgumentNullException(nameof(correlationIdentifier));
             }
 
-            string path = this.GetPath(request);
+            string path = this.GetPath();
             IResourceRetrievalParameters retrievalParameters =
                 new ResourceRetrievalParameters(
                         this.SchemaIdentifier,
@@ -214,20 +214,19 @@ namespace Microsoft.SCIM
                         excludedAttributePaths);
             IReadOnlyCollection<IExtension> extensions = this.ReadExtensions();
             IRequest<IResourceRetrievalParameters> retrievalRequest =
-                new RetrievalRequest(request, retrievalParameters, correlationIdentifier, extensions);
+                new SystemForCrossDomainIdentityManagementRequest<IResourceRetrievalParameters>(httpContext, retrievalParameters, correlationIdentifier, extensions);
             Resource result = await this.Provider.RetrieveAsync(retrievalRequest).ConfigureAwait(false);
             return result;
         }
 
-        public virtual async Task Update(
-            HttpRequestMessage request,
+        public virtual async Task<Resource> Update(HttpContext httpContext,
             string identifier,
             PatchRequestBase patchRequest,
             string correlationIdentifier)
         {
-            if (null == request)
+            if (null == httpContext)
             {
-                throw new ArgumentNullException(nameof(request));
+                throw new ArgumentNullException(nameof(httpContext));
             }
 
             if (string.IsNullOrWhiteSpace(correlationIdentifier))
@@ -243,8 +242,8 @@ namespace Microsoft.SCIM
                     PatchRequest = patchRequest
                 };
             IReadOnlyCollection<IExtension> extensions = this.ReadExtensions();
-            IRequest<IPatch> updateRequest = new UpdateRequest(request, patch, correlationIdentifier, extensions);
-            await this.Provider.UpdateAsync(updateRequest).ConfigureAwait(false);
+            IRequest<IPatch> updateRequest = new SystemForCrossDomainIdentityManagementRequest<IPatch>(httpContext, patch, correlationIdentifier, extensions);
+            return await this.Provider.UpdateAsync(updateRequest).ConfigureAwait(false);
         }
     }
 }

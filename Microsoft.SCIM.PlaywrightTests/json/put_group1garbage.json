@@ -1,0 +1,8 @@
+{
+  "id": "{{1stgroupid}}",
+  "displayName": "Tiffany Ortiz",
+  "externalId": "6c6b54c2-fa81-4234-ad4f-420ec6808049",
+  "schemas": [
+    "urn:ietf:params:scim:schemas:core:2.0:Group"
+  ]
+}

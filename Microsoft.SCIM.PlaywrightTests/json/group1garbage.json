@@ -1,0 +1,7 @@
+{
+  "displayName": "Group 1",
+  "externalId": "015489ea-9410-4306-b583-9f002b2446f7",
+  "schemas": [
+    "urn:ietf:params:scim:schemas:core:2.0:Group"
+  ]
+}

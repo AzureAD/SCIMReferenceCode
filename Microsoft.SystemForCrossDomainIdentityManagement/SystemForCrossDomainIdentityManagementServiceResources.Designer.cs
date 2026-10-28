@@ -363,5 +363,11 @@ namespace Microsoft.SCIM {
                 return ResourceManager.GetString("WarningUnexpectedWatermarkTemplate", resourceCulture);
             }
         }
+        
+        public static string ExceptionResourceConflict {
+            get {
+                return ResourceManager.GetString("ExceptionResourceConflict", resourceCulture);
+            }
+        }
     }
 }

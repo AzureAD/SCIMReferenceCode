@@ -1,0 +1,75 @@
+{
+  "userName": "emp3",
+  "active": true,
+  "addresses": [
+    {
+      "country": "Bermuda",
+      "formatted": "9132 Jennifer Way Suite 040\nSouth Nancy, MI 55645",
+      "locality": "West Mercedes",
+      "postalCode": "99265",
+      "region": "Montana",
+      "streetAddress": "4939 Hess Fork",
+      "type": "work",
+      "primary": false
+    },
+    {
+      "country": null,
+      "formatted": "18522 Lisa Unions\nEast Gregory, CT 52311",
+      "locality": null,
+      "postalCode": null,
+      "region": null,
+      "streetAddress": null,
+      "type": "other",
+      "primary": false
+    }
+  ],
+  "displayName": "Kimberly Baker",
+  "emails": [
+    {
+      "type": "work",
+      "primary": true,
+      "value": "anna33@gmail.com"
+    },
+    {
+      "type": "work",
+      "primary": false,
+      "value": "anna33@example.com"
+    }
+  ],
+  "meta": {
+    "created": "2019-09-18T18:15:26.5788954+00:00",
+    "lastModified": "2019-09-18T18:15:26.5788976+00:00",
+    "resourceType": "User"
+  },
+  "name": {
+    "formatted": "Daniel Mcgee",
+    "familyName": "Employee",
+    "givenName": "Darl",
+    "honorificPrefix": null,
+    "honorificSuffix": null
+  },
+  "phoneNumbers": [
+    {
+      "type": "fax",
+      "primary": false,
+      "value": "312-320-0500"
+    },
+    {
+      "type": "mobile",
+      "primary": false,
+      "value": "312-320-1707"
+    },
+    {
+      "type": "work",
+      "primary": true,
+      "value": "312-320-0932"
+    }
+  ],
+  "preferredLanguage": "xh",
+  "roles": [],
+  "title": "Site engineer",
+  "externalId": "22fbc523-6032-4c5f-939d-5d4850cf3e52",
+  "schemas": [
+    "urn:ietf:params:scim:schemas:core:2.0:User"
+  ]
+}
